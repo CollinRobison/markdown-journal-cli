@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Demo.Utilities;
 using Spectre.Console.Cli;
 
 namespace Demo.Commands.Run;
@@ -63,7 +62,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        SettingsDumper.Dump(settings);
+        //SettingsDumper.Dump(settings);
         return 0;
     }
 }

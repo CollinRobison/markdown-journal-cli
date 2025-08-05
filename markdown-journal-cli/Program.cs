@@ -1,6 +1,4 @@
-﻿using Demo.Commands.Add;
-using Demo.Commands.Run;
-using Demo.Commands.Serve;
+﻿using Demo.Commands.Run;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli;
