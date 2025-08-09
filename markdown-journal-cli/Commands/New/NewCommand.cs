@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using System.IO;
 
 namespace markdown_journal_cli.Commands.New;
 
@@ -22,10 +23,36 @@ public sealed class NewCommand : Command<NewCommand.Settings>
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        // need to implement an actual journal creation logic here
-        // will want it to be cross-platform, so using .NET APIs (Copilot said that)
         // Also implement testing. 
-        AnsiConsole.MarkupLine($"Creating journal: [green]{settings.JournalName}[/]");
+        // need to create markdown files somehow
+        //eventually implement a template 
+        string journalDirectory = Path.Combine(settings.FilePath ?? ".", settings.JournalName);
+        if (Directory.Exists(journalDirectory))
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] A journal with the name [yellow]{settings.JournalName}[/] already exists at the specified path.");
+            return 1;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(journalDirectory);
+            AnsiConsole.MarkupLine($"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]");
+        }
+        catch (IOException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] Could not create journal at the specified path. {ex.Message}");
+            return 1;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] Access denied. {ex.Message}");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] An unexpected error occurred. {ex.Message}");
+            return 1;
+        }
         return 0;
     }
 }
