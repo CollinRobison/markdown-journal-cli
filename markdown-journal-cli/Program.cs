@@ -1,4 +1,5 @@
 ﻿using Demo.Commands.Run;
+using markdown_journal_cli.Commands.New;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli;
@@ -13,9 +14,13 @@ public static class Program
             config.SetApplicationName("md-journal");
             config.ValidateExamples();
             config.AddExample("run", "--no-build");
+            config.AddExample("new", "TestJournal");
 
             // Run
             config.AddCommand<RunCommand>("run");
+
+            // New 
+            config.AddCommand<NewCommand>("new");
 
             // Add
             // config.AddBranch<AddSettings>("add", add =>
@@ -25,7 +30,7 @@ public static class Program
             //     add.AddCommand<AddReferenceCommand>("reference");
             // });
 
-            
+
         });
 
         return app.Run(args);
