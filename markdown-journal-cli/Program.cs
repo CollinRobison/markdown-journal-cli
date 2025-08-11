@@ -1,5 +1,5 @@
-﻿using Demo.Commands.Run;
-using markdown_journal_cli.Commands.New;
+﻿using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Infrastructure;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli;
@@ -8,16 +8,16 @@ public static class Program
 {
     public static int Main(string[] args)
     {
-        var app = new CommandApp();
+        // Set up dependency injection
+        var registrar = new TypeRegistrar();
+        registrar.Register(typeof(IFileSystem), typeof(FileSystem));
+        
+        var app = new CommandApp(registrar);
         app.Configure(config =>
         {
             config.SetApplicationName("md-journal");
             config.ValidateExamples();
-            config.AddExample("run", "--no-build");
-            config.AddExample("new", "TestJournal");
-
-            // Run
-            config.AddCommand<RunCommand>("run");
+            config.AddExample("new", "TestJournal", "--path", "Source/Repos");
 
             // New 
             config.AddCommand<NewCommand>("new");

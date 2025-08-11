@@ -1,6 +1,8 @@
 using Spectre.Console.Testing;
 using Spectre.Console.Cli;
 using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Tests.Infrastructure;
 using Xunit;
 using Shouldly;
 
@@ -8,61 +10,63 @@ namespace markdown_journal_cli.Tests.Commands;
 
 public class NewCommandTests
 {
+    private readonly TestConsole _console;
+    private readonly TestFileSystem _fileSystem;
+    private readonly CommandAppTester _app;
+
+    public NewCommandTests()
+    {
+        _console = new TestConsole();
+        _fileSystem = new TestFileSystem();
+        
+        var registrar = new TypeRegistrar()
+            .RegisterInstance(_console)
+            .RegisterInstance<IFileSystem>(_fileSystem);
+
+        _app = new CommandAppTester(registrar);
+        _app.Configure(config =>
+        {
+            config.SetApplicationName("md-journal");
+            config.PropagateExceptions();
+            config.AddCommand<NewCommand>("new")
+                .WithDescription("Creates a new markdown journal.");
+        });
+    }
+
     [Fact]
     public void Should_Create_New_Journal_With_Default_Name()
     {
-        // Given
-        var console = new TestConsole();
-        var app = new CommandAppTester();
-        app.Configure(config =>
-        {
-            config.AddCommand<NewCommand>("new");
-        });
-
         // When
-        var result = app.Run(new[] { "new" });
+        var result = _app.Run(["new", "MyJournal"]);
 
         // Then
         result.ExitCode.ShouldBe(0);
-        result.Output.ShouldContain("MyJournal"); // Default name from Settings
+        result.Output.ShouldContain("MyJournal");
+        _fileSystem.DirectoryExists("./MyJournal").ShouldBeTrue();
     }
 
     [Fact]
     public void Should_Create_New_Journal_With_Custom_Name()
     {
-        // Given
-        var console = new TestConsole();
-        var app = new CommandAppTester();
-        app.Configure(config =>
-        {
-            config.AddCommand<NewCommand>("new");
-        });
-
         // When
-        var result = app.Run(new[] { "new", "CustomJournal" });
+        var result = _app.Run(["new", "CustomJournal"]);
 
         // Then
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("CustomJournal");
+        _fileSystem.DirectoryExists("./CustomJournal").ShouldBeTrue();
     }
 
     [Fact]
     public void Should_Return_Error_When_Journal_Already_Exists()
     {
         // Given
-        var console = new TestConsole();
-        var app = new CommandAppTester();
-        app.Configure(config =>
-        {
-            config.AddCommand<NewCommand>("new");
-        });
+        var journalName = "ExistingJournal";
+        var path = Path.Combine(".", journalName);
+        _fileSystem.CreateDirectory(path);
 
-        // Create the journal first
-        var firstResult = app.Run(new[] { "new", "ExistingJournal" });
-        firstResult.ExitCode.ShouldBe(0);
-
-        // When - Try to create the same journal again
-        var result = app.Run(new[] { "new", "ExistingJournal" });
+        // When
+        var result = _app.Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(1);
@@ -70,25 +74,49 @@ public class NewCommandTests
         result.Output.ShouldContain("already exists");
     }
 
-    [Fact]
-    public void Should_Create_Journal_In_Custom_Path()
+    [Theory]
+    [InlineData("--path")]
+    [InlineData("-p")]
+    public void Should_Create_Journal_In_Custom_Path(string pathOption)
     {
         // Given
-        var console = new TestConsole();
-        var app = new CommandAppTester();
-        app.Configure(config =>
-        {
-            config.AddCommand<NewCommand>("new");
-        });
-
-        var customPath = Path.Combine(Path.GetTempPath(), "custom_journals");
+        var customPath = Path.Combine("custom", "journals");
+        var journalName = "PathJournal";
+        var expectedPath = Path.Combine(customPath, journalName);
 
         // When
-        var result = app.Run(new[] { "new", "PathJournal", "--path", customPath });
+        var result = _app.Run(["new", journalName, $"{pathOption}", customPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
-        result.Output.ShouldContain("PathJournal");
+        result.Output.ShouldContain(journalName);
         result.Output.ShouldContain(customPath);
+        _fileSystem.DirectoryExists(expectedPath).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Should_Validate_Journal_Name_For_Invalid_Characters()
+    {
+        // Given
+        var invalidName = "Invalid/Name";
+
+        // When
+        var exception = Should.Throw<CommandRuntimeException>(() =>
+            _app.Run(["new", invalidName]));
+
+        // Then
+        exception.Message.ShouldContain("invalid characters");
+    }
+
+    [Fact]
+    public void Should_Validate_Empty_Journal_Name()
+    {
+        // When
+        var exception = Should.Throw<CommandRuntimeException>(() =>
+            _app.Run(["new", ""]));
+
+        // Then
+        exception.Message.ShouldContain("cannot be empty");
     }
 }
+

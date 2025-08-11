@@ -8,7 +8,12 @@ This project contains the unit tests for the Markdown Journal CLI tool. The test
 markdown-journal-cli.Tests/
 ├── Commands/
 │   └── NewCommandTests.cs      # Tests for the New command
-└── markdown-journal-cli.Tests.csproj
+├── Infrastructure/
+│   └── TestFileSystem.cs       # Mock file system for testing
+├── bin/                        # Build output
+├── obj/                        # Build artifacts
+├── markdown-journal-cli.Tests.csproj
+└── README.md
 ```
 
 ## Technologies Used
@@ -16,184 +21,136 @@ markdown-journal-cli.Tests/
 - [xUnit](https://xunit.net/) - Testing framework
 - [Spectre.Console.Testing](https://spectreconsole.net/cli/unit-testing) - Testing utilities for Spectre.Console
 - [Shouldly](https://github.com/shouldly/shouldly) - Assertion framework for better test readability
+- [Microsoft.Extensions.DependencyInjection](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection) - For dependency injection in tests
+- [coverlet.collector](https://github.com/coverlet-coverage/coverlet) - Code coverage collection
 
 ## Running Tests
 
-To run the tests, use:
+To run all tests:
 
 ```bash
 dotnet test
+```
+
+To run tests with coverage:
+
+```bash
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+To run specific tests:
+
+```bash
+# Run specific test class
+dotnet test --filter "FullyQualifiedName~NewCommandTests"
+
+# Run specific test method
+dotnet test --filter "FullyQualifiedName~Should_Create_New_Journal_With_Default_Name"
 ```
 
 ## Test Coverage
 
 ### NewCommand Tests
 
-- Creating a journal with default name
-- Creating a journal with custom name
-- Handling duplicate journal names
-- Creating a journal in a custom path
+The `NewCommandTests` class provides comprehensive testing for the journal creation functionality:
+
+- **Should_Create_New_Journal_With_Default_Name** - Tests basic journal creation with a simple name
+- **Should_Create_New_Journal_With_Custom_Name** - Tests journal creation with custom naming
+- **Should_Return_Error_When_Journal_Already_Exists** - Tests duplicate journal handling (returns exit code 1)
+- **Should_Create_Journal_In_Custom_Path** - Tests journal creation with custom path using `--path` option
+- **Should_Validate_Journal_Name_For_Invalid_Characters** - Tests input validation for invalid file name characters
+- **Should_Validate_Empty_Journal_Name** - Tests input validation for empty journal names
+
+### Infrastructure Tests
+
+The test infrastructure includes:
+
+- **TestFileSystem** - Mock implementation of `IFileSystem` for isolated file system testing
+- **TypeRegistrar** - Uses the main project's dependency injection container for test setup
+- **TestConsole** - Spectre.Console test console for verifying output
+
+## Architecture
+
+The test project follows these architectural patterns:
+
+1. **Dependency Injection**: Uses the main project's `TypeRegistrar` to inject mock dependencies
+2. **Mock File System**: `TestFileSystem` provides in-memory file system simulation
+3. **Command Testing**: Uses `CommandAppTester` to test the full command pipeline
+4. **Arrange-Act-Assert**: All tests follow the AAA pattern for clarity
+
+## Current Implementation Status
+
+✅ **Implemented Features:**
+- File system abstraction (`IFileSystem`) with test mock
+- Dependency injection for testability
+- Input validation with proper error handling
+- Console output testing
+- Custom path support
+- Comprehensive error scenarios
+
+✅ **Best Practices Applied:**
+- Dependency injection for console and file system operations
+- Custom exceptions for domain-specific errors
+- Settings validation
+- Isolated, independent tests
+- Meaningful test names following convention
 
 ## Best Practices and Recommendations
 
-### For Main Project
+### Current Implementation Status
 
-1. **Dependency Injection for Console Operations**
-   
-   Currently, the NewCommand uses `AnsiConsole` directly, which makes testing harder because we can't mock or verify the console output easily.
+The main project has already implemented most recommended best practices:
 
-   ```csharp
-   // Current approach - hard to test
-   public sealed class NewCommand
-   {
-       public override int Execute(CommandContext context, Settings settings)
-       {
-           AnsiConsole.MarkupLine("Some output"); // Direct dependency
-       }
-   }
+✅ **Already Implemented:**
+- **File System Abstraction**: `IFileSystem` interface with real implementation
+- **Dependency Injection**: Console operations use injected `IAnsiConsole`
+- **Custom Exceptions**: Domain-specific exception handling
+- **Input Validation**: Settings validation with proper error messages
+- **Testable Architecture**: All dependencies are mockable
 
-   // Recommended approach - testable
-   public sealed class NewCommand
-   {
-       private readonly IAnsiConsole _console;
-       
-       public NewCommand(IAnsiConsole console)
-       {
-           _console = console;
-       }
+### Future Enhancements
 
-       public override int Execute(CommandContext context, Settings settings)
-       {
-           _console.MarkupLine("Some output"); // Can be mocked and verified
-       }
-   }
-   ```
+While the current implementation is well-architected, consider these enhancements:
 
-   **Why?**
-   - Makes unit testing easier by allowing us to inject TestConsole
-   - Follows SOLID principles (Dependency Inversion)
-   - Enables better test verification of console output
-   - Makes it easier to change console behavior in the future
+1. **Additional Command Testing**
+   - Add tests for any new commands as they're implemented
+   - Consider integration tests for end-to-end scenarios
 
-2. **File System Abstraction**
+2. **Performance Testing**
+   - Add benchmarks for large journal operations
+   - Test memory usage with many files
 
-   Currently, file system operations are done directly using System.IO. This couples your code to the file system and makes testing harder.
+3. **Error Scenario Coverage**
+   - Test file system permission errors
+   - Test disk space limitations
+   - Test network path scenarios
 
-   ```csharp
-   // Current approach - tightly coupled to file system
-   Directory.CreateDirectory(path);
+### Testing Best Practices Applied
 
-   // Recommended approach - abstracted file system
-   public interface IFileSystem
-   {
-       bool DirectoryExists(string path);
-       void CreateDirectory(string path);
-       string CombinePaths(params string[] paths);
-   }
+1. **Arrange-Act-Assert**: All tests follow the AAA pattern for clarity
+2. **Meaningful Names**: Test names describe the scenario using Should_ExpectedBehavior_When_Condition pattern
+3. **Independent Tests**: Each test is self-contained with proper setup and teardown
+4. **Mock Dependencies**: File system and console operations are mocked for isolation
+5. **Comprehensive Coverage**: Tests cover happy path, error conditions, and edge cases
+6. **Domain-Specific Testing**: Tests verify business logic, not just technical implementation
 
-   public class RealFileSystem : IFileSystem
-   {
-       public bool DirectoryExists(string path) => Directory.Exists(path);
-       public void CreateDirectory(string path) => Directory.CreateDirectory(path);
-       public string CombinePaths(params string[] paths) => Path.Combine(paths);
-   }
+### Test Structure Example
 
-   public class NewCommand
-   {
-       private readonly IFileSystem _fileSystem;
-       
-       public NewCommand(IFileSystem fileSystem)
-       {
-           _fileSystem = fileSystem;
-       }
+```csharp
+[Fact]
+public void Should_Create_New_Journal_With_Default_Name()
+{
+    // Arrange - Set up test data and expectations
+    
+    // Act - Execute the operation being tested
+    var result = _app.Run(new[] { "new", "MyJournal" });
 
-       public override int Execute(CommandContext context, Settings settings)
-       {
-           var path = _fileSystem.CombinePaths(settings.FilePath ?? ".", settings.JournalName);
-           if (!_fileSystem.DirectoryExists(path))
-           {
-               _fileSystem.CreateDirectory(path);
-           }
-       }
-   }
-   ```
-
-   **Why?**
-   - Makes unit testing possible without touching the real file system
-   - Allows mocking file system operations in tests
-   - Makes it easier to handle different file system implementations (e.g., for different platforms)
-   - Enables better error simulation in tests
-
-3. **Error Handling and Custom Exceptions**
-
-   Instead of using generic exceptions, create specific ones for your domain:
-
-   ```csharp
-   public class JournalException : Exception
-   {
-       public JournalException(string message) : base(message) { }
-       public JournalException(string message, Exception inner) : base(message, inner) { }
-   }
-
-   public class JournalAlreadyExistsException : JournalException
-   {
-       public string JournalName { get; }
-       public string Path { get; }
-
-       public JournalAlreadyExistsException(string journalName, string path)
-           : base($"Journal '{journalName}' already exists at '{path}'")
-       {
-           JournalName = journalName;
-           Path = path;
-       }
-   }
-   ```
-
-   **Why?**
-   - Makes error handling more specific and meaningful
-   - Allows catching specific types of errors
-   - Provides more context in error messages
-   - Makes testing error conditions more explicit
-
-4. **Settings Validation**
-
-   Consider adding validation to your Settings class:
-
-   ```csharp
-   public sealed class Settings : CommandSettings
-   {
-       [CommandArgument(0, "[name]")]
-       [Description("The name of the journal to create")]
-       public required string JournalName { get; set; }
-
-       public override ValidationResult Validate()
-       {
-           if (string.IsNullOrWhiteSpace(JournalName))
-           {
-               return ValidationResult.Error("Journal name cannot be empty");
-           }
-
-           if (JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-           {
-               return ValidationResult.Error("Journal name contains invalid characters");
-           }
-
-           return ValidationResult.Success();
-       }
-   }
-   ```
-
-   **Why?**
-   - Catches invalid input before execution
-   - Makes validation logic centralized and reusable
-   - Easier to test input validation separately from command execution
-   - Provides clear feedback to users
-
-### Testing Best Practices
-
-1. **Arrange-Act-Assert**: Tests follow the AAA pattern for clarity
-2. **Meaningful Names**: Test names describe the scenario being tested
-3. **Independent Tests**: Each test is self-contained and doesn't rely on other tests
+    // Assert - Verify the expected outcomes
+    result.ExitCode.ShouldBe(0);
+    result.Output.ShouldContain("MyJournal");
+    _fileSystem.DirectoryExists("./MyJournal").ShouldBeTrue();
+}
+```
 
 ## Useful Links
 
@@ -204,7 +161,11 @@ dotnet test
 
 ## Notes
 
-- The test project uses the same target framework as the main project (net9.0)
-- Tests are organized by command in the Commands directory
-- Each test class focuses on a single command
-- Test names are descriptive and follow the pattern Should_ExpectedBehavior_When_Condition
+- The test project targets .NET 9.0, matching the main project
+- Tests are organized by command in the `Commands/` directory
+- Infrastructure helpers are in the `Infrastructure/` directory
+- Each test class focuses on a single command with comprehensive scenario coverage
+- Test names follow the pattern `Should_ExpectedBehavior_When_Condition`
+- All file system operations are mocked using `TestFileSystem` for fast, isolated tests
+- Console output is captured and verified using Spectre.Console.Testing
+- Dependency injection is used throughout for better testability and maintainability

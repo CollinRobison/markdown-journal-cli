@@ -52,3 +52,37 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# VS Code settings
+.vscode/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+*.sln.iml
+
+# macOS
+.DS_Store
+
+# Test coverage
+coverage/
+TestResults/
+
+# Local secrets
+secrets.json
+
+# Resharper
+*.DotSettings
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Others
+*.log
