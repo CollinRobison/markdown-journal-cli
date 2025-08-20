@@ -1,0 +1,4 @@
+- add tests for FileSystem create md file method
+- Create Test for Journal/Template methods
+- Update tests for new command that tests adding file functionality
+- create journal templates for other base journal files and add to new command

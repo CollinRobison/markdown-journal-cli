@@ -3,6 +3,7 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using markdown_journal_cli.Infrastructure;
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.JournalTemplates;
 
 namespace markdown_journal_cli.Commands.New;
 
@@ -12,10 +13,13 @@ public sealed class NewCommand : Command<NewCommand.Settings>
     private readonly IAnsiConsole _console;
     private readonly IFileSystem _fileSystem;
 
-    public NewCommand(IAnsiConsole console, IFileSystem fileSystem)
+    private readonly ITemplateManager _templateManager;
+
+    public NewCommand(IAnsiConsole console, IFileSystem fileSystem, ITemplateManager templateManager)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
     }
 
     public sealed class Settings : CommandSettings
@@ -58,6 +62,7 @@ public sealed class NewCommand : Command<NewCommand.Settings>
             }
 
             _fileSystem.CreateDirectory(journalDirectory);
+            _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", _templateManager.GenerateFromTemplate("journal-entry", []));
             _console.MarkupLine($"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]");
             
             return 0;

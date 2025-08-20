@@ -1,5 +1,6 @@
 ﻿using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.JournalTemplates;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli;
@@ -11,6 +12,7 @@ public static class Program
         // Set up dependency injection
         var registrar = new TypeRegistrar();
         registrar.Register(typeof(IFileSystem), typeof(FileSystem));
+        registrar.Register(typeof(ITemplateManager), typeof(TemplateManager));
         
         var app = new CommandApp(registrar);
         app.Configure(config =>
