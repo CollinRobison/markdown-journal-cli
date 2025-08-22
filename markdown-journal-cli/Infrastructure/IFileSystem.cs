@@ -34,7 +34,7 @@ public interface IFileSystem
     /// and write the provided body to a file with the provided <paramref name="fileName"/>.
     /// </summary>
     /// <param name="path">The directory path where the markdown file will be created.</param>
-    /// <param name="fileName">The file name excluding extension (for example, <c>note.md</c>).</param>
+    /// <param name="fileName">The file name excluding extension (for example, <c>note not note.md</c>).</param>
     /// <param name="body">The markdown content to write into the file.</param>
     /// <remarks>
     /// Implementations should prefer UTF-8 encoding and overwrite existing files by default,
