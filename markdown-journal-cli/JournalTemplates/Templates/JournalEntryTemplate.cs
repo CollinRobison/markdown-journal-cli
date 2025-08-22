@@ -1,6 +1,6 @@
 using System;
 
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.JournalTemplates.Templates;
 
 public class JournalEntryTemplate : ITemplateGenerator
 {

@@ -7,8 +7,9 @@ public class FileSystem : IFileSystem
     public string CombinePaths(params string[] paths) => Path.Combine(paths);
     public void CreateMarkdownFile(string path, string fileName, string body)
     {
-        string filePath = Path.Combine(path, fileName + ".md");
+        var fullFileName = fileName + ".md";
+        string filePath = Path.Combine(path, fullFileName);
         File.WriteAllText(filePath, body);
-        Console.WriteLine($"Markdown file created at: {filePath}");
+        Console.WriteLine($"Markdown file {fullFileName} created at: {filePath}");
     }
 }

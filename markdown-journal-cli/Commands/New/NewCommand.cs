@@ -63,6 +63,7 @@ public sealed class NewCommand : Command<NewCommand.Settings>
 
             _fileSystem.CreateDirectory(journalDirectory);
             _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", _templateManager.GenerateFromTemplate("journal-entry", []));
+            _fileSystem.CreateMarkdownFile(journalDirectory, "1a-TableOfContents", _templateManager.GenerateFromTemplate("table-of-contents", []));
             _console.MarkupLine($"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]");
             
             return 0;

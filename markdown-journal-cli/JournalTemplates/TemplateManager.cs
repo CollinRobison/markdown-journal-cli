@@ -1,4 +1,5 @@
 using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.JournalTemplates.Templates;
 
 namespace markdown_journal_cli.JournalTemplates;
 
@@ -29,6 +30,7 @@ public class TemplateManager : ITemplateManager
     private void RegisterDefaultTemplates()
     {
         RegisterTemplate(new JournalEntryTemplate());
+        RegisterTemplate(new TableOfContentsTemplate());
     }
 
     /// <summary>
