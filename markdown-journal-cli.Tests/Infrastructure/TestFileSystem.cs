@@ -49,6 +49,9 @@ public class TestFileSystem : IFileSystem
 
     public void CreateMarkdownFile(string path, string fileName, string body)
     {
-        throw new NotImplementedException();
+        if (!_directories.ContainsKey(path))
+        {
+            _directories[path] = true;
+        }
     }
 }

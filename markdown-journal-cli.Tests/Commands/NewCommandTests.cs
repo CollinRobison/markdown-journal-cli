@@ -5,6 +5,7 @@ using markdown_journal_cli.Infrastructure;
 using markdown_journal_cli.Tests.Infrastructure;
 using Xunit;
 using Shouldly;
+using markdown_journal_cli.JournalTemplates;
 
 namespace markdown_journal_cli.Tests.Commands;
 
@@ -14,14 +15,18 @@ public class NewCommandTests
     private readonly TestFileSystem _fileSystem;
     private readonly CommandAppTester _app;
 
+    private readonly TemplateManager _templateManager;
+
     public NewCommandTests()
     {
         _console = new TestConsole();
         _fileSystem = new TestFileSystem();
-        
+        _templateManager = new TemplateManager();
+
         var registrar = new TypeRegistrar()
             .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem);
+            .RegisterInstance<IFileSystem>(_fileSystem)
+            .RegisterInstance<ITemplateManager>(_templateManager);
 
         _app = new CommandAppTester(registrar);
         _app.Configure(config =>
