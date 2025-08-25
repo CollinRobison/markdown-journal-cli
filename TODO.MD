@@ -1,4 +1,5 @@
 - add tests for FileSystem create md file method
 - Create Test for Journal/Template methods
+  - Look at existing tests I think its currently not mocking DI as much as it should.
 - Update tests for new command that tests adding file functionality
 - create journal templates for other base journal files and add to new command
