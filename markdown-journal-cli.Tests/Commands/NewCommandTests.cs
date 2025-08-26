@@ -1,11 +1,11 @@
-using Spectre.Console.Testing;
-using Spectre.Console.Cli;
 using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure;
-using markdown_journal_cli.Tests.Infrastructure;
-using Xunit;
-using Shouldly;
 using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Tests.Infrastructure;
+using Shouldly;
+using Spectre.Console.Cli;
+using Spectre.Console.Testing;
+using Xunit;
 
 namespace markdown_journal_cli.Tests.Commands;
 
@@ -33,8 +33,7 @@ public class NewCommandTests
         {
             config.SetApplicationName("md-journal");
             config.PropagateExceptions();
-            config.AddCommand<NewCommand>("new")
-                .WithDescription("Creates a new markdown journal.");
+            config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
     }
 
@@ -106,8 +105,7 @@ public class NewCommandTests
         var invalidName = "Invalid/Name";
 
         // When
-        var exception = Should.Throw<CommandRuntimeException>(() =>
-            _app.Run(["new", invalidName]));
+        var exception = Should.Throw<CommandRuntimeException>(() => _app.Run(["new", invalidName]));
 
         // Then
         exception.Message.ShouldContain("invalid characters");
@@ -117,11 +115,9 @@ public class NewCommandTests
     public void Should_Validate_Empty_Journal_Name()
     {
         // When
-        var exception = Should.Throw<CommandRuntimeException>(() =>
-            _app.Run(["new", ""]));
+        var exception = Should.Throw<CommandRuntimeException>(() => _app.Run(["new", ""]));
 
         // Then
         exception.Message.ShouldContain("cannot be empty");
     }
 }
-

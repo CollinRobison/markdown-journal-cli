@@ -8,7 +8,10 @@ public class TestTemplateGenerator : ITemplateGenerator
 
     private readonly string _output;
 
-    public TestTemplateGenerator(string templateName = "test-template", string output = "TEST_OUTPUT")
+    public TestTemplateGenerator(
+        string templateName = "test-template",
+        string output = "TEST_OUTPUT"
+    )
     {
         TemplateName = templateName;
         _output = output;

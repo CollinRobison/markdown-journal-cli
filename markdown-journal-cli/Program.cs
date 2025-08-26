@@ -13,7 +13,7 @@ public static class Program
         var registrar = new TypeRegistrar();
         registrar.Register(typeof(IFileSystem), typeof(FileSystem));
         registrar.Register(typeof(ITemplateManager), typeof(TemplateManager));
-        
+
         var app = new CommandApp(registrar);
         app.Configure(config =>
         {
@@ -21,7 +21,7 @@ public static class Program
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
 
-            // New 
+            // New
             config.AddCommand<NewCommand>("new");
 
             // Add
@@ -31,8 +31,6 @@ public static class Program
             //     add.AddCommand<AddPackageCommand>("package");
             //     add.AddCommand<AddReferenceCommand>("reference");
             // });
-
-
         });
 
         return app.Run(args);

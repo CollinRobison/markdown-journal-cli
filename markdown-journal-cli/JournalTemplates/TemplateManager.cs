@@ -54,7 +54,9 @@ public class TemplateManager : ITemplateManager
     {
         if (!_templates.ContainsKey(templateName))
         {
-            throw new ArgumentException($"Template '{templateName}' not found. Available templates: {string.Join(", ", GetAvailableTemplates())}");
+            throw new ArgumentException(
+                $"Template '{templateName}' not found. Available templates: {string.Join(", ", GetAvailableTemplates())}"
+            );
         }
 
         return _templates[templateName].GenerateTemplate(parameters);

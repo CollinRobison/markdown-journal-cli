@@ -20,7 +20,7 @@ public class TestFileSystem : IFileSystem
     /// <param name="path">The directory path to check.</param>
     /// <returns><c>true</c> if the directory exists; otherwise, <c>false</c>.</returns>
     public bool DirectoryExists(string path) => _directories.ContainsKey(path);
-    
+
     /// <summary>
     /// Creates a directory entry in the in-memory file system.
     /// If the directory already exists in the in-memory store, this method does nothing.
@@ -33,7 +33,7 @@ public class TestFileSystem : IFileSystem
             _directories[path] = true;
         }
     }
-    
+
     /// <summary>
     /// Combines one or more path segments into a single path string using the platform
     /// <see cref="System.IO.Path.Combine"/> behavior.
