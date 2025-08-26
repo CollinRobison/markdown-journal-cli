@@ -60,10 +60,27 @@ public sealed class NewCommand : Command<NewCommand.Settings>
             {
                 throw new JournalAlreadyExistsException(settings.JournalName, journalDirectory);
             }
-
+            
             _fileSystem.CreateDirectory(journalDirectory);
-            _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", _templateManager.GenerateFromTemplate("journal-entry", []));
             _fileSystem.CreateMarkdownFile(journalDirectory, "1a-TableOfContents", _templateManager.GenerateFromTemplate("table-of-contents", []));
+            var introParams = new Dictionary<string, object>
+            {
+                ["title"] = "Introduction",
+                ["body"] = "Add an introduction to your new journal here.",
+                ["addSourceBlock"] = false
+            };
+            _fileSystem.CreateMarkdownFile(journalDirectory, "1b-Intro", _templateManager.GenerateFromTemplate("journal-entry", introParams));
+            _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", _templateManager.GenerateFromTemplate("journal-entry", []));
+            var allMyJournalsParams = new Dictionary<string, object>
+            {
+                ["title"] = "Journals List",
+                ["body"] = @"- [example journal 1](link-to-journal)
+- [example journal 2](link-to-journal)
+- [example journal 2](link-to-journal)",
+                ["addSourceBlock"] = false
+            };
+            _fileSystem.CreateMarkdownFile(journalDirectory, "1h-All-My-Journals", _templateManager.GenerateFromTemplate("journal-entry", allMyJournalsParams));
+            
             _console.MarkupLine($"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]");
             
             return 0;
