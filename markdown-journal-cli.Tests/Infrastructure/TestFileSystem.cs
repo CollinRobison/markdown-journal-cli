@@ -15,6 +15,12 @@ public class TestFileSystem : IFileSystem
     private readonly Dictionary<string, bool> _directories = new();
 
     /// <summary>
+    /// Tracks created files in-memory. The dictionary keys are the full file paths and the
+    /// values are the file contents.
+    /// </summary>
+    private readonly Dictionary<string, string> _files = new();
+
+    /// <summary>
     /// Determines whether the specified directory exists in the in-memory file system.
     /// </summary>
     /// <param name="path">The directory path to check.</param>
@@ -45,13 +51,65 @@ public class TestFileSystem : IFileSystem
     /// <summary>
     /// Clears the in-memory directory store. Useful for test setup/teardown between tests.
     /// </summary>
-    public void Reset() => _directories.Clear();
+    public void Reset()
+    {
+        _directories.Clear();
+        _files.Clear();
+    }
 
+    /// <summary>
+    /// Creates a markdown file in the in-memory file system with the specified name and content.
+    /// Also ensures the parent directory exists in the directory tracking.
+    /// </summary>
+    /// <param name="path">The directory path where the markdown file will be created.</param>
+    /// <param name="fileName">The file name excluding extension (for example, <c>note</c> not <c>note.md</c>).</param>
+    /// <param name="body">The markdown content to write into the file.</param>
     public void CreateMarkdownFile(string path, string fileName, string body)
     {
         if (!_directories.ContainsKey(path))
         {
             _directories[path] = true;
         }
+
+        var filePath = Path.Combine(path, $"{fileName}.md");
+        _files[filePath] = body;
+    }
+
+    /// <summary>
+    /// Gets the content of a file created in the test file system.
+    /// </summary>
+    /// <param name="filePath">The full path to the file.</param>
+    /// <returns>The file content, or null if the file doesn't exist.</returns>
+    public string? GetFileContent(string filePath)
+    {
+        return _files.TryGetValue(filePath, out var content) ? content : null;
+    }
+
+    /// <summary>
+    /// Checks if a file exists in the test file system.
+    /// </summary>
+    /// <param name="filePath">The full path to the file.</param>
+    /// <returns>True if the file exists, false otherwise.</returns>
+    public bool FileExists(string filePath)
+    {
+        return _files.ContainsKey(filePath);
+    }
+
+    /// <summary>
+    /// Gets all created files for verification in tests.
+    /// </summary>
+    /// <returns>A dictionary of file paths and their contents.</returns>
+    public IReadOnlyDictionary<string, string> GetAllFiles()
+    {
+        return _files.AsReadOnly();
+    }
+
+    /// <summary>
+    /// Gets all created directories for verification in tests.
+    /// </summary>
+    /// <returns>A collection of directory paths.</returns>
+    public IEnumerable<string> GetAllDirectories()
+    {
+        return _directories.Keys;
     }
 }

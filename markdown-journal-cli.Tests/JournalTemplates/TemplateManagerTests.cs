@@ -5,6 +5,10 @@ using Xunit;
 
 namespace markdown_journal_cli.Tests.JournalTemplates;
 
+/// <summary>
+/// Unit tests for the <see cref="TemplateManager"/> class, covering template registration
+/// and content generation functionality.
+/// </summary>
 public class TemplateManagerTests
 {
     [Fact]
