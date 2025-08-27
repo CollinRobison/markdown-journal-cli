@@ -52,14 +52,14 @@ public class TemplateManager : ITemplateManager
     /// <exception cref="ArgumentException">Thrown when the specified template name is not registered.</exception>
     public string GenerateFromTemplate(string templateName, Dictionary<string, object>? parameters)
     {
-        if (!_templates.ContainsKey(templateName))
+        if (!_templates.TryGetValue(templateName, out var template))
         {
             throw new ArgumentException(
                 $"Template '{templateName}' not found. Available templates: {string.Join(", ", GetAvailableTemplates())}"
             );
         }
 
-        return _templates[templateName].GenerateTemplate(parameters);
+        return template.GenerateTemplate(parameters);
     }
 
     /// <summary>
