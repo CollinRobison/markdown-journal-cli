@@ -8,22 +8,25 @@ public class JournalEntryTemplate : ITemplateGenerator
 
     public string GenerateTemplate(Dictionary<string, object>? parameters)
     {
-        var title = parameters?.GetValueOrDefault("title", "Title goes here").ToString();
-        var body = parameters?.GetValueOrDefault("body", "body goes here.").ToString();
-        var addSourceBlock = parameters?.GetValueOrDefault("addSourceBlock", true);
-        var sources = addSourceBlock is false
+        var title = (parameters?.GetValueOrDefault("title", "Title goes here") ?? "Title goes here").ToString();
+        var body = (parameters?.GetValueOrDefault("body", "body goes here.") ?? "body goes here.").ToString();
+        var addSourceBlockValue = parameters?.GetValueOrDefault("addSourceBlock", true) ?? true;
+        var addSourceBlock = ConvertToBoolean(addSourceBlockValue);
+        var sources = !addSourceBlock
             ? ""
-            : parameters
+            : (parameters
                 ?.GetValueOrDefault(
                     "sources",
                     "[Make sure to add link to any reference here](add-link)"
-                )
+                ) ?? "[Make sure to add link to any reference here](add-link)")
                 .ToString();
-        var createdDate = parameters
+        var createdDate = (parameters
             ?.GetValueOrDefault("createdDate", DateTime.Now.ToString("M/d/yyyy"))
+            ?? DateTime.Now.ToString("M/d/yyyy"))
             .ToString();
-        var lastEditedDate = parameters
+        var lastEditedDate = (parameters
             ?.GetValueOrDefault("lastEditedDate", DateTime.Now.ToString("M/d/yyyy"))
+            ?? DateTime.Now.ToString("M/d/yyyy"))
             .ToString();
 
         return $@"[Back to Table of Contents](1a-TableOfContents.md)
@@ -37,5 +40,16 @@ Last Edited: {lastEditedDate}
 
 {sources}
 ";
+    }
+
+    private static bool ConvertToBoolean(object value)
+    {
+        return value switch
+        {
+            bool b => b,
+            string s => !string.Equals(s, "false", StringComparison.OrdinalIgnoreCase),
+            int i => i != 0,
+            _ => true
+        };
     }
 }
