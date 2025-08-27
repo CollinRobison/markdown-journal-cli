@@ -47,9 +47,16 @@ Last Edited: {lastEditedDate}
         return value switch
         {
             bool b => b,
-            string s => !string.Equals(s, "false", StringComparison.OrdinalIgnoreCase),
+            string s => !IsFalseString(s),
             int i => i != 0,
             _ => true
         };
+    }
+
+    private static bool IsFalseString(string s)
+    {
+        // Common false representations
+        var falseStrings = new[] { "false", "0", "no", "off", "n", "f" };
+        return Array.Exists(falseStrings, fs => string.Equals(s.Trim(), fs, StringComparison.OrdinalIgnoreCase));
     }
 }
