@@ -48,7 +48,8 @@ markdown-journal-cli/
 ```csharp
 using System.ComponentModel;
 using Spectre.Console.Cli;
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.DependencyInjection;
 
 namespace markdown_journal_cli.Commands.YourCommand;
 
@@ -109,7 +110,7 @@ config.AddCommand<YourCommand>("your-command");
 
 #### Step 1: Define Interface
 ```csharp
-namespace markdown_journal_cli.Infrastructure;
+namespace markdown_journal_cli.Infrastructure.FileSystem;
 
 public interface IYourService
 {
@@ -120,7 +121,7 @@ public interface IYourService
 
 #### Step 2: Implement Service
 ```csharp
-namespace markdown_journal_cli.Infrastructure;
+namespace markdown_journal_cli.Infrastructure.Services;
 
 public class YourService : IYourService
 {

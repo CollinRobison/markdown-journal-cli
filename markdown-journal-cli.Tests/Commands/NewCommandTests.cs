@@ -1,5 +1,6 @@
 using markdown_journal_cli.Commands.New;
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
 using Shouldly;

@@ -1,0 +1,5 @@
+- [ ] create initial journalrc (run control) file
+- [ ] figure out
+- [ ] update readme
+- [ ] add the add command 
+  - [ ] decide how to update journalrc/table of contents when its added

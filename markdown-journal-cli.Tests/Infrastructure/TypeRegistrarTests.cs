@@ -1,4 +1,4 @@
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Spectre.Console.Cli;

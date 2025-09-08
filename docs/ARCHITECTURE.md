@@ -23,8 +23,8 @@ Program.cs
             ├── NewCommand
             └── [Future Commands]
                     └── Infrastructure/
-                            ├── IFileSystem
-                            └── Custom Exceptions
+                                    ├── IFileSystem (markdown_journal_cli.Infrastructure.FileSystem)
+                                    └── Custom Exceptions
 ```
 
 ## 🔧 Dependency Injection Deep Dive
@@ -45,7 +45,7 @@ public interface ITypeRegistrar
     ITypeResolver Build();
 }
 
-// Our Implementation
+// Our Implementation (located in markdown_journal_cli.Infrastructure.DependencyInjection)
 public sealed class TypeRegistrar : ITypeRegistrar
 {
     private readonly IServiceCollection _services; // Microsoft DI

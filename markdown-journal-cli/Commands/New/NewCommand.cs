@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
 using Spectre.Console;
 using Spectre.Console.Cli;

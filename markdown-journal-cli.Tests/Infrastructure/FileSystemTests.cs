@@ -1,4 +1,4 @@
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.FileSystem;
 using Shouldly;
 using Xunit;
 
