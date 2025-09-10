@@ -1,0 +1,59 @@
+using System;
+using System.Text.Json.Serialization;
+
+namespace markdown_journal_cli.Infrastructure.Configuration.Objects;
+
+public class TableOfContents
+{
+    [JsonPropertyName("file")]
+    public string File { get; set; } = "1a-TableOfContents.md";
+
+    [JsonPropertyName("extensions")]
+    public string[] Extensions { get; set; } = [".md"];
+
+    [JsonPropertyName("ignoreFiles")]
+    public string[]? IgnoreFiles { get; set; }
+
+    [JsonPropertyName("structure")]
+    public required Structure Structure { get; set; }
+
+    [JsonPropertyName("indexCache")]
+    public required IndexCache IndexCache { get; set; }
+
+    [JsonPropertyName("rootEntries")]
+    public required RootEntries[] RootEntries { get; set; }
+
+}
+
+public class Topic
+{
+    [JsonPropertyName("name")]
+    public required string Name { get; set; }
+
+    [JsonPropertyName("subtopics")]
+    public Topic[]? Subtopics { get; set; }
+}
+
+public class Structure
+{
+    [JsonPropertyName("topics")]
+    public required Topic[] Topics { get; set; }
+}
+
+public class IndexCache
+{
+    [JsonPropertyName("updatedAt")]
+    public required DateTime UpdatedAt { get; set; }
+
+    [JsonPropertyName("topics")]
+    public required Topic[] Topics { get; set; }
+}
+
+public class RootEntries
+{
+    [JsonPropertyName("name")]
+    public required string Name { get; set; }
+
+    [JsonPropertyName("file")]
+    public required string File { get; set; }
+}
