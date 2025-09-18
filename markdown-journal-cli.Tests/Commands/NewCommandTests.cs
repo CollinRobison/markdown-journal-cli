@@ -600,13 +600,20 @@ public class NewCommandTests
     private class FaultyTestFileSystem : IFileSystem
     {
         public bool DirectoryExists(string path) => false;
-        
+
+        public bool FileExists(string path) => false;
+
         public void CreateDirectory(string path) => throw new IOException("Simulated I/O error");
-        
+
         public string CombinePaths(params string[] paths) => Path.Combine(paths);
-        
-        public void CreateMarkdownFile(string path, string fileName, string body) => 
+
+        public void CreateMarkdownFile(string path, string fileName, string body) =>
             throw new UnauthorizedAccessException("Simulated access error");
+
+        public void CreateFile(string path, string fileName, string body)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     [Fact]
@@ -852,6 +859,8 @@ public class NewCommandTests
     private class FileCreationFailureFileSystem : IFileSystem
     {
         public bool DirectoryExists(string path) => false;
+
+        public bool FileExists(string path) => false;
         
         public void CreateDirectory(string path) 
         {
@@ -862,6 +871,11 @@ public class NewCommandTests
         
         public void CreateMarkdownFile(string path, string fileName, string body) => 
             throw new IOException("Failed to create file");
+
+        public void CreateFile(string path, string fileName, string body)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     /// <summary>

@@ -112,4 +112,15 @@ public class TestFileSystem : IFileSystem
     {
         return _directories.Keys;
     }
+
+    public void CreateFile(string path, string fileName, string body)
+    {
+        if (!_directories.ContainsKey(path))
+        {
+            _directories[path] = true;
+        }
+
+        var filePath = Path.Combine(path, fileName);
+        _files[filePath] = body;
+    }
 }

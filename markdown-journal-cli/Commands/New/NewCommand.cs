@@ -8,24 +8,17 @@ using Spectre.Console.Cli;
 namespace markdown_journal_cli.Commands.New;
 
 [Description("Creates a new markdown journal")]
-public sealed class NewCommand : Command<NewCommand.Settings>
+public sealed class NewCommand(
+    IAnsiConsole console,
+    IFileSystem fileSystem,
+    ITemplateManager templateManager
+    ) : Command<NewCommand.Settings>
 {
-    private readonly IAnsiConsole _console;
-    private readonly IFileSystem _fileSystem;
+    private readonly IAnsiConsole _console = console ?? throw new ArgumentNullException(nameof(console));
+    private readonly IFileSystem _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-    private readonly ITemplateManager _templateManager;
-
-    public NewCommand(
-        IAnsiConsole console,
-        IFileSystem fileSystem,
-        ITemplateManager templateManager
-    )
-    {
-        _console = console ?? throw new ArgumentNullException(nameof(console));
-        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _templateManager =
+    private readonly ITemplateManager _templateManager =
             templateManager ?? throw new ArgumentNullException(nameof(templateManager));
-    }
 
     public sealed class Settings : CommandSettings
     {

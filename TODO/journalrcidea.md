@@ -163,3 +163,44 @@ Notes:
 ---
 
 If you want, I can scaffold the POCO and service files and add the DI registration and tests. Let me know and I will implement them.
+
+
+
+--------
+
+GitHub Copilot
+
+Add an overload that accepts an Action<JournalConfig> so callers can tweak only the fields they need before the config is persisted.
+
+Change the interface:
+
+````csharp
+using System;
+using markdown_journal_cli.Infrastructure.Configuration.Objects;
+
+namespace markdown_journal_cli.Infrastructure.Configuration;
+
+public interface IJournalConfiguration
+{
+    void EnsureConfigExists(string directory);
+
+    JournalConfig Create(string directory);
+
+    // ...existing code...
+    // allow caller to modify specific values on the new config before it's saved
+    JournalConfig Create(string directory, Action<JournalConfig> configure);
+    // ...existing code...
+}
+````
+
+Example usage (caller only updates one field):
+
+````csharp
+// update only Title while creating config
+var config = journalConfigService.Create(directory, cfg =>
+{
+    cfg.Title = "My Journal";
+});
+````
+
+Implementation note: inside Create(directory, configure) instantiate a JournalConfig (with defaults), invoke configure(config), validate/merge as needed, then persist and return it.

@@ -13,6 +13,13 @@ public interface IFileSystem
     bool DirectoryExists(string path);
 
     /// <summary>
+    /// Determines whether the specified file exists.
+    /// </summary>
+    /// <param name="path">The file path to check.</param>
+    /// <returns>true if the file exists; otherwise, false.</returns>
+    bool FileExists(string path);
+
+    /// <summary>
     /// Creates all directories and subdirectories in the specified path unless they already exist.
     /// </summary>
     /// <param name="path">The directory path to create.</param>
@@ -27,14 +34,35 @@ public interface IFileSystem
     /// <returns>The combined path.</returns>
     /// <exception cref="ArgumentException">Thrown when one of the paths contains invalid characters.</exception>
     string CombinePaths(params string[] paths);
+    /// <summary>
+    /// Creates a file with the specified name and content at the given path.
+    /// Implementations should ensure the target directory exists (creating it if necessary)
+    /// and write the provided <paramref name="body"/> to a file with the provided <paramref name="fileName"/>.
+    /// </summary>
+    /// <param name="path">The directory path where the file will be created.</param>
+    /// <param name="fileName">The file name. May include an extension (for example, <c>note.md</c> or <c>note.txt</c>), or be extension-less.</param>
+    /// <param name="body">The content to write into the file.</param>
+    /// <remarks>
+    /// Implementations should prefer UTF-8 encoding and overwrite existing files by default,
+    /// or throw an exception if overwriting is not allowed.
+    /// </remarks>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> or <paramref name="fileName"/> contains invalid characters.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/>, <paramref name="fileName"/>, or <paramref name="body"/> is null.</exception>
+    /// <exception cref="PathTooLongException">Thrown when the specified path, file name, or both exceed the system-defined maximum length.</exception>
+    /// <exception cref="DirectoryNotFoundException">Thrown when the specified directory cannot be found.</exception>
+    /// <exception cref="IOException">Thrown when an I/O error occurs while writing the file.</exception>
+    /// <exception cref="UnauthorizedAccessException">Thrown when the caller does not have permission to write to the target location.</exception>
+    /// <exception cref="NotSupportedException">Thrown when the path format is not supported.</exception>
+    /// <exception cref="System.Security.SecurityException">Thrown when the caller does not have the required permission.</exception>
+    void CreateFile(string path, string fileName, string body);
 
     /// <summary>
     /// Creates a markdown file with the specified name and content at the given path.
     /// The implementation should ensure the target directory exists (creating it if necessary)
-    /// and write the provided body to a file with the provided <paramref name="fileName"/>.
+    /// and write the provided <paramref name="body"/> to a file with the provided <paramref name="fileName"/>.
     /// </summary>
     /// <param name="path">The directory path where the markdown file will be created.</param>
-    /// <param name="fileName">The file name excluding extension (for example, <c>note not note.md</c>).</param>
+    /// <param name="fileName">The file name excluding extension (for example, <c>note</c> not <c>note.md</c>).</param>
     /// <param name="body">The markdown content to write into the file.</param>
     /// <remarks>
     /// Implementations should prefer UTF-8 encoding and overwrite existing files by default,
@@ -48,5 +76,6 @@ public interface IFileSystem
     /// <exception cref="UnauthorizedAccessException">Thrown when the caller does not have permission to write to the target location.</exception>
     /// <exception cref="NotSupportedException">Thrown when the path format is not supported.</exception>
     /// <exception cref="System.Security.SecurityException">Thrown when the caller does not have the required permission.</exception>
-    public void CreateMarkdownFile(string path, string fileName, string body);
+    void CreateMarkdownFile(string path, string fileName, string body);
+
 }

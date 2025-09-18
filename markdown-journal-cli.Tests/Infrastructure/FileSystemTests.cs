@@ -56,6 +56,48 @@ public class FileSystemTests : IDisposable
     }
 
     [Fact]
+    public void FileExists_Should_Return_True_For_Existing_File()
+    {
+        // Given
+        var fileName = "testfile.txt";
+        var filePath = Path.Combine(_tempDirectory, fileName);
+        File.WriteAllText(filePath, "test content");
+
+        // When
+        var result = _fileSystem.FileExists(filePath);
+
+        // Then
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void FileExists_Should_Return_False_For_Non_Existing_File()
+    {
+        // Given
+        var filePath = Path.Combine(_tempDirectory, "nonexistent.txt");
+
+        // When
+        var result = _fileSystem.FileExists(filePath);
+
+        // Then
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void FileExists_Should_Return_False_For_Directory_Path()
+    {
+        // Given
+        var dirPath = Path.Combine(_tempDirectory, "testdir");
+        Directory.CreateDirectory(dirPath);
+
+        // When
+        var result = _fileSystem.FileExists(dirPath);
+
+        // Then
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
     public void CreateDirectory_Should_Create_New_Directory()
     {
         // Given
@@ -182,27 +224,25 @@ public class FileSystemTests : IDisposable
         var content = "# Test Content";
 
         // When & Then
-        Should.Throw<DirectoryNotFoundException>(() => 
+        Should.Throw<DirectoryNotFoundException>(() =>
             _fileSystem.CreateMarkdownFile(nonExistentPath, fileName, content));
     }
 
     [Fact]
-    public void CreateMarkdownFile_Should_Overwrite_Existing_File()
+    public void CreateMarkdownFile_Should_Not_Overwrite_Existing_File()
     {
         // Given
         var fileName = "testfile";
         var originalContent = "# Original Content";
         var newContent = "# New Content";
         var filePath = Path.Combine(_tempDirectory, "testfile.md");
-        
+
         File.WriteAllText(filePath, originalContent);
 
-        // When
-        _fileSystem.CreateMarkdownFile(_tempDirectory, fileName, newContent);
-
-        // Then
-        var actualContent = File.ReadAllText(filePath);
-        actualContent.ShouldBe(newContent);
+        // When & Then
+        Should.Throw<InvalidOperationException>(() =>
+        _fileSystem.CreateMarkdownFile(_tempDirectory, fileName, newContent));
+    
     }
 
     [Theory]
@@ -220,6 +260,90 @@ public class FileSystemTests : IDisposable
 
         // Then
         var expectedPath = Path.Combine(_tempDirectory, "testfile.md");
+        File.Exists(expectedPath).ShouldBeTrue();
+        var actualContent = File.ReadAllText(expectedPath);
+        actualContent.ShouldBe(content);
+    }
+
+    /// 
+    [Fact]
+    public void CreateFile_Should_Create_File()
+    {
+        // Given
+        var fileName = "testfile.txt";
+        var content = "# Test Content";
+
+        // When
+        _fileSystem.CreateFile(_tempDirectory, fileName, content);
+
+        // Then
+        var expectedPath = Path.Combine(_tempDirectory, "testfile.txt");
+        File.Exists(expectedPath).ShouldBeTrue();
+        var actualContent = File.ReadAllText(expectedPath);
+        actualContent.ShouldBe(content);
+    }
+
+    [Fact]
+    public void CreateFile_Should_Create_File_When_Directory_Exists()
+    {
+        // Given
+        var subPath = Path.Combine(_tempDirectory, "subdir");
+        Directory.CreateDirectory(subPath);
+        var fileName = ".testfile";
+        var content = "# Test Content";
+
+        // When
+        _fileSystem.CreateFile(subPath, fileName, content);
+
+        // Then
+        var expectedFilePath = Path.Combine(subPath, ".testfile");
+        File.Exists(expectedFilePath).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CreateFile_Should_Throw_When_Directory_Does_Not_Exist()
+    {
+        // Given
+        var nonExistentPath = Path.Combine(_tempDirectory, "nonexistent");
+        var fileName = ".testfile";
+        var content = "# Test Content";
+
+        // When & Then
+        Should.Throw<DirectoryNotFoundException>(() => 
+            _fileSystem.CreateFile(nonExistentPath, fileName, content));
+    }
+
+    [Fact]
+    public void CreateFile_Should_Overwrite_Existing_File()
+    {
+        // Given
+        var fileName = ".testfile";
+        var originalContent = "# Original Content";
+        var newContent = "# New Content";
+        var filePath = Path.Combine(_tempDirectory, ".testfile");
+        
+        File.WriteAllText(filePath, originalContent);
+
+        // When % Then
+         Should.Throw<InvalidOperationException>(() =>
+        _fileSystem.CreateFile(_tempDirectory, fileName, newContent));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void CreateFile_Should_Handle_Empty_And_Whitespace_Content(string content)
+    {
+        // Given
+        var fileName = ".testfile";
+
+        // When
+        _fileSystem.CreateFile(_tempDirectory, fileName, content);
+
+        // Then
+        var expectedPath = Path.Combine(_tempDirectory, ".testfile");
         File.Exists(expectedPath).ShouldBeTrue();
         var actualContent = File.ReadAllText(expectedPath);
         actualContent.ShouldBe(content);
