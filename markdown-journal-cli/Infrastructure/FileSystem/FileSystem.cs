@@ -32,4 +32,34 @@ public class FileSystem : IFileSystem
         File.WriteAllText(filePath, body);
         Console.WriteLine($"file {fileName} created at: {filePath}");
     }
+
+    public void UpdateFile(string path, string fileName, string body)
+    {
+        string filePath = Path.Combine(path, fileName);
+        File.WriteAllText(filePath, body);
+        Console.WriteLine($"file {fileName} updated at: {filePath}");
+
+    }
+
+    public void DeleteFile(string filePath)
+    {
+        if (FileExists(filePath))
+        {
+            File.Delete(filePath);
+            Console.WriteLine($"file deleted at {filePath}");
+        }
+        else
+        {
+            Console.WriteLine($"file doesn't exist at {filePath}");
+        }
+    }
+
+    public string GetFileContent(string filePath)
+    {
+        if (!FileExists(filePath))
+        {
+            throw new FileNotFoundException($"File not found: {filePath}");
+        }
+        return File.ReadAllText(filePath);
+    }
 }

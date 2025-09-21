@@ -1,6 +1,6 @@
 
-- [ ] Finish JournalConfiguration Implementations and add tests
-- [ ] create initial journalrc (run control) file
+- [x] Finish JournalConfiguration Implementations and add tests
+- [ ] create initial journalrc (run control) file in new command
 - [ ] update readme
 - [ ] add the add command 
   - [ ] decide how to update journalrc/table of contents when its added

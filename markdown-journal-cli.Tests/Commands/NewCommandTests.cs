@@ -614,6 +614,21 @@ public class NewCommandTests
         {
             throw new NotImplementedException();
         }
+
+        public void UpdateFile(string path, string fileName, string body)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteFile(string filePath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetFileContent(string filePath)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     [Fact]
@@ -873,6 +888,21 @@ public class NewCommandTests
             throw new IOException("Failed to create file");
 
         public void CreateFile(string path, string fileName, string body)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void UpdateFile(string path, string fileName, string body)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteFile(string filePath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetFileContent(string filePath)
         {
             throw new NotImplementedException();
         }

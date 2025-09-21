@@ -123,4 +123,24 @@ public class TestFileSystem : IFileSystem
         var filePath = Path.Combine(path, fileName);
         _files[filePath] = body;
     }
+
+    public void UpdateFile(string path, string fileName, string body)
+    {
+        var filePath = Path.Combine(path, fileName);
+        _files[filePath] = body;
+    }
+
+    public void DeleteFile(string filePath)
+    {
+        _files.Remove(filePath);
+    }
+
+    string IFileSystem.GetFileContent(string filePath)
+    {
+        if (!_files.ContainsKey(filePath))
+        {
+            throw new FileNotFoundException($"File not found: {filePath}");
+        }
+        return _files[filePath];
+    }
 }
