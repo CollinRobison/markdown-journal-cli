@@ -1,5 +1,4 @@
 using markdown_journal_cli.Commands.New;
-using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
@@ -20,29 +19,18 @@ public class NewCommandTests
     private readonly TestConsole _console;
     private readonly TestFileSystem _fileSystem;
     private readonly CommandAppTester _app;
-    private readonly TemplateManager _templateManager;
+    private readonly TestJournalInitializer _journalInitializer;
 
     public NewCommandTests()
     {
         _console = new TestConsole();
         _fileSystem = new TestFileSystem();
-        _templateManager = new TemplateManager();
-
-        // Register test templates to ensure consistent behavior
-        _templateManager.RegisterTemplate(
-            new TestTemplateGenerator(
-                "table-of-contents",
-                "# Table of Contents\n\nTEST_TOC_CONTENT"
-            )
-        );
-        _templateManager.RegisterTemplate(
-            new TestTemplateGenerator("journal-entry", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT")
-        );
+        _journalInitializer = new TestJournalInitializer();
 
         var registrar = new TypeRegistrar()
             .RegisterInstance(_console)
             .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<ITemplateManager>(_templateManager);
+            .RegisterInstance<IJournalInitializer>(_journalInitializer);
 
         _app = new CommandAppTester(registrar);
         _app.Configure(config =>
@@ -62,6 +50,7 @@ public class NewCommandTests
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("MyJournal");
         _fileSystem.DirectoryExists("./MyJournal").ShouldBeTrue();
+        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalName == "MyJournal");
     }
 
     [Fact]
@@ -74,6 +63,7 @@ public class NewCommandTests
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("CustomJournal");
         _fileSystem.DirectoryExists("./CustomJournal").ShouldBeTrue();
+        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalName == "CustomJournal");
     }
 
     [Fact]
@@ -542,7 +532,7 @@ public class NewCommandTests
         var registrar = new TypeRegistrar()
             .RegisterInstance(_console)
             .RegisterInstance<IFileSystem>(faultyFileSystem)
-            .RegisterInstance<ITemplateManager>(_templateManager);
+            .RegisterInstance<IJournalInitializer>(_journalInitializer);
 
         var faultyApp = new CommandAppTester(registrar);
         faultyApp.Configure(config =>
@@ -566,12 +556,14 @@ public class NewCommandTests
     {
         // When & Then
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(null!, _fileSystem, _templateManager, new JournalConfiguration(_fileSystem))
+            new NewCommand(null!, _fileSystem, _journalInitializer)
         );
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(_console, null!, _templateManager, new JournalConfiguration(new TestFileSystem()))
+            new NewCommand(_console, null!, _journalInitializer)
         );
-        Should.Throw<ArgumentNullException>(() => new NewCommand(_console, _fileSystem, null!, new JournalConfiguration(_fileSystem)));
+        Should.Throw<ArgumentNullException>(() => 
+            new NewCommand(_console, _fileSystem, null!)
+        );
     }
 
     [Fact]
@@ -806,7 +798,7 @@ public class NewCommandTests
         var registrar = new TypeRegistrar()
             .RegisterInstance(_console)
             .RegisterInstance<IFileSystem>(faultyFileSystem)
-            .RegisterInstance<ITemplateManager>(_templateManager);
+            .RegisterInstance<IJournalInitializer>(_journalInitializer);
 
         var faultyApp = new CommandAppTester(registrar);
         faultyApp.Configure(config =>
@@ -969,6 +961,26 @@ public class NewCommandTests
         public IEnumerable<string> GetAvailableTemplates()
         {
             return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Test implementation of IJournalInitializer that tracks initialization calls.
+    /// </summary>
+    private class TestJournalInitializer : IJournalInitializer
+    {
+        public List<(string journalDirectory, string journalName)> InitializedJournals { get; } = new();
+        public bool ShouldThrow { get; set; } = false;
+        public Exception? ExceptionToThrow { get; set; }
+
+        public void Initialize(string journalDirectory, string journalName)
+        {
+            if (ShouldThrow && ExceptionToThrow != null)
+            {
+                throw ExceptionToThrow;
+            }
+
+            InitializedJournals.Add((journalDirectory, journalName));
         }
     }
 }

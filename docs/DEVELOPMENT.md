@@ -34,8 +34,18 @@ markdown-journal-cli/
 │   ├── Commands/New/              # Command implementations
 │   ├── Exceptions/                # Custom exceptions
 │   ├── Infrastructure/            # Core services
+│   │   ├── Configuration/         # Journal configuration management
+│   │   ├── DependencyInjection/   # DI container setup
+│   │   └── FileSystem/           # File system abstraction
+│   ├── JournalTemplates/          # Template and initialization services
+│   │   ├── Templates/            # Template implementations
+│   │   ├── IJournalInitializer.cs # Journal creation orchestration
+│   │   └── ITemplateManager.cs   # Template processing
 │   └── Program.cs                # Entry point
 ├── markdown-journal-cli.Tests/    # Unit tests
+│   ├── Commands/                 # Command tests
+│   ├── Infrastructure/           # Infrastructure service tests
+│   └── JournalTemplates/         # Template and initialization tests
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
 ```
@@ -49,7 +59,8 @@ markdown-journal-cli/
 using System.ComponentModel;
 using Spectre.Console.Cli;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.DependencyInjection;
+using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Infrastructure.Configuration;
 
 namespace markdown_journal_cli.Commands.YourCommand;
 
@@ -58,11 +69,16 @@ public sealed class YourCommand : Command<YourCommand.Settings>
 {
     private readonly IAnsiConsole _console;
     private readonly IFileSystem _fileSystem;
+    private readonly IJournalInitializer _journalInitializer; // Example service injection
 
-    public YourCommand(IAnsiConsole console, IFileSystem fileSystem)
+    public YourCommand(
+        IAnsiConsole console, 
+        IFileSystem fileSystem,
+        IJournalInitializer journalInitializer)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        _journalInitializer = journalInitializer ?? throw new ArgumentNullException(nameof(journalInitializer));
     }
 
     public sealed class Settings : CommandSettings
@@ -177,16 +193,19 @@ public class YourCommandTests
 {
     private readonly TestConsole _console;
     private readonly TestFileSystem _fileSystem;
+    private readonly TestJournalInitializer _journalInitializer;
     private readonly CommandAppTester _app;
 
     public YourCommandTests()
     {
         _console = new TestConsole();
-        _fileSystem = new TestFileSystem();
+        _fileSystem = new TestFileSystem(); 
+        _journalInitializer = new TestJournalInitializer();
         
         var registrar = new markdown_journal_cli.Tests.Infrastructure.TypeRegistrar()
             .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem);
+            .RegisterInstance<IFileSystem>(_fileSystem)
+            .RegisterInstance<IJournalInitializer>(_journalInitializer);
 
         _app = new CommandAppTester(registrar);
         _app.Configure(config =>
@@ -411,6 +430,72 @@ The following areas need detailed documentation (you should write these based on
 - [ ] **Error Reporting** - How do we handle crash reports?
 - [ ] **Telemetry** - What usage data (if any) should we collect?
 - [ ] **Backup Strategy** - How do we help users backup journals?
+
+## 🏗️ Service Architecture Patterns
+
+### Current Service Implementations
+
+**IJournalInitializer Pattern**
+- **Purpose**: Orchestrates complex journal creation process
+- **Benefits**: Commands stay focused on CLI concerns, business logic is testable
+- **Example**: `NewCommand` delegates all initialization to `IJournalInitializer`
+
+**ITemplateManager Pattern**  
+- **Purpose**: Handles template processing and content generation
+- **Benefits**: Extensible template system, parameterized content generation
+- **Example**: Generates table of contents, intro, and journal entry templates
+
+**IJournalConfiguration Pattern**
+- **Purpose**: Manages `.journalrc` configuration files
+- **Benefits**: Centralized config management, supports complex configuration objects
+- **Example**: Creates and manages journal metadata and settings
+
+### Testing Service Dependencies
+
+**Integration Testing with Real Services:**
+```csharp
+[Fact]
+public void JournalInitializer_Should_Create_Complete_Journal()
+{
+    // Uses real implementations for integration testing
+    var fileSystem = new TestFileSystem();
+    var templateManager = new TemplateManager();
+    var configuration = new TestJournalConfiguration();
+    var initializer = new JournalInitializer(fileSystem, templateManager, configuration);
+    
+    initializer.Initialize("/test/journal", "TestJournal");
+    
+    // Verify complete journal structure was created
+    Assert.True(fileSystem.DirectoryExists("/test/journal"));
+    Assert.Contains("TestJournal", configuration.CreatedConfigurations.Values.First().JournalName);
+}
+```
+
+**Unit Testing with Mocked Dependencies:**
+```csharp
+[Fact] 
+public void NewCommand_Should_Handle_InitializationFailure()
+{
+    // Mock initializer to throw exception
+    var mockInitializer = new TestJournalInitializer();
+    mockInitializer.ShouldThrow = true;
+    mockInitializer.ExceptionToThrow = new InvalidOperationException("Test error");
+    
+    var command = new NewCommand(_console, _fileSystem, mockInitializer);
+    var result = command.Execute(context, settings);
+    
+    Assert.Equal(1, result);
+    Assert.Contains("Test error", _console.Output);
+}
+```
+
+### Service Design Guidelines
+
+1. **Single Responsibility**: Each service should have one clear purpose
+2. **Interface Segregation**: Keep interfaces focused and minimal  
+3. **Dependency Inversion**: Depend on abstractions, not concretions
+4. **Immutable After Construction**: Services should be configured via constructor injection
+5. **Async-Ready**: Design interfaces to support future async operations
 
 ## 🤝 Contribution Guidelines
 

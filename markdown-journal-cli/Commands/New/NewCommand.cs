@@ -1,7 +1,5 @@
 ﻿using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
 using Spectre.Console;
@@ -13,8 +11,7 @@ namespace markdown_journal_cli.Commands.New;
 public sealed class NewCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,
-    ITemplateManager templateManager,
-    IJournalConfiguration journalConfiguration
+    IJournalInitializer journalInitializer
 ) : Command<NewCommand.Settings>
 {
     private readonly IAnsiConsole _console =
@@ -22,11 +19,8 @@ public sealed class NewCommand(
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-    private readonly ITemplateManager _templateManager =
-        templateManager ?? throw new ArgumentNullException(nameof(templateManager));
-
-    private readonly IJournalConfiguration _journalConfiguration =
-        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    private readonly IJournalInitializer _journalInitializer =
+        journalInitializer ?? throw new ArgumentNullException(nameof(journalInitializer));
 
     public sealed class Settings : CommandSettings
     {
@@ -74,77 +68,7 @@ public sealed class NewCommand(
                 throw new JournalAlreadyExistsException(settings.JournalName, journalDirectory);
             }
 
-            _fileSystem.CreateDirectory(journalDirectory);
-            // table of contents
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1a-TableOfContents",
-                _templateManager.GenerateFromTemplate("table-of-contents", null)
-            );
-            // Introduction
-            var introParams = new Dictionary<string, object>
-            {
-                ["title"] = "Introduction",
-                ["body"] = "Add an introduction to your new journal here.",
-                ["addSourceBlock"] = false,
-            };
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1b-Intro",
-                _templateManager.GenerateFromTemplate("journal-entry", introParams)
-            );
-
-            //Journal Entry Template
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1c-Journal-Entry-Template",
-                _templateManager.GenerateFromTemplate("journal-entry", null)
-            );
-            var allMyJournalsParams = new Dictionary<string, object>
-            {
-                ["title"] = "Journals List",
-                ["body"] =
-                    @"- [example journal 1](link-to-journal)
-- [example journal 2](link-to-journal)
-- [example journal 2](link-to-journal)",
-                ["addSourceBlock"] = false,
-            };
-
-            // All My Journals
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1h-All-My-Journals",
-                _templateManager.GenerateFromTemplate("journal-entry", allMyJournalsParams)
-            );
-
-            // journalrc config
-                        RootEntries[] rootConfig =
-                        [
-                                new() { Name = "Introduction", File = "1b-Intro.md"},
-                                new() { Name = "Journal Entry Template", File = "1c-Journal-Entry-Template.md"},
-                                new() { Name = "All My Journals", File = "1h-All-My-Journals.md"}
-                        ];
-
-            JournalConfig journalrc = new()
-            {
-                JournalName = settings.JournalName, 
-                TableOfContents = new()
-                {
-                    Structure = new()
-                    {
-                        Topics = []
-                    },
-                    RootEntries = rootConfig,
-                    IndexCache = new()
-                    {
-                        UpdatedAt = DateTime.Now,
-                        Topics = [],
-                        RootEntries = rootConfig
-                    }
-                    
-                }
-            };
-            _journalConfiguration.Create(journalDirectory, journalrc);
+            _journalInitializer.Initialize(journalDirectory, settings.JournalName);
 
             _console.MarkupLine(
                 $"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]"

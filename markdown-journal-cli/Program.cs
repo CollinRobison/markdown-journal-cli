@@ -16,6 +16,7 @@ public static class Program
         registrar.Register(typeof(IFileSystem), typeof(FileSystem));
         registrar.Register(typeof(ITemplateManager), typeof(TemplateManager));
         registrar.Register(typeof(IJournalConfiguration), typeof(JournalConfiguration));
+        registrar.Register(typeof(IJournalInitializer), typeof(JournalInitializer));
 
         var app = new CommandApp(registrar);
         app.Configure(config =>

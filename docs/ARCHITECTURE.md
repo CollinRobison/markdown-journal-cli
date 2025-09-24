@@ -23,7 +23,10 @@ Program.cs
             ├── NewCommand
             └── [Future Commands]
                     └── Infrastructure/
-                                    ├── IFileSystem (markdown_journal_cli.Infrastructure.FileSystem)
+                                    ├── IFileSystem (File operations)
+                                    ├── IJournalInitializer (Journal creation)
+                                    ├── ITemplateManager (Template generation)
+                                    ├── IJournalConfiguration (Configuration management)
                                     └── Custom Exceptions
 ```
 
@@ -67,7 +70,11 @@ public sealed class TypeRegistrar : ITypeRegistrar
 
 ### Registration Flow
 1. **Startup** - `Program.cs` creates `TypeRegistrar`
-2. **Registration** - Services registered via `registrar.Register()`
+2. **Registration** - Core services registered:
+   - `IFileSystem` → `FileSystem` (File operations)
+   - `ITemplateManager` → `TemplateManager` (Template processing)
+   - `IJournalConfiguration` → `JournalConfiguration` (Config management)
+   - `IJournalInitializer` → `JournalInitializer` (Journal creation orchestration)
 3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
@@ -198,6 +205,64 @@ public class TestFileSystem : IFileSystem
 - ✅ **Cross-Platform** - Abstraction handles OS differences
 - ✅ **Security** - Can add validation/sandboxing later
 - ✅ **Monitoring** - Can add logging/metrics without changing commands
+
+## 🏗️ Service Architecture
+
+### Core Services Overview
+
+The application follows a service-oriented architecture with clear separation of concerns:
+
+**`IJournalInitializer`** - Orchestrates journal creation
+```csharp
+public interface IJournalInitializer
+{
+    void Initialize(string journalDirectory, string journalName);
+}
+```
+- Coordinates file creation, templating, and configuration
+- Encapsulates journal initialization business logic
+- Makes NewCommand focus solely on CLI concerns
+
+**`ITemplateManager`** - Handles template processing
+```csharp
+public interface ITemplateManager
+{
+    string GenerateFromTemplate(string templateName, Dictionary<string, object>? parameters);
+    void RegisterTemplate(ITemplateGenerator template);
+}
+```
+- Generates content from templates (table of contents, journal entries)
+- Extensible template system for custom journal formats
+- Parameters support for dynamic content generation
+
+**`IJournalConfiguration`** - Manages journal configuration files
+```csharp
+public interface IJournalConfiguration
+{
+    void Create(string directory, JournalConfig config);
+    JournalConfig Read(string directory);
+    void Update(string directory, Action<JournalConfig> config);
+}
+```
+- Handles `.journalrc` file operations
+- Supports complex journal configuration objects
+- Enables journal metadata and settings management
+
+### Service Interaction Flow
+```
+NewCommand
+    └── IJournalInitializer.Initialize()
+            ├── IFileSystem.CreateDirectory()
+            ├── ITemplateManager.GenerateFromTemplate() (4x)
+            └── IJournalConfiguration.Create()
+```
+
+### Benefits of Service Architecture
+- ✅ **Single Responsibility** - Each service has one clear purpose
+- ✅ **Testability** - Services can be tested in isolation
+- ✅ **Maintainability** - Changes to one service don't affect others
+- ✅ **Extensibility** - Easy to add new services or modify existing ones
+- ✅ **Reusability** - Services can be used by multiple commands
 
 ## 🧪 Testing Architecture
 
