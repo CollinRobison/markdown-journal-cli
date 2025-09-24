@@ -8,14 +8,14 @@ public class TableOfContentsTemplate : ITemplateGenerator
 
     public string GenerateTemplate(Dictionary<string, object>? parameters)
     {
-        var createdDate = (parameters
-            ?.GetValueOrDefault("createdDate", DateTime.Now.ToString("M/d/yyyy"))
-            ?? DateTime.Now.ToString("M/d/yyyy"))
-            .ToString();
-        var lastEditedDate = (parameters
-            ?.GetValueOrDefault("lastEditedDate", DateTime.Now.ToString("M/d/yyyy"))
-            ?? DateTime.Now.ToString("M/d/yyyy"))
-            .ToString();
+        var createdDate = (
+            parameters?.GetValueOrDefault("createdDate", DateTime.Now.ToString("M/d/yyyy"))
+            ?? DateTime.Now.ToString("M/d/yyyy")
+        ).ToString();
+        var lastEditedDate = (
+            parameters?.GetValueOrDefault("lastEditedDate", DateTime.Now.ToString("M/d/yyyy"))
+            ?? DateTime.Now.ToString("M/d/yyyy")
+        ).ToString();
 
         return $@"Created: {createdDate}
 Last Edited: {lastEditedDate}

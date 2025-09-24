@@ -80,9 +80,10 @@ public class TemplateManagerTests
         var manager = new TemplateManager();
 
         // When & Then
-        var exception = Should.Throw<ArgumentException>(() => 
-            manager.GenerateFromTemplate("non-existent", null));
-        
+        var exception = Should.Throw<ArgumentException>(() =>
+            manager.GenerateFromTemplate("non-existent", null)
+        );
+
         exception.Message.ShouldContain("Template 'non-existent' not found");
         exception.Message.ShouldContain("Available templates:");
     }
@@ -209,8 +210,7 @@ public class TemplateManagerTests
         var manager = new TemplateManager();
 
         // When & Then
-        Should.Throw<ArgumentException>(() => 
-            manager.GenerateFromTemplate(templateName, null));
+        Should.Throw<ArgumentException>(() => manager.GenerateFromTemplate(templateName, null));
     }
 
     [Fact]
@@ -220,8 +220,7 @@ public class TemplateManagerTests
         var manager = new TemplateManager();
 
         // When & Then
-        Should.Throw<ArgumentException>(() => 
-            manager.GenerateFromTemplate(null!, null));
+        Should.Throw<ArgumentException>(() => manager.GenerateFromTemplate(null!, null));
     }
 
     [Fact]

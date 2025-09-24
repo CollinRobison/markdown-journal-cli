@@ -79,11 +79,14 @@ public class TypeRegistrarTests
         var factoryCalled = false;
 
         // When
-        registrar.RegisterLazy(typeof(ITestService), () =>
-        {
-            factoryCalled = true;
-            return new TestService();
-        });
+        registrar.RegisterLazy(
+            typeof(ITestService),
+            () =>
+            {
+                factoryCalled = true;
+                return new TestService();
+            }
+        );
         var resolver = registrar.Build();
 
         // Then
@@ -117,9 +120,7 @@ public class TypeRegistrarTests
         var instance2 = new AnotherTestService();
 
         // When
-        var result = registrar
-            .RegisterInstance(instance1)
-            .RegisterInstance(instance2);
+        var result = registrar.RegisterInstance(instance1).RegisterInstance(instance2);
 
         // Then
         result.ShouldBe(registrar);
@@ -202,8 +203,10 @@ public class TypeRegistrarTests
 
     // Test interfaces and classes
     private interface ITestService { }
+
     private class TestService : ITestService { }
-    
+
     private interface IAnotherTestService { }
+
     private class AnotherTestService : IAnotherTestService { }
 }

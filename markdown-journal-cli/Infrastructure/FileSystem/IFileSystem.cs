@@ -34,6 +34,7 @@ public interface IFileSystem
     /// <returns>The combined path.</returns>
     /// <exception cref="ArgumentException">Thrown when one of the paths contains invalid characters.</exception>
     string CombinePaths(params string[] paths);
+
     /// <summary>
     /// Creates a file with the specified name and content at the given path.
     /// Implementations should ensure the target directory exists (creating it if necessary)
@@ -137,5 +138,4 @@ public interface IFileSystem
     /// <exception cref="PathTooLongException">Thrown when the specified path exceeds the system-defined maximum length.</exception>
     /// <exception cref="System.Security.SecurityException">Thrown when the caller does not have the required permission.</exception>
     string GetFileContent(string filePath);
-
 }

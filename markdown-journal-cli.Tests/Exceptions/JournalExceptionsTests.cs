@@ -93,7 +93,10 @@ public class JournalExceptionsTests
     [InlineData("   ", "   ")]
     [InlineData("Journal With Spaces", "/path/with spaces/")]
     [InlineData("Special!@#$%Characters", "/path/with/special/chars/")]
-    public void JournalAlreadyExistsException_Should_Handle_Various_Input_Values(string journalName, string path)
+    public void JournalAlreadyExistsException_Should_Handle_Various_Input_Values(
+        string journalName,
+        string path
+    )
     {
         // When
         var exception = new JournalAlreadyExistsException(journalName, path);

@@ -1,6 +1,7 @@
 using markdown_journal_cli.Commands.New;
-using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
+using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
 using Shouldly;
@@ -28,8 +29,15 @@ public class NewCommandTests
         _templateManager = new TemplateManager();
 
         // Register test templates to ensure consistent behavior
-        _templateManager.RegisterTemplate(new TestTemplateGenerator("table-of-contents", "# Table of Contents\n\nTEST_TOC_CONTENT"));
-        _templateManager.RegisterTemplate(new TestTemplateGenerator("journal-entry", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT"));
+        _templateManager.RegisterTemplate(
+            new TestTemplateGenerator(
+                "table-of-contents",
+                "# Table of Contents\n\nTEST_TOC_CONTENT"
+            )
+        );
+        _templateManager.RegisterTemplate(
+            new TestTemplateGenerator("journal-entry", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT")
+        );
 
         var registrar = new TypeRegistrar()
             .RegisterInstance(_console)
@@ -141,14 +149,16 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var journalPath = Path.Combine(".", journalName);
         _fileSystem.DirectoryExists(journalPath).ShouldBeTrue();
-        
+
         // Check all expected files are created
         _fileSystem.FileExists(Path.Combine(journalPath, "1a-TableOfContents.md")).ShouldBeTrue();
         _fileSystem.FileExists(Path.Combine(journalPath, "1b-Intro.md")).ShouldBeTrue();
-        _fileSystem.FileExists(Path.Combine(journalPath, "1c-Journal-Entry-Template.md")).ShouldBeTrue();
+        _fileSystem
+            .FileExists(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"))
+            .ShouldBeTrue();
         _fileSystem.FileExists(Path.Combine(journalPath, "1h-All-My-Journals.md")).ShouldBeTrue();
     }
 
@@ -163,21 +173,27 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var journalPath = Path.Combine(".", journalName);
-        
+
         // Verify table of contents content
-        var tocContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1a-TableOfContents.md"));
+        var tocContent = _fileSystem.GetFileContent(
+            Path.Combine(journalPath, "1a-TableOfContents.md")
+        );
         tocContent.ShouldBe("# Table of Contents\n\nTEST_TOC_CONTENT");
-        
+
         // Verify other files have template content
         var introContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1b-Intro.md"));
         introContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
-        
-        var templateContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"));
+
+        var templateContent = _fileSystem.GetFileContent(
+            Path.Combine(journalPath, "1c-Journal-Entry-Template.md")
+        );
         templateContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
-        
-        var journalsContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1h-All-My-Journals.md"));
+
+        var journalsContent = _fileSystem.GetFileContent(
+            Path.Combine(journalPath, "1h-All-My-Journals.md")
+        );
         journalsContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
     }
 
@@ -232,7 +248,7 @@ public class NewCommandTests
     }
 
     [Theory]
-    [InlineData("Invalid/Name")]  // Forward slash is invalid on all platforms
+    [InlineData("Invalid/Name")] // Forward slash is invalid on all platforms
     [InlineData("Invalid\0Name")] // Null character is invalid on all platforms
     public void Should_Reject_Invalid_Journal_Names(string invalidName)
     {
@@ -260,7 +276,7 @@ public class NewCommandTests
     {
         // Given
         var faultyTemplateManager = new EmptyTemplateManager();
-        
+
         var registrar = new TypeRegistrar()
             .RegisterInstance(_console)
             .RegisterInstance<IFileSystem>(_fileSystem)
@@ -270,7 +286,7 @@ public class NewCommandTests
         faultyApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -309,11 +325,11 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         // Verify directory was created
         var journalPath = Path.Combine(".", journalName);
         _fileSystem.DirectoryExists(journalPath).ShouldBeTrue();
-        
+
         // Verify files were created in that directory
         _fileSystem.FileExists(Path.Combine(journalPath, "1a-TableOfContents.md")).ShouldBeTrue();
     }
@@ -329,7 +345,7 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var tocPath = Path.Combine(".", journalName, "1a-TableOfContents.md");
         var tocContent = _fileSystem.GetFileContent(tocPath);
         tocContent.ShouldBe("# Table of Contents\n\nTEST_TOC_CONTENT");
@@ -346,14 +362,18 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var journalPath = Path.Combine(".", journalName);
-        
+
         // All these files should use the journal-entry template
         var introContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1b-Intro.md"));
-        var templateContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"));
-        var journalsContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1h-All-My-Journals.md"));
-        
+        var templateContent = _fileSystem.GetFileContent(
+            Path.Combine(journalPath, "1c-Journal-Entry-Template.md")
+        );
+        var journalsContent = _fileSystem.GetFileContent(
+            Path.Combine(journalPath, "1h-All-My-Journals.md")
+        );
+
         introContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
         templateContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
         journalsContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
@@ -370,10 +390,10 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var allFiles = _fileSystem.GetAllFiles();
         var journalFiles = allFiles.Where(f => f.Key.Contains(journalName)).ToList();
-        
+
         journalFiles.Count.ShouldBe(4);
         journalFiles.ShouldContain(f => f.Key.EndsWith("1a-TableOfContents.md"));
         journalFiles.ShouldContain(f => f.Key.EndsWith("1b-Intro.md"));
@@ -503,10 +523,10 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var journalPath = Path.Combine(".", journalName);
         var allFiles = _fileSystem.GetAllFiles().Keys.Where(k => k.Contains(journalName)).ToList();
-        
+
         // Files should be created in alphabetical order by filename
         allFiles.ShouldContain(Path.Combine(journalPath, "1a-TableOfContents.md"));
         allFiles.ShouldContain(Path.Combine(journalPath, "1b-Intro.md"));
@@ -528,7 +548,7 @@ public class NewCommandTests
         faultyApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -545,9 +565,13 @@ public class NewCommandTests
     public void Should_Validate_Constructor_Parameters()
     {
         // When & Then
-        Should.Throw<ArgumentNullException>(() => new NewCommand(null!, _fileSystem, _templateManager));
-        Should.Throw<ArgumentNullException>(() => new NewCommand(_console, null!, _templateManager));
-        Should.Throw<ArgumentNullException>(() => new NewCommand(_console, _fileSystem, null!));
+        Should.Throw<ArgumentNullException>(() =>
+            new NewCommand(null!, _fileSystem, _templateManager, new JournalConfiguration(_fileSystem))
+        );
+        Should.Throw<ArgumentNullException>(() =>
+            new NewCommand(_console, null!, _templateManager, new JournalConfiguration(new TestFileSystem()))
+        );
+        Should.Throw<ArgumentNullException>(() => new NewCommand(_console, _fileSystem, null!, new JournalConfiguration(_fileSystem)));
     }
 
     [Fact]
@@ -648,7 +672,7 @@ public class NewCommandTests
         testApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -657,12 +681,15 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         // Verify intro parameters
         var introParams = testTemplateManager.GetParametersForTemplate("journal-entry", 0);
         introParams.ShouldNotBeNull();
         introParams.ShouldContainKeyAndValue("title", "Introduction");
-        introParams.ShouldContainKeyAndValue("body", "Add an introduction to your new journal here.");
+        introParams.ShouldContainKeyAndValue(
+            "body",
+            "Add an introduction to your new journal here."
+        );
         introParams.ShouldContainKeyAndValue("addSourceBlock", false);
     }
 
@@ -683,7 +710,7 @@ public class NewCommandTests
         testApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -692,13 +719,14 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         // Verify all-my-journals parameters (should be the last call to journal-entry template)
         var allJournalsParams = testTemplateManager.GetParametersForTemplate("journal-entry", 2);
         allJournalsParams.ShouldNotBeNull();
         allJournalsParams.ShouldContainKeyAndValue("title", "Journals List");
         allJournalsParams.ShouldContainKeyAndValue("addSourceBlock", false);
-        var expectedBody = @"- [example journal 1](link-to-journal)
+        var expectedBody =
+            @"- [example journal 1](link-to-journal)
 - [example journal 2](link-to-journal)
 - [example journal 2](link-to-journal)";
         allJournalsParams.ShouldContainKeyAndValue("body", expectedBody);
@@ -721,7 +749,7 @@ public class NewCommandTests
         testApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -730,7 +758,7 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         // Verify table-of-contents parameters
         var tocParams = testTemplateManager.GetParametersForTemplate("table-of-contents", 0);
         tocParams.ShouldNotBeNull();
@@ -754,7 +782,7 @@ public class NewCommandTests
         testApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -763,7 +791,7 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         // Verify journal-entry-template parameters (should be the second call to journal-entry template)
         var templateParams = testTemplateManager.GetParametersForTemplate("journal-entry", 1);
         templateParams.ShouldNotBeNull();
@@ -784,7 +812,7 @@ public class NewCommandTests
         faultyApp.Configure(config =>
         {
             config.SetApplicationName("md-journal");
-            
+
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
 
@@ -805,9 +833,10 @@ public class NewCommandTests
     {
         // Given
         var journalName = "PathTestJournal";
-        var args = pathValue == null 
-            ? new[] { "new", journalName }
-            : new[] { "new", journalName, "--path", pathValue };
+        var args =
+            pathValue == null
+                ? new[] { "new", journalName }
+                : new[] { "new", journalName, "--path", pathValue };
 
         // When
         var result = _app.Run(args);
@@ -824,22 +853,28 @@ public class NewCommandTests
     private class TestTemplateManagerWithParameterCapture : ITemplateManager
     {
         private readonly Dictionary<string, ITemplateGenerator> _templates = new();
-        private readonly List<(string templateName, Dictionary<string, object>? parameters)> _templateCalls = new();
+        private readonly List<(
+            string templateName,
+            Dictionary<string, object>? parameters
+        )> _templateCalls = new();
 
         public void RegisterTemplate(ITemplateGenerator template)
         {
             _templates[template.TemplateName] = template;
         }
 
-        public string GenerateFromTemplate(string templateName, Dictionary<string, object>? parameters)
+        public string GenerateFromTemplate(
+            string templateName,
+            Dictionary<string, object>? parameters
+        )
         {
             _templateCalls.Add((templateName, parameters));
-            
+
             if (_templates.TryGetValue(templateName, out var template))
             {
                 return template.GenerateTemplate(parameters);
             }
-            
+
             throw new ArgumentException($"Template '{templateName}' not found");
         }
 
@@ -855,15 +890,20 @@ public class NewCommandTests
         /// <param name="callIndex">The zero-based index of the template call (in case the same template was called multiple times).</param>
         /// <returns>The parameters dictionary that was passed to the template, or an empty dictionary if null was passed.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the call index is greater than the number of times the template was called.</exception>
-        public Dictionary<string, object>? GetParametersForTemplate(string templateName, int callIndex)
+        public Dictionary<string, object>? GetParametersForTemplate(
+            string templateName,
+            int callIndex
+        )
         {
             var calls = _templateCalls.Where(c => c.templateName == templateName).ToList();
             if (callIndex >= calls.Count)
             {
-                throw new ArgumentOutOfRangeException(nameof(callIndex), 
-                    $"Template '{templateName}' was called {calls.Count} times, but index {callIndex} was requested");
+                throw new ArgumentOutOfRangeException(
+                    nameof(callIndex),
+                    $"Template '{templateName}' was called {calls.Count} times, but index {callIndex} was requested"
+                );
             }
-            
+
             return calls[callIndex].parameters ?? new Dictionary<string, object>();
         }
     }
@@ -876,15 +916,15 @@ public class NewCommandTests
         public bool DirectoryExists(string path) => false;
 
         public bool FileExists(string path) => false;
-        
-        public void CreateDirectory(string path) 
+
+        public void CreateDirectory(string path)
         {
             // Allow directory creation to succeed
         }
-        
+
         public string CombinePaths(params string[] paths) => Path.Combine(paths);
-        
-        public void CreateMarkdownFile(string path, string fileName, string body) => 
+
+        public void CreateMarkdownFile(string path, string fileName, string body) =>
             throw new IOException("Failed to create file");
 
         public void CreateFile(string path, string fileName, string body)
@@ -918,7 +958,10 @@ public class NewCommandTests
             // Don't register any templates
         }
 
-        public string GenerateFromTemplate(string templateName, Dictionary<string, object>? parameters)
+        public string GenerateFromTemplate(
+            string templateName,
+            Dictionary<string, object>? parameters
+        )
         {
             throw new ArgumentException($"Template '{templateName}' not found");
         }

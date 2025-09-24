@@ -9,7 +9,6 @@ namespace markdown_journal_cli.Infrastructure.Configuration;
 /// </summary>
 public interface IJournalConfiguration
 {
-
     /// <summary>
     /// Creates a journal configuration file in the specified <paramref name="directory"/>
     /// using the provided <paramref name="config"/> instance.

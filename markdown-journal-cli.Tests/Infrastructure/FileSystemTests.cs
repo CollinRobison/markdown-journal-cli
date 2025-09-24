@@ -225,7 +225,8 @@ public class FileSystemTests : IDisposable
 
         // When & Then
         Should.Throw<DirectoryNotFoundException>(() =>
-            _fileSystem.CreateMarkdownFile(nonExistentPath, fileName, content));
+            _fileSystem.CreateMarkdownFile(nonExistentPath, fileName, content)
+        );
     }
 
     [Fact]
@@ -241,8 +242,8 @@ public class FileSystemTests : IDisposable
 
         // When & Then
         Should.Throw<InvalidOperationException>(() =>
-        _fileSystem.CreateMarkdownFile(_tempDirectory, fileName, newContent));
-    
+            _fileSystem.CreateMarkdownFile(_tempDirectory, fileName, newContent)
+        );
     }
 
     [Theory]
@@ -265,7 +266,7 @@ public class FileSystemTests : IDisposable
         actualContent.ShouldBe(content);
     }
 
-    /// 
+    ///
     [Fact]
     public void CreateFile_Should_Create_File()
     {
@@ -309,8 +310,9 @@ public class FileSystemTests : IDisposable
         var content = "# Test Content";
 
         // When & Then
-        Should.Throw<DirectoryNotFoundException>(() => 
-            _fileSystem.CreateFile(nonExistentPath, fileName, content));
+        Should.Throw<DirectoryNotFoundException>(() =>
+            _fileSystem.CreateFile(nonExistentPath, fileName, content)
+        );
     }
 
     [Fact]
@@ -321,12 +323,13 @@ public class FileSystemTests : IDisposable
         var originalContent = "# Original Content";
         var newContent = "# New Content";
         var filePath = Path.Combine(_tempDirectory, ".testfile");
-        
+
         File.WriteAllText(filePath, originalContent);
 
         // When % Then
-         Should.Throw<InvalidOperationException>(() =>
-        _fileSystem.CreateFile(_tempDirectory, fileName, newContent));
+        Should.Throw<InvalidOperationException>(() =>
+            _fileSystem.CreateFile(_tempDirectory, fileName, newContent)
+        );
     }
 
     [Theory]

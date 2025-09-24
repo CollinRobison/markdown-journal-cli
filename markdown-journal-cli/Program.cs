@@ -1,4 +1,5 @@
 ﻿using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
@@ -14,6 +15,7 @@ public static class Program
         var registrar = new TypeRegistrar();
         registrar.Register(typeof(IFileSystem), typeof(FileSystem));
         registrar.Register(typeof(ITemplateManager), typeof(TemplateManager));
+        registrar.Register(typeof(IJournalConfiguration), typeof(JournalConfiguration));
 
         var app = new CommandApp(registrar);
         app.Configure(config =>

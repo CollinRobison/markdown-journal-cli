@@ -33,21 +33,16 @@ public class JournalConfigurationTests
                 Extensions = [".md", ".txt"],
                 Structure = new Structure
                 {
-                    Topics = [
-                        new Topic { Name = "General", Subtopics = null }
-                    ]
+                    Topics = [new Topic { Name = "General", Subtopics = null }],
                 },
                 IndexCache = new IndexCache
                 {
                     UpdatedAt = DateTime.Now,
-                    Topics = [
-                        new Topic { Name = "General", Subtopics = null }
-                    ]
+                    Topics = [new Topic { Name = "General", Subtopics = null }],
+                    RootEntries = [new RootEntries { Name = "Home", File = "home.md" }],
                 },
-                RootEntries = [
-                    new RootEntries { Name = "Home", File = "home.md" }
-                ]
-            }
+                RootEntries = [new RootEntries { Name = "Home", File = "home.md" }],
+            },
         };
     }
 
@@ -56,18 +51,18 @@ public class JournalConfigurationTests
     {
         // Arrange
         var config = CreateTestConfig();
-        
+
         // Act
         _journalConfiguration.Create(_testDirectory, config);
-        
+
         // Assert
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         _fileSystem.FileExists(journalrcPath).ShouldBeTrue();
-        
+
         var fileContent = _fileSystem.GetFileContent(journalrcPath);
         fileContent.ShouldNotBeNull();
         var savedConfig = JsonSerializer.Deserialize<JournalConfig>(fileContent);
-        
+
         savedConfig.ShouldNotBeNull();
         savedConfig.JournalName.ShouldBe("Test Journal");
         savedConfig.TableOfContents.File.ShouldBe("toc.md");
@@ -80,10 +75,10 @@ public class JournalConfigurationTests
         var config = CreateTestConfig();
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         _fileSystem.CreateFile(_testDirectory, ".journalrc", "existing content");
-        
+
         // Act
         _journalConfiguration.Create(_testDirectory, config);
-        
+
         // Assert
         var fileContent = _fileSystem.GetFileContent(journalrcPath);
         fileContent.ShouldBe("existing content");
@@ -95,10 +90,10 @@ public class JournalConfigurationTests
         // Arrange
         var config = CreateTestConfig();
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        
+
         // Act
         _journalConfiguration.Create(journalrcPath, config);
-        
+
         // Assert
         _fileSystem.FileExists(journalrcPath).ShouldBeTrue();
     }
@@ -109,10 +104,10 @@ public class JournalConfigurationTests
         // Arrange
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         _fileSystem.CreateFile(_testDirectory, ".journalrc", "test content");
-        
+
         // Act
         _journalConfiguration.Delete(_testDirectory);
-        
+
         // Assert
         _fileSystem.FileExists(journalrcPath).ShouldBeFalse();
     }
@@ -130,10 +125,10 @@ public class JournalConfigurationTests
         // Arrange
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         _fileSystem.CreateFile(_testDirectory, ".journalrc", "test content");
-        
+
         // Act
         _journalConfiguration.Delete(journalrcPath);
-        
+
         // Assert
         _fileSystem.FileExists(journalrcPath).ShouldBeFalse();
     }
@@ -144,26 +139,34 @@ public class JournalConfigurationTests
         // Arrange
         var originalConfig = CreateTestConfig();
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var originalJson = JsonSerializer.Serialize(originalConfig, new JsonSerializerOptions { WriteIndented = true });
+        var originalJson = JsonSerializer.Serialize(
+            originalConfig,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
-        
+
         // Act
-        _journalConfiguration.Update(_testDirectory, config =>
-        {
-            config.JournalName = "Updated Journal Name";
-            config.TableOfContents.File = "updated-toc.md";
-        });
-        
+        _journalConfiguration.Update(
+            _testDirectory,
+            config =>
+            {
+                config.JournalName = "Updated Journal Name";
+                config.TableOfContents.File = "updated-toc.md";
+            }
+        );
+
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         updatedContent.ShouldNotBeNull();
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
-        
+
         updatedConfig.ShouldNotBeNull();
         updatedConfig.JournalName.ShouldBe("Updated Journal Name");
         updatedConfig.TableOfContents.File.ShouldBe("updated-toc.md");
         // Verify other properties are preserved
-        updatedConfig.TableOfContents.Extensions.ShouldBe(originalConfig.TableOfContents.Extensions);
+        updatedConfig.TableOfContents.Extensions.ShouldBe(
+            originalConfig.TableOfContents.Extensions
+        );
     }
 
     [Fact]
@@ -172,36 +175,51 @@ public class JournalConfigurationTests
         // Arrange
         var originalConfig = CreateTestConfig();
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var originalJson = JsonSerializer.Serialize(originalConfig, new JsonSerializerOptions { WriteIndented = true });
+        var originalJson = JsonSerializer.Serialize(
+            originalConfig,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
-        
+
         // Act - Only modify one property
-        _journalConfiguration.Update(_testDirectory, config =>
-        {
-            config.JournalName = "Only This Changed";
-        });
-        
+        _journalConfiguration.Update(
+            _testDirectory,
+            config =>
+            {
+                config.JournalName = "Only This Changed";
+            }
+        );
+
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         updatedContent.ShouldNotBeNull();
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
-        
+
         updatedConfig.ShouldNotBeNull();
         updatedConfig.JournalName.ShouldBe("Only This Changed");
         // All other properties should remain unchanged
         updatedConfig.TableOfContents.File.ShouldBe(originalConfig.TableOfContents.File);
-        updatedConfig.TableOfContents.Extensions.ShouldBe(originalConfig.TableOfContents.Extensions);
-        updatedConfig.TableOfContents.Structure.Topics.Length.ShouldBe(originalConfig.TableOfContents.Structure.Topics.Length);
+        updatedConfig.TableOfContents.Extensions.ShouldBe(
+            originalConfig.TableOfContents.Extensions
+        );
+        updatedConfig.TableOfContents.Structure.Topics.Length.ShouldBe(
+            originalConfig.TableOfContents.Structure.Topics.Length
+        );
     }
 
     [Fact]
     public void Update_ShouldNotThrow_WhenFileDoesNotExist()
     {
         // Act & Assert
-        Should.NotThrow(() => _journalConfiguration.Update(_testDirectory, config =>
-        {
-            config.JournalName = "This won't be applied";
-        }));
+        Should.NotThrow(() =>
+            _journalConfiguration.Update(
+                _testDirectory,
+                config =>
+                {
+                    config.JournalName = "This won't be applied";
+                }
+            )
+        );
     }
 
     [Fact]
@@ -210,13 +228,18 @@ public class JournalConfigurationTests
         // Arrange
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         _fileSystem.CreateFile(_testDirectory, ".journalrc", "invalid json content");
-        
+
         // Act & Assert
-        Should.NotThrow(() => _journalConfiguration.Update(_testDirectory, config =>
-        {
-            config.JournalName = "This won't be applied";
-        }));
-        
+        Should.NotThrow(() =>
+            _journalConfiguration.Update(
+                _testDirectory,
+                config =>
+                {
+                    config.JournalName = "This won't be applied";
+                }
+            )
+        );
+
         // Verify the file content remains unchanged
         var fileContent = _fileSystem.GetFileContent(journalrcPath);
         fileContent.ShouldBe("invalid json content");
@@ -228,20 +251,26 @@ public class JournalConfigurationTests
         // Arrange
         var originalConfig = CreateTestConfig();
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var originalJson = JsonSerializer.Serialize(originalConfig, new JsonSerializerOptions { WriteIndented = true });
+        var originalJson = JsonSerializer.Serialize(
+            originalConfig,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
-        
+
         // Act
-        _journalConfiguration.Update(journalrcPath, config =>
-        {
-            config.JournalName = "Updated via full path";
-        });
-        
+        _journalConfiguration.Update(
+            journalrcPath,
+            config =>
+            {
+                config.JournalName = "Updated via full path";
+            }
+        );
+
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         updatedContent.ShouldNotBeNull();
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
-        
+
         updatedConfig.ShouldNotBeNull();
         updatedConfig.JournalName.ShouldBe("Updated via full path");
     }

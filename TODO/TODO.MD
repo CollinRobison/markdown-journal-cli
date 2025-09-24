@@ -5,3 +5,4 @@
 - [ ] add the add command 
   - [ ] decide how to update journalrc/table of contents when its added
 - [ ] create a command to add a journal rc for an existing journal without one.
+- [ ] u r so sexy <3

@@ -5,17 +5,20 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
 
-public class JournalConfiguration(
-    IFileSystem fileSystem
-) : IJournalConfiguration
+public class JournalConfiguration(IFileSystem fileSystem) : IJournalConfiguration
 {
     private readonly IFileSystem _fileSystem = fileSystem;
     private JsonSerializerOptions opts = new() { WriteIndented = true };
+
     public void Create(string directory, JournalConfig config)
     {
-        var journalrcPath = directory.Contains(".journalrc") ? directory : Path.Combine(directory, ".journalrc");
-        var actualDirectory = directory.Contains(".journalrc") ? Path.GetDirectoryName(directory) ?? directory : directory;
-        
+        var journalrcPath = directory.Contains(".journalrc")
+            ? directory
+            : Path.Combine(directory, ".journalrc");
+        var actualDirectory = directory.Contains(".journalrc")
+            ? Path.GetDirectoryName(directory) ?? directory
+            : directory;
+
         if (!_fileSystem.FileExists(journalrcPath))
         {
             var journalrc = config;
@@ -30,8 +33,9 @@ public class JournalConfiguration(
 
     public void Delete(string directory)
     {
-
-        var journalrcPath = directory.Contains(".journalrc") ? directory : Path.Combine(directory, ".journalrc");
+        var journalrcPath = directory.Contains(".journalrc")
+            ? directory
+            : Path.Combine(directory, ".journalrc");
         if (_fileSystem.FileExists(journalrcPath))
         {
             _fileSystem.DeleteFile(journalrcPath);
@@ -44,7 +48,9 @@ public class JournalConfiguration(
 
     public void Update(string directory, Action<JournalConfig> config)
     {
-        var journalrcPath = directory.Contains(".journalrc") ? directory : Path.Combine(directory, ".journalrc");
+        var journalrcPath = directory.Contains(".journalrc")
+            ? directory
+            : Path.Combine(directory, ".journalrc");
         if (!_fileSystem.FileExists(journalrcPath))
         {
             Console.WriteLine($".journalrc doesn't exist at {journalrcPath}");
@@ -54,7 +60,7 @@ public class JournalConfiguration(
         // Read existing configuration - preserves all existing values
         var existingJson = _fileSystem.GetFileContent(journalrcPath);
         JournalConfig? existingConfig;
-        
+
         try
         {
             existingConfig = JsonSerializer.Deserialize<JournalConfig>(existingJson);
@@ -64,7 +70,7 @@ public class JournalConfiguration(
             Console.WriteLine($"Failed to parse .journalrc at {journalrcPath}");
             return;
         }
-        
+
         if (existingConfig == null)
         {
             Console.WriteLine($"Failed to parse .journalrc at {journalrcPath}");
@@ -73,12 +79,12 @@ public class JournalConfiguration(
 
         // Only modify the properties specified by the user
         config(existingConfig);
-        
+
         // Save with all values (existing + updated)
         string updatedJsonString = JsonSerializer.Serialize(existingConfig, opts);
-        var actualDirectory = directory.Contains(".journalrc") ? Path.GetDirectoryName(directory) ?? directory : directory;
+        var actualDirectory = directory.Contains(".journalrc")
+            ? Path.GetDirectoryName(directory) ?? directory
+            : directory;
         _fileSystem.UpdateFile(actualDirectory, ".journalrc", updatedJsonString);
-        
-        
     }
 }

@@ -60,10 +60,7 @@ public class JournalEntryTemplateTests
     public void GenerateTemplate_Should_Use_Custom_Title_When_Provided()
     {
         // Given
-        var parameters = new Dictionary<string, object>
-        {
-            ["title"] = "Custom Title"
-        };
+        var parameters = new Dictionary<string, object> { ["title"] = "Custom Title" };
 
         // When
         var result = _template.GenerateTemplate(parameters);
@@ -79,7 +76,7 @@ public class JournalEntryTemplateTests
         // Given
         var parameters = new Dictionary<string, object>
         {
-            ["body"] = "This is custom body content."
+            ["body"] = "This is custom body content.",
         };
 
         // When
@@ -94,10 +91,7 @@ public class JournalEntryTemplateTests
     public void GenerateTemplate_Should_Hide_Sources_When_AddSourceBlock_Is_False()
     {
         // Given
-        var parameters = new Dictionary<string, object>
-        {
-            ["addSourceBlock"] = false
-        };
+        var parameters = new Dictionary<string, object> { ["addSourceBlock"] = false };
 
         // When
         var result = _template.GenerateTemplate(parameters);
@@ -114,7 +108,7 @@ public class JournalEntryTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["addSourceBlock"] = true,
-            ["sources"] = "Custom source content"
+            ["sources"] = "Custom source content",
         };
 
         // When
@@ -129,10 +123,7 @@ public class JournalEntryTemplateTests
     public void GenerateTemplate_Should_Use_Custom_Created_Date_When_Provided()
     {
         // Given
-        var parameters = new Dictionary<string, object>
-        {
-            ["createdDate"] = "1/1/2023"
-        };
+        var parameters = new Dictionary<string, object> { ["createdDate"] = "1/1/2023" };
 
         // When
         var result = _template.GenerateTemplate(parameters);
@@ -145,10 +136,7 @@ public class JournalEntryTemplateTests
     public void GenerateTemplate_Should_Use_Custom_Last_Edited_Date_When_Provided()
     {
         // Given
-        var parameters = new Dictionary<string, object>
-        {
-            ["lastEditedDate"] = "2/1/2023"
-        };
+        var parameters = new Dictionary<string, object> { ["lastEditedDate"] = "2/1/2023" };
 
         // When
         var result = _template.GenerateTemplate(parameters);
@@ -183,7 +171,7 @@ public class JournalEntryTemplateTests
             ["addSourceBlock"] = true,
             ["sources"] = "[Reference 1](http://example.com)",
             ["createdDate"] = "12/25/2022",
-            ["lastEditedDate"] = "1/15/2023"
+            ["lastEditedDate"] = "1/15/2023",
         };
 
         // When
@@ -202,15 +190,17 @@ public class JournalEntryTemplateTests
     [InlineData(true)]
     [InlineData("true")]
     [InlineData(1)]
-    [InlineData("")]        // Empty string now evaluates to true
-    [InlineData("   ")]     // Whitespace now evaluates to true
+    [InlineData("")] // Empty string now evaluates to true
+    [InlineData("   ")] // Whitespace now evaluates to true
     [InlineData("anything")] // Any non-"false" string evaluates to true
-    public void GenerateTemplate_Should_Handle_Various_AddSourceBlock_Types_True(object addSourceBlockValue)
+    public void GenerateTemplate_Should_Handle_Various_AddSourceBlock_Types_True(
+        object addSourceBlockValue
+    )
     {
         // Given
         var parameters = new Dictionary<string, object>
         {
-            ["addSourceBlock"] = addSourceBlockValue
+            ["addSourceBlock"] = addSourceBlockValue,
         };
 
         // When
@@ -225,12 +215,14 @@ public class JournalEntryTemplateTests
     [InlineData(false)]
     [InlineData("false")]
     [InlineData(0)]
-    public void GenerateTemplate_Should_Handle_Various_AddSourceBlock_Types_False(object addSourceBlockValue)
+    public void GenerateTemplate_Should_Handle_Various_AddSourceBlock_Types_False(
+        object addSourceBlockValue
+    )
     {
         // Given
         var parameters = new Dictionary<string, object>
         {
-            ["addSourceBlock"] = addSourceBlockValue
+            ["addSourceBlock"] = addSourceBlockValue,
         };
 
         // When
@@ -253,7 +245,7 @@ public class JournalEntryTemplateTests
         {
             ["title"] = value,
             ["body"] = value,
-            ["sources"] = value
+            ["sources"] = value,
         };
 
         // When
@@ -273,7 +265,7 @@ public class JournalEntryTemplateTests
         {
             ["title"] = 123,
             ["body"] = 456.789,
-            ["sources"] = true
+            ["sources"] = true,
         };
 
         // When
@@ -293,7 +285,7 @@ public class JournalEntryTemplateTests
         {
             ["title"] = null!,
             ["body"] = null!,
-            ["sources"] = null!
+            ["sources"] = null!,
         };
 
         // When & Then

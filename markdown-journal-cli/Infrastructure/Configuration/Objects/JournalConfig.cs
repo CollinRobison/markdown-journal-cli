@@ -8,7 +8,6 @@ public class JournalConfig
     [JsonPropertyName("journalName")]
     public string JournalName { get; set; } = "MyJournal";
 
-    [JsonPropertyName("tableofcontents")]
-    public required TableOfContents TableOfContents { get; set;}
-
+    [JsonPropertyName("tableOfContents")]
+    public required TableOfContents TableOfContents { get; set; }
 }

@@ -17,12 +17,12 @@ public class TableOfContents
     [JsonPropertyName("structure")]
     public required Structure Structure { get; set; }
 
-    [JsonPropertyName("indexCache")]
-    public required IndexCache IndexCache { get; set; }
-
     [JsonPropertyName("rootEntries")]
     public required RootEntries[] RootEntries { get; set; }
 
+    [JsonPropertyName("indexCache")]
+    public required IndexCache IndexCache { get; set; }
+    
 }
 
 public class Topic
@@ -47,6 +47,9 @@ public class IndexCache
 
     [JsonPropertyName("topics")]
     public required Topic[] Topics { get; set; }
+
+    [JsonPropertyName("rootEntries")]
+    public required RootEntries[] RootEntries { get; set; }
 }
 
 public class RootEntries
