@@ -3,6 +3,9 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli;
@@ -11,12 +14,36 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        // Create host with configuration from the application directory
+        var host = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            Args = args,
+            ContentRootPath = AppContext.BaseDirectory
+        });
+        
+        // Configure options
+        host.Services.AddOptions<JournalSettings>()
+            .BindConfiguration(JournalSettings.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Register Spectre.Console services
+        host.Services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
+
+        // Register services
+        host.Services.AddSingleton<IFileSystem, FileSystem>();
+        host.Services.AddSingleton<ITemplateManager, TemplateManager>();
+        host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
+        host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
+        
+        // Register commands
+        host.Services.AddSingleton<NewCommand>();
+
+        // Build the host and get the service provider
+        var builtHost = host.Build();
+        
         // Set up dependency injection
-        var registrar = new TypeRegistrar();
-        registrar.Register(typeof(IFileSystem), typeof(FileSystem));
-        registrar.Register(typeof(ITemplateManager), typeof(TemplateManager));
-        registrar.Register(typeof(IJournalConfiguration), typeof(JournalConfiguration));
-        registrar.Register(typeof(IJournalInitializer), typeof(JournalInitializer));
+        var registrar = new TypeRegistrar(builtHost.Services);
 
         var app = new CommandApp(registrar);
         app.Configure(config =>
@@ -27,7 +54,7 @@ public static class Program
 
             // New
             config.AddCommand<NewCommand>("new");
-
+            
             // Add
             // config.AddBranch<AddSettings>("add", add =>
             // {

@@ -2,6 +2,7 @@
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
+using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -11,7 +12,8 @@ namespace markdown_journal_cli.Commands.New;
 public sealed class NewCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,
-    IJournalInitializer journalInitializer
+    IJournalInitializer journalInitializer, 
+    IOptions<JournalSettings>  journalSettings
 ) : Command<NewCommand.Settings>
 {
     private readonly IAnsiConsole _console =
@@ -22,14 +24,16 @@ public sealed class NewCommand(
     private readonly IJournalInitializer _journalInitializer =
         journalInitializer ?? throw new ArgumentNullException(nameof(journalInitializer));
 
+    private readonly JournalSettings _journalSettings = journalSettings.Value;
+
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[name]")]
         [Description(
             "The name of the journal to create. If not specified, a default name will be used."
         )]
-        [DefaultValue("MyJournal")]
-        public required string JournalName { get; set; }
+        //[DefaultValue("MyJournal")]
+        public string? JournalName { get; set; }
 
         [CommandOption("-p|--path <filePath>")]
         [Description(
@@ -40,12 +44,9 @@ public sealed class NewCommand(
 
         public override ValidationResult Validate()
         {
-            if (string.IsNullOrWhiteSpace(JournalName))
-            {
-                return ValidationResult.Error("Journal name cannot be empty");
-            }
-
-            if (JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            // Only validate JournalName if it's provided (not null)
+            if (!string.IsNullOrWhiteSpace(JournalName) && 
+                JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
                 return ValidationResult.Error("Journal name contains invalid characters");
             }
@@ -55,23 +56,23 @@ public sealed class NewCommand(
     }
 
     public override int Execute(CommandContext context, Settings settings)
-    {
+    {   var journalName = settings.JournalName ?? _journalSettings.DefaultJournalName; 
         try
         {
             string journalDirectory = _fileSystem.CombinePaths(
                 settings.FilePath ?? ".",
-                settings.JournalName
+                journalName 
             );
 
             if (_fileSystem.DirectoryExists(journalDirectory))
             {
-                throw new JournalAlreadyExistsException(settings.JournalName, journalDirectory);
+                throw new JournalAlreadyExistsException(journalName, journalDirectory);
             }
 
-            _journalInitializer.Initialize(journalDirectory, settings.JournalName);
+            _journalInitializer.Initialize(journalDirectory, journalName);
 
             _console.MarkupLine(
-                $"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]"
+                $"[green]Success:[/] Journal [yellow]{journalName}[/] created at [blue]{journalDirectory}[/]"
             );
 
             return 0;

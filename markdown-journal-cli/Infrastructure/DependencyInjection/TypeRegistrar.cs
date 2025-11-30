@@ -6,15 +6,19 @@ namespace markdown_journal_cli.Infrastructure.DependencyInjection;
 public sealed class TypeRegistrar : ITypeRegistrar
 {
     private readonly IServiceCollection _services;
+    private readonly IServiceProvider? _provider;
 
-    public TypeRegistrar()
+    // Constructor for building services
+    public TypeRegistrar(Microsoft.Extensions.Hosting.IHost host)
     {
         _services = new ServiceCollection();
     }
-
-    public ITypeResolver Build()
+    
+    // Constructor for using existing service provider
+    public TypeRegistrar(IServiceProvider provider)
     {
-        return new TypeResolver(_services.BuildServiceProvider());
+        _provider = provider;
+        _services = new ServiceCollection(); // Not used but required
     }
 
     public void Register(Type service, Type implementation)
@@ -32,11 +36,9 @@ public sealed class TypeRegistrar : ITypeRegistrar
         _services.AddSingleton(service, _ => factory());
     }
 
-    public TypeRegistrar RegisterInstance<TService>(TService implementation)
-        where TService : class
+    public ITypeResolver Build()
     {
-        _services.AddSingleton(implementation);
-        return this;
+        return new TypeResolver(_provider ?? _services.BuildServiceProvider());
     }
 }
 
