@@ -3,8 +3,10 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -42,13 +44,16 @@ public static class Program
         // Build the host and get the service provider
         var builtHost = host.Build();
         
+        // Get settings
+        var settings = builtHost.Services.GetRequiredService<IOptions<JournalSettings>>().Value;
+        
         // Set up dependency injection
         var registrar = new TypeRegistrar(builtHost.Services);
 
         var app = new CommandApp(registrar);
         app.Configure(config =>
         {
-            config.SetApplicationName("md-journal");
+            config.SetApplicationName(settings.AppName);
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
 
