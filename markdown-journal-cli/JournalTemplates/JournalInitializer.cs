@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Objects;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.JournalTemplates;
 
@@ -13,6 +14,8 @@ public class JournalInitializer : IJournalInitializer
     private readonly ITemplateManager _templateManager;
     private readonly IJournalConfiguration _journalConfiguration;
 
+    private readonly JournalSettings _journalSettings; 
+
     /// <summary>
     /// Initializes a new instance of the JournalInitializer class.
     /// </summary>
@@ -23,11 +26,13 @@ public class JournalInitializer : IJournalInitializer
     public JournalInitializer(
         IFileSystem fileSystem,
         ITemplateManager templateManager,
-        IJournalConfiguration journalConfiguration)
+        IJournalConfiguration journalConfiguration,
+        IOptions<JournalSettings> journalSettings)
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
         _journalConfiguration = journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        _journalSettings = journalSettings.Value;
     }
 
     /// <inheritdoc />
@@ -60,7 +65,7 @@ public class JournalInitializer : IJournalInitializer
     {
         _fileSystem.CreateMarkdownFile(
             journalDirectory,
-            "1a-TableOfContents",
+            _journalSettings.TableOfContentsFileName,
             _templateManager.GenerateFromTemplate("table-of-contents", null)
         );
     }
@@ -69,14 +74,14 @@ public class JournalInitializer : IJournalInitializer
     {
         var introParams = new Dictionary<string, object>
         {
-            ["title"] = "Introduction",
+            ["title"] = _journalSettings.IntroductionTitle,
             ["body"] = "Add an introduction to your new journal here.",
             ["addSourceBlock"] = false,
         };
 
         _fileSystem.CreateMarkdownFile(
             journalDirectory,
-            "1b-Intro",
+            _journalSettings.IntroductionFileName,
             _templateManager.GenerateFromTemplate("journal-entry", introParams)
         );
     }
@@ -85,7 +90,7 @@ public class JournalInitializer : IJournalInitializer
     {
         _fileSystem.CreateMarkdownFile(
             journalDirectory,
-            "1c-Journal-Entry-Template",
+            _journalSettings.JournalEntryTemplateFileName,
             _templateManager.GenerateFromTemplate("journal-entry", null)
         );
     }
@@ -103,7 +108,7 @@ public class JournalInitializer : IJournalInitializer
 
         _fileSystem.CreateMarkdownFile(
             journalDirectory,
-            "1h-All-My-Journals",
+            _journalSettings.AllJournalsFileName,
             _templateManager.GenerateFromTemplate("journal-entry", allMyJournalsParams)
         );
     }
@@ -112,9 +117,9 @@ public class JournalInitializer : IJournalInitializer
     {
         RootEntries[] rootConfig =
         [
-            new() { Name = "Introduction", File = "1b-Intro.md" },
-            new() { Name = "Journal Entry Template", File = "1c-Journal-Entry-Template.md" },
-            new() { Name = "All My Journals", File = "1h-All-My-Journals.md" }
+            new() { Name = _journalSettings.IntroductionTitle, File = $"{_journalSettings.IntroductionFileName}.md" },
+            new() { Name = _journalSettings.JournalEntryTemplateTitle, File = $"{_journalSettings.JournalEntryTemplateFileName}.md" },
+            new() { Name = _journalSettings.AllJournalsTitle, File = $"{_journalSettings.AllJournalsFileName}.md" }
         ];
 
         JournalConfig journalrc = new()

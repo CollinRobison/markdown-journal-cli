@@ -1,10 +1,21 @@
 using System;
+using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.JournalTemplates.Templates;
 
 public class TableOfContentsTemplate : ITemplateGenerator
 {
+    private readonly JournalSettings _journalSettings;
     public string TemplateName => "table-of-contents";
+    
+    public TableOfContentsTemplate(IOptions<JournalSettings> journalSettings)
+    {
+        _journalSettings = journalSettings.Value;
+    }
+
+    public TableOfContentsTemplate()
+    {
+    }
 
     public string GenerateTemplate(Dictionary<string, object>? parameters)
     {
@@ -21,9 +32,9 @@ public class TableOfContentsTemplate : ITemplateGenerator
 Last Edited: {lastEditedDate}
 
 # Table of Contents
-- [Introduction](1b-Intro.md)
-- [Journal Entry Template](1c-Journal-Entry-Template.md)
-- [All My Journals](1h-All-My-Journals.md)
+- [{_journalSettings.IntroductionTitle}]({_journalSettings.IntroductionFileName}.md)
+- [{_journalSettings.JournalEntryTemplateTitle}]({_journalSettings.JournalEntryTemplateFileName})
+- [{_journalSettings.AllJournalsTitle}]({_journalSettings.AllJournalsFileName})
 ## Example Topic
   - [example link to content]()
 

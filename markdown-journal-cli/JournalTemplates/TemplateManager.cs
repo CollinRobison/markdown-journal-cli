@@ -1,5 +1,6 @@
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.JournalTemplates.Templates;
+using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.JournalTemplates;
 
@@ -13,13 +14,15 @@ public class TemplateManager : ITemplateManager
     /// Stores registered templates keyed by their name.
     /// </summary>
     private readonly Dictionary<string, ITemplateGenerator> _templates;
+    private readonly IOptions<JournalSettings> _journalSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TemplateManager"/> class
     /// and registers default templates.
     /// </summary>
-    public TemplateManager()
+    public TemplateManager(IOptions<JournalSettings> journalSettings)
     {
+        _journalSettings = journalSettings ?? throw new ArgumentNullException(nameof(journalSettings));
         _templates = new Dictionary<string, ITemplateGenerator>();
         RegisterDefaultTemplates();
     }
@@ -30,7 +33,7 @@ public class TemplateManager : ITemplateManager
     private void RegisterDefaultTemplates()
     {
         RegisterTemplate(new JournalEntryTemplate());
-        RegisterTemplate(new TableOfContentsTemplate());
+        RegisterTemplate(new TableOfContentsTemplate(_journalSettings));
     }
 
     /// <summary>
