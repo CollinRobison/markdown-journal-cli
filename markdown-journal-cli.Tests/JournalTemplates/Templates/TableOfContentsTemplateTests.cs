@@ -1,4 +1,5 @@
 using markdown_journal_cli.JournalTemplates.Templates;
+using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
@@ -11,10 +12,20 @@ namespace markdown_journal_cli.Tests.JournalTemplates.Templates;
 public class TableOfContentsTemplateTests
 {
     private readonly TableOfContentsTemplate _template;
+    private readonly IOptions<JournalSettings> _journalSettings;
 
     public TableOfContentsTemplateTests()
     {
-        _template = new TableOfContentsTemplate();
+        _journalSettings = Options.Create(new JournalSettings
+        {
+            IntroductionTitle = "Introduction",
+            IntroductionFileName = "1b-Intro",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            JournalEntryTemplateFileName = "1c-Journal-Entry-Template.md",
+            AllJournalsTitle = "All My Journals",
+            AllJournalsFileName = "1h-All-My-Journals.md"
+        });
+        _template = new TableOfContentsTemplate(_journalSettings);
     }
 
     [Fact]

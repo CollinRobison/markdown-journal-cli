@@ -3,6 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration.Objects;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Tests.JournalTemplates;
 
@@ -11,6 +12,7 @@ public class JournalInitializerTests
     private readonly TestFileSystem _testFileSystem;
     private readonly TestTemplateManager _testTemplateManager;
     private readonly TestJournalConfiguration _testJournalConfiguration;
+    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly JournalInitializer _journalInitializer;
 
     public JournalInitializerTests()
@@ -18,7 +20,21 @@ public class JournalInitializerTests
         _testFileSystem = new TestFileSystem();
         _testTemplateManager = new TestTemplateManager();
         _testJournalConfiguration = new TestJournalConfiguration();
-        _journalInitializer = new JournalInitializer(_testFileSystem, _testTemplateManager, _testJournalConfiguration);
+        _journalSettings = Options.Create(new JournalSettings
+        {
+            AppName = "md-journal",
+            JournalConfigFileName = ".journalrc",
+            DefaultJournalName = "MyJournal",
+            TableOfContentsFileName = "1a-TableOfContents",
+            TableOfContentsTitle = "Table of Contents",
+            IntroductionFileName = "1b-Intro",
+            IntroductionTitle = "Introduction",
+            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            AllJournalsFileName = "1h-All-My-Journals",
+            AllJournalsTitle = "All My Journals"
+        });
+        _journalInitializer = new JournalInitializer(_testFileSystem, _testTemplateManager, _testJournalConfiguration, _journalSettings);
     }
 
     [Fact]
@@ -154,7 +170,7 @@ public class JournalInitializerTests
     public void Constructor_WithNullFileSystem_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(null!, _testTemplateManager, _testJournalConfiguration));
+        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(null!, _testTemplateManager, _testJournalConfiguration, _journalSettings));
         Assert.Equal("fileSystem", exception.ParamName);
     }
 
@@ -162,7 +178,7 @@ public class JournalInitializerTests
     public void Constructor_WithNullTemplateManager_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(_testFileSystem, null!, _testJournalConfiguration));
+        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(_testFileSystem, null!, _testJournalConfiguration, _journalSettings));
         Assert.Equal("templateManager", exception.ParamName);
     }
 
@@ -170,7 +186,7 @@ public class JournalInitializerTests
     public void Constructor_WithNullJournalConfiguration_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(_testFileSystem, _testTemplateManager, null!));
+        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(_testFileSystem, _testTemplateManager, null!, _journalSettings));
         Assert.Equal("journalConfiguration", exception.ParamName);
     }
 

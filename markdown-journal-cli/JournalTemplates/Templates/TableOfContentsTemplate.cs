@@ -13,10 +13,6 @@ public class TableOfContentsTemplate : ITemplateGenerator
         _journalSettings = journalSettings.Value;
     }
 
-    public TableOfContentsTemplate()
-    {
-    }
-
     public string GenerateTemplate(Dictionary<string, object>? parameters)
     {
         var createdDate = (

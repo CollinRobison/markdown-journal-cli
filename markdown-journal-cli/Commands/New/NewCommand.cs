@@ -44,7 +44,13 @@ public sealed class NewCommand(
 
         public override ValidationResult Validate()
         {
-            // Only validate JournalName if it's provided (not null)
+            // Reject empty or whitespace-only journal names
+            if (JournalName != null && string.IsNullOrWhiteSpace(JournalName))
+            {
+                return ValidationResult.Error("Journal name cannot be empty or whitespace");
+            }
+            
+            // Validate characters if name is provided
             if (!string.IsNullOrWhiteSpace(JournalName) && 
                 JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {

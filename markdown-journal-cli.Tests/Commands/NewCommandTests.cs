@@ -1,9 +1,15 @@
 using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
+using markdown_journal_cli.Tests.JournalTemplates;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Shouldly;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
@@ -20,22 +26,57 @@ public class NewCommandTests
     private readonly TestFileSystem _fileSystem;
     private readonly CommandAppTester _app;
     private readonly TestJournalInitializer _journalInitializer;
+    private readonly IOptions<JournalSettings> _journalSettings;
 
     public NewCommandTests()
     {
         _console = new TestConsole();
         _fileSystem = new TestFileSystem();
-        _journalInitializer = new TestJournalInitializer();
+        
+        // Create test settings with explicit values for testing
+        _journalSettings = Options.Create(new JournalSettings
+        {
+            AppName = "md-journal",
+            JournalConfigFileName = ".journalrc",
+            DefaultJournalName = "MyJournal",
+            TableOfContentsFileName = "1a-TableOfContents",
+            TableOfContentsTitle = "Table of Contents",
+            IntroductionFileName = "1b-Intro",
+            IntroductionTitle = "Introduction",
+            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            AllJournalsFileName = "1h-All-My-Journals",
+            AllJournalsTitle = "All My Journals"
+        });
 
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<IJournalInitializer>(_journalInitializer);
+        _journalInitializer = new TestJournalInitializer(_fileSystem);
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        services.AddSingleton<IJournalInitializer>(_journalInitializer);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<NewCommand>();
+
+        // Use IHost constructor and manually register services
+        var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().Build();
+        var registrar = new TypeRegistrar(host);
+        
+        foreach (var service in services)
+        {
+            if (service.ImplementationInstance != null)
+            {
+                registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
+            }
+            else if (service.ImplementationType != null)
+            {
+                registrar.Register(service.ServiceType, service.ImplementationType);
+            }
+        }
 
         _app = new CommandAppTester(registrar);
         _app.Configure(config =>
         {
-            config.SetApplicationName("md-journal");
+            config.SetApplicationName(_journalSettings.Value.AppName);
             config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
         });
     }
@@ -266,11 +307,19 @@ public class NewCommandTests
     {
         // Given
         var faultyTemplateManager = new EmptyTemplateManager();
+        var testJournalConfiguration = new TestJournalConfiguration();
 
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<ITemplateManager>(faultyTemplateManager);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(faultyTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+        services.AddSingleton<NewCommand>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var faultyApp = new CommandAppTester(registrar);
         faultyApp.Configure(config =>
@@ -529,10 +578,19 @@ public class NewCommandTests
     {
         // Given
         var faultyFileSystem = new FaultyTestFileSystem();
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(faultyFileSystem)
-            .RegisterInstance<IJournalInitializer>(_journalInitializer);
+        var testTemplateManager = new TemplateManager(_journalSettings);
+        var testJournalConfiguration = new TestJournalConfiguration();
+        
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(faultyFileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(testTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var faultyApp = new CommandAppTester(registrar);
         faultyApp.Configure(config =>
@@ -556,13 +614,13 @@ public class NewCommandTests
     {
         // When & Then
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(null!, _fileSystem, _journalInitializer)
+            new NewCommand(null!, _fileSystem, _journalInitializer, _journalSettings)
         );
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(_console, null!, _journalInitializer)
+            new NewCommand(_console, null!, _journalInitializer, _journalSettings)
         );
         Should.Throw<ArgumentNullException>(() => 
-            new NewCommand(_console, _fileSystem, null!)
+            new NewCommand(_console, _fileSystem, null!, _journalSettings)
         );
     }
 
@@ -572,10 +630,166 @@ public class NewCommandTests
         // Given - Use no arguments to test default behavior
         var result = _app.Run(["new"]);
 
-        // Then - Should use default name "MyJournal" and current directory
+        // Then - Should use default name from settings ("MyJournal") and current directory
         result.ExitCode.ShouldBe(0);
         _fileSystem.DirectoryExists("./MyJournal").ShouldBeTrue();
         result.Output.ShouldContain("MyJournal");
+    }
+
+    [Fact]
+    public void Should_Use_DefaultJournalName_From_Settings_When_No_Name_Provided()
+    {
+        // Given - Create custom settings with a different default name
+        var customSettings = Options.Create(new JournalSettings
+        {
+            AppName = "md-journal",
+            DefaultJournalName = "CustomDefaultName",
+            JournalConfigFileName = ".journalrc",
+            TableOfContentsFileName = "1a-TableOfContents",
+            TableOfContentsTitle = "Table of Contents",
+            IntroductionFileName = "1b-Intro",
+            IntroductionTitle = "Introduction",
+            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            AllJournalsFileName = "1h-All-My-Journals",
+            AllJournalsTitle = "All My Journals"
+        });
+
+        var testFileSystem = new TestFileSystem();
+        
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(testFileSystem);
+        var testInitializer = new TestJournalInitializer(testFileSystem);
+        services.AddSingleton<IJournalInitializer>(testInitializer);
+        services.AddSingleton(customSettings);
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
+
+        var customApp = new CommandAppTester(registrar);
+        customApp.Configure(config =>
+        {
+            config.SetApplicationName(customSettings.Value.AppName);
+            config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
+        });
+
+        // When - Run without providing a journal name
+        var result = customApp.Run(["new"]);
+
+        // Then - Should use the custom default name
+        result.ExitCode.ShouldBe(0);
+        testFileSystem.DirectoryExists("./CustomDefaultName").ShouldBeTrue();
+        result.Output.ShouldContain("CustomDefaultName");
+        testInitializer.InitializedJournals.ShouldContain(x => x.journalName == "CustomDefaultName");
+    }
+
+    [Fact]
+    public void Should_Use_Custom_Settings_For_File_Names()
+    {
+        // Given - Create custom settings with different file names
+        var customSettings = Options.Create(new JournalSettings
+        {
+            AppName = "custom-journal",
+            JournalConfigFileName = ".customrc",
+            DefaultJournalName = "CustomDefault",
+            TableOfContentsFileName = "00-TOC",
+            TableOfContentsTitle = "Contents",
+            IntroductionFileName = "01-Welcome",
+            IntroductionTitle = "Welcome",
+            JournalEntryTemplateFileName = "02-Template",
+            JournalEntryTemplateTitle = "Entry Template",
+            AllJournalsFileName = "99-Journals",
+            AllJournalsTitle = "My Journals"
+        });
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        var testInitializer = new TestJournalInitializer(_fileSystem);
+        services.AddSingleton<IJournalInitializer>(testInitializer);
+        services.AddSingleton(customSettings);
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
+
+        var customApp = new CommandAppTester(registrar);
+        customApp.Configure(config =>
+        {
+            config.SetApplicationName(customSettings.Value.AppName);
+            config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
+        });
+
+        // When
+        var result = customApp.Run(["new", "TestJournal"]);
+
+        // Then
+        result.ExitCode.ShouldBe(0);
+        
+        // Verify the initializer was called with correct parameters
+        testInitializer.InitializedJournals.ShouldContain(x => x.journalName == "TestJournal");
+    }
+
+    [Fact]
+    public void Should_Create_Files_With_Custom_Settings_Names()
+    {
+        // Given - Create custom settings
+        var customSettings = Options.Create(new JournalSettings
+        {
+            AppName = "test-journal",
+            JournalConfigFileName = ".testrc",
+            DefaultJournalName = "DefaultTest",
+            TableOfContentsFileName = "0-Contents",
+            TableOfContentsTitle = "My Contents",
+            IntroductionFileName = "1-Intro",
+            IntroductionTitle = "My Intro",
+            JournalEntryTemplateFileName = "2-Template",
+            JournalEntryTemplateTitle = "My Template",
+            AllJournalsFileName = "9-AllJournals",
+            AllJournalsTitle = "All Journals"
+        });
+
+        var testFileSystem = new TestFileSystem();
+        
+        // Use real JournalInitializer with test template manager
+        var testTemplateManager = new TestTemplateManager();
+        var testJournalConfig = new TestJournalConfiguration();
+        var realInitializer = new JournalInitializer(
+            testFileSystem,
+            testTemplateManager,
+            testJournalConfig,
+            customSettings
+        );
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(testFileSystem);
+        services.AddSingleton<IJournalInitializer>(realInitializer);
+        services.AddSingleton(customSettings);
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
+
+        var customApp = new CommandAppTester(registrar);
+        customApp.Configure(config =>
+        {
+            config.SetApplicationName(customSettings.Value.AppName);
+            config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
+        });
+
+        // When
+        var result = customApp.Run(["new", "MyJournal"]);
+
+        // Then
+        result.ExitCode.ShouldBe(0);
+        
+        var journalPath = Path.Combine(".", "MyJournal");
+        
+        // Verify files were created with custom file names
+        testFileSystem.FileExists(Path.Combine(journalPath, "0-Contents.md")).ShouldBeTrue();
+        testFileSystem.FileExists(Path.Combine(journalPath, "1-Intro.md")).ShouldBeTrue();
+        testFileSystem.FileExists(Path.Combine(journalPath, "2-Template.md")).ShouldBeTrue();
+        testFileSystem.FileExists(Path.Combine(journalPath, "9-AllJournals.md")).ShouldBeTrue();
     }
 
     [Fact]
@@ -654,11 +868,18 @@ public class NewCommandTests
         var testTemplateManager = new TestTemplateManagerWithParameterCapture();
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("table-of-contents", "TOC"));
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("journal-entry", "ENTRY"));
+        var testJournalConfiguration = new TestJournalConfiguration();
 
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<ITemplateManager>(testTemplateManager);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(testTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var testApp = new CommandAppTester(registrar);
         testApp.Configure(config =>
@@ -692,11 +913,18 @@ public class NewCommandTests
         var testTemplateManager = new TestTemplateManagerWithParameterCapture();
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("table-of-contents", "TOC"));
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("journal-entry", "ENTRY"));
+        var testJournalConfiguration = new TestJournalConfiguration();
 
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<ITemplateManager>(testTemplateManager);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(testTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var testApp = new CommandAppTester(registrar);
         testApp.Configure(config =>
@@ -720,7 +948,7 @@ public class NewCommandTests
         var expectedBody =
             @"- [example journal 1](link-to-journal)
 - [example journal 2](link-to-journal)
-- [example journal 2](link-to-journal)";
+- [example journal 3](link-to-journal)";
         allJournalsParams.ShouldContainKeyAndValue("body", expectedBody);
     }
 
@@ -731,11 +959,18 @@ public class NewCommandTests
         var testTemplateManager = new TestTemplateManagerWithParameterCapture();
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("table-of-contents", "TOC"));
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("journal-entry", "ENTRY"));
+        var testJournalConfiguration = new TestJournalConfiguration();
 
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<ITemplateManager>(testTemplateManager);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(testTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var testApp = new CommandAppTester(registrar);
         testApp.Configure(config =>
@@ -764,11 +999,18 @@ public class NewCommandTests
         var testTemplateManager = new TestTemplateManagerWithParameterCapture();
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("table-of-contents", "TOC"));
         testTemplateManager.RegisterTemplate(new TestTemplateGenerator("journal-entry", "ENTRY"));
+        var testJournalConfiguration = new TestJournalConfiguration();
 
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<ITemplateManager>(testTemplateManager);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(_fileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(testTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var testApp = new CommandAppTester(registrar);
         testApp.Configure(config =>
@@ -795,10 +1037,19 @@ public class NewCommandTests
     {
         // Given
         var faultyFileSystem = new FileCreationFailureFileSystem();
-        var registrar = new TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(faultyFileSystem)
-            .RegisterInstance<IJournalInitializer>(_journalInitializer);
+        var testTemplateManager = new TemplateManager(_journalSettings);
+        var testJournalConfiguration = new TestJournalConfiguration();
+        
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IFileSystem>(faultyFileSystem);
+        services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
+        services.AddSingleton<ITemplateManager>(testTemplateManager);
+        services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalInitializer, JournalInitializer>();
+
+        // Use helper method to create TypeRegistrar with manual service registration
+        var registrar = CreateTypeRegistrar(services);
 
         var faultyApp = new CommandAppTester(registrar);
         faultyApp.Configure(config =>
@@ -941,6 +1192,35 @@ public class NewCommandTests
     }
 
     /// <summary>
+    /// Helper method to create a TypeRegistrar with services registered manually to work with Spectre.Console's DI
+    /// </summary>
+    private static TypeRegistrar CreateTypeRegistrar(ServiceCollection services)
+    {
+        // Ensure NewCommand is registered if not already
+        if (!services.Any(s => s.ServiceType == typeof(NewCommand)))
+        {
+            services.AddSingleton<NewCommand>();
+        }
+        
+        var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().Build();
+        var registrar = new TypeRegistrar(host);
+        
+        foreach (var service in services)
+        {
+            if (service.ImplementationInstance != null)
+            {
+                registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
+            }
+            else if (service.ImplementationType != null)
+            {
+                registrar.Register(service.ServiceType, service.ImplementationType);
+            }
+        }
+        
+        return registrar;
+    }
+
+    /// <summary>
     /// Test template manager that throws exceptions for missing templates.
     /// </summary>
     private class EmptyTemplateManager : ITemplateManager
@@ -969,15 +1249,34 @@ public class NewCommandTests
     /// </summary>
     private class TestJournalInitializer : IJournalInitializer
     {
+        private readonly IFileSystem? _fileSystem;
+        
         public List<(string journalDirectory, string journalName)> InitializedJournals { get; } = new();
         public bool ShouldThrow { get; set; } = false;
         public Exception? ExceptionToThrow { get; set; }
+
+        public TestJournalInitializer(IFileSystem? fileSystem = null)
+        {
+            _fileSystem = fileSystem;
+        }
 
         public void Initialize(string journalDirectory, string journalName)
         {
             if (ShouldThrow && ExceptionToThrow != null)
             {
                 throw ExceptionToThrow;
+            }
+
+            // Create directory to simulate real behavior
+            _fileSystem?.CreateDirectory(journalDirectory);
+            
+            // Create the expected files
+            if (_fileSystem != null)
+            {
+                _fileSystem.CreateMarkdownFile(journalDirectory, "1a-TableOfContents", "# Table of Contents\n\nTEST_TOC_CONTENT");
+                _fileSystem.CreateMarkdownFile(journalDirectory, "1b-Intro", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
+                _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
+                _fileSystem.CreateMarkdownFile(journalDirectory, "1h-All-My-Journals", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
             }
 
             InitializedJournals.Add((journalDirectory, journalName));
