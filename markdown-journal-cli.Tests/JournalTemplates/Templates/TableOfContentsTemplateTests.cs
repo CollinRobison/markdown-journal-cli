@@ -1,4 +1,5 @@
 using markdown_journal_cli.JournalTemplates.Templates;
+using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
@@ -11,10 +12,20 @@ namespace markdown_journal_cli.Tests.JournalTemplates.Templates;
 public class TableOfContentsTemplateTests
 {
     private readonly TableOfContentsTemplate _template;
+    private readonly IOptions<JournalSettings> _journalSettings;
 
     public TableOfContentsTemplateTests()
     {
-        _template = new TableOfContentsTemplate();
+        _journalSettings = Options.Create(new JournalSettings
+        {
+            IntroductionTitle = "Introduction",
+            IntroductionFileName = "1b-Intro",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            JournalEntryTemplateFileName = "1c-Journal-Entry-Template.md",
+            AllJournalsTitle = "All My Journals",
+            AllJournalsFileName = "1h-All-My-Journals.md"
+        });
+        _template = new TableOfContentsTemplate(_journalSettings);
     }
 
     [Fact]
@@ -65,10 +76,7 @@ public class TableOfContentsTemplateTests
     public void GenerateTemplate_Should_Use_Custom_Created_Date_When_Provided()
     {
         // Given
-        var parameters = new Dictionary<string, object>
-        {
-            ["createdDate"] = "1/1/2023"
-        };
+        var parameters = new Dictionary<string, object> { ["createdDate"] = "1/1/2023" };
 
         // When
         var result = _template.GenerateTemplate(parameters);
@@ -81,10 +89,7 @@ public class TableOfContentsTemplateTests
     public void GenerateTemplate_Should_Use_Custom_Last_Edited_Date_When_Provided()
     {
         // Given
-        var parameters = new Dictionary<string, object>
-        {
-            ["lastEditedDate"] = "2/1/2023"
-        };
+        var parameters = new Dictionary<string, object> { ["lastEditedDate"] = "2/1/2023" };
 
         // When
         var result = _template.GenerateTemplate(parameters);
@@ -115,7 +120,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["createdDate"] = "12/25/2022",
-            ["lastEditedDate"] = "1/15/2023"
+            ["lastEditedDate"] = "1/15/2023",
         };
 
         // When
@@ -139,19 +144,19 @@ public class TableOfContentsTemplateTests
         // Check for required date fields
         result.ShouldContain("Created:");
         result.ShouldContain("Last Edited:");
-        
+
         // Check for main heading
         result.ShouldContain("# Table of Contents");
-        
+
         // Check for required navigation links
         result.ShouldContain("- [Introduction](1b-Intro.md)");
         result.ShouldContain("- [Journal Entry Template](1c-Journal-Entry-Template.md)");
         result.ShouldContain("- [All My Journals](1h-All-My-Journals.md)");
-        
+
         // Check for example section
         result.ShouldContain("## Example Topic");
         result.ShouldContain("- [example link to content]()");
-        
+
         // Should end with newline
         result.ShouldEndWith("\n");
     }
@@ -163,7 +168,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["createdDate"] = "1/1/2023",
-            ["lastEditedDate"] = "2/1/2023"
+            ["lastEditedDate"] = "2/1/2023",
         };
 
         // When
@@ -171,7 +176,7 @@ public class TableOfContentsTemplateTests
 
         // Then
         var lines = result.Split('\n');
-        
+
         // Check first few lines for correct structure
         lines[0].ShouldBe("Created: 1/1/2023");
         lines[1].ShouldBe("Last Edited: 2/1/2023");
@@ -197,7 +202,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["createdDate"] = dateValue,
-            ["lastEditedDate"] = dateValue
+            ["lastEditedDate"] = dateValue,
         };
 
         // When
@@ -216,7 +221,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["createdDate"] = 123,
-            ["lastEditedDate"] = 456.789
+            ["lastEditedDate"] = 456.789,
         };
 
         // When
@@ -234,7 +239,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["createdDate"] = null!,
-            ["lastEditedDate"] = null!
+            ["lastEditedDate"] = null!,
         };
 
         // When & Then
@@ -251,7 +256,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["createdDate"] = createdDate,
-            ["lastEditedDate"] = lastEditedDate
+            ["lastEditedDate"] = lastEditedDate,
         };
 
         // When
@@ -269,7 +274,7 @@ public class TableOfContentsTemplateTests
         var parameters = new Dictionary<string, object>
         {
             ["unknownParameter"] = "should be ignored",
-            ["createdDate"] = "1/1/2023"
+            ["createdDate"] = "1/1/2023",
         };
 
         // When

@@ -110,15 +110,16 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ `new` command implementation  
 - ✅ Exception handling
 - ✅ Unit tests for core functionality
+- ✅ Service-oriented architecture with dependency injection
+- ✅ Configuration system with `.journalrc` files
 
 **Planned Features:**
 - ⏳ Additional commands (add, open, search)
-- ⏳ Configuration system
 - ⏳ Global tool installation
+- ⏳ Advanced configuration options
 
 **Known Limitations:**
 - Global tool installation not yet configured
-- No configuration file support yet
 
 ## 📄 License
 

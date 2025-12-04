@@ -1,4 +1,4 @@
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.FileSystem;
 
 namespace markdown_journal_cli.Tests.Infrastructure;
 
@@ -111,5 +111,36 @@ public class TestFileSystem : IFileSystem
     public IEnumerable<string> GetAllDirectories()
     {
         return _directories.Keys;
+    }
+
+    public void CreateFile(string path, string fileName, string body)
+    {
+        if (!_directories.ContainsKey(path))
+        {
+            _directories[path] = true;
+        }
+
+        var filePath = Path.Combine(path, fileName);
+        _files[filePath] = body;
+    }
+
+    public void UpdateFile(string path, string fileName, string body)
+    {
+        var filePath = Path.Combine(path, fileName);
+        _files[filePath] = body;
+    }
+
+    public void DeleteFile(string filePath)
+    {
+        _files.Remove(filePath);
+    }
+
+    string IFileSystem.GetFileContent(string filePath)
+    {
+        if (!_files.ContainsKey(filePath))
+        {
+            throw new FileNotFoundException($"File not found: {filePath}");
+        }
+        return _files[filePath];
     }
 }

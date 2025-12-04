@@ -1,5 +1,6 @@
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
+using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
@@ -11,11 +12,31 @@ namespace markdown_journal_cli.Tests.JournalTemplates;
 /// </summary>
 public class TemplateManagerTests
 {
+    private readonly IOptions<JournalSettings> _journalSettings;
+
+    public TemplateManagerTests()
+    {
+        _journalSettings = Options.Create(new JournalSettings
+        {
+            AppName = "md-journal",
+            JournalConfigFileName = ".journalrc",
+            DefaultJournalName = "MyJournal",
+            TableOfContentsFileName = "1a-TableOfContents",
+            TableOfContentsTitle = "Table of Contents",
+            IntroductionFileName = "1b-Intro",
+            IntroductionTitle = "Introduction",
+            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            AllJournalsFileName = "1h-All-My-Journals",
+            AllJournalsTitle = "All My Journals"
+        });
+    }
+
     [Fact]
     public void Constructor_Should_Register_Default_Templates()
     {
         // When
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // Then
         var availableTemplates = manager.GetAvailableTemplates().ToList();
@@ -27,7 +48,7 @@ public class TemplateManagerTests
     public void GenerateFromTemplate_Returns_Registered_Template_Output()
     {
         // Arrange
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var fake = new TestTemplateGenerator("x-test", "EXPECTED");
         manager.RegisterTemplate(fake);
 
@@ -43,7 +64,7 @@ public class TemplateManagerTests
     public void RegisterTemplate_Should_Add_New_Template()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var template = new TestTemplateGenerator("new-template", "NEW_OUTPUT");
 
         // When
@@ -59,7 +80,7 @@ public class TemplateManagerTests
     public void RegisterTemplate_Should_Replace_Existing_Template()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var originalTemplate = new TestTemplateGenerator("test-template", "ORIGINAL");
         var replacementTemplate = new TestTemplateGenerator("test-template", "REPLACEMENT");
 
@@ -77,12 +98,13 @@ public class TemplateManagerTests
     public void GenerateFromTemplate_Should_Throw_When_Template_Not_Found()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // When & Then
-        var exception = Should.Throw<ArgumentException>(() => 
-            manager.GenerateFromTemplate("non-existent", null));
-        
+        var exception = Should.Throw<ArgumentException>(() =>
+            manager.GenerateFromTemplate("non-existent", null)
+        );
+
         exception.Message.ShouldContain("Template 'non-existent' not found");
         exception.Message.ShouldContain("Available templates:");
     }
@@ -91,7 +113,7 @@ public class TemplateManagerTests
     public void GenerateFromTemplate_Should_Pass_Parameters_To_Template()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var template = new ParameterCapturingTestTemplate();
         manager.RegisterTemplate(template);
         var parameters = new Dictionary<string, object> { ["key"] = "value" };
@@ -107,7 +129,7 @@ public class TemplateManagerTests
     public void GenerateFromTemplate_Should_Handle_Null_Parameters()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var template = new ParameterCapturingTestTemplate();
         manager.RegisterTemplate(template);
 
@@ -122,7 +144,7 @@ public class TemplateManagerTests
     public void GenerateFromTemplate_Should_Handle_Empty_Parameters()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var template = new ParameterCapturingTestTemplate();
         manager.RegisterTemplate(template);
         var parameters = new Dictionary<string, object>();
@@ -140,7 +162,7 @@ public class TemplateManagerTests
     public void GetAvailableTemplates_Should_Return_All_Registered_Templates()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var template1 = new TestTemplateGenerator("template1", "output1");
         var template2 = new TestTemplateGenerator("template2", "output2");
 
@@ -160,7 +182,7 @@ public class TemplateManagerTests
     public void GetAvailableTemplates_Should_Return_Empty_Collection_When_No_Custom_Templates()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // When
         var templates = manager.GetAvailableTemplates().ToList();
@@ -174,7 +196,7 @@ public class TemplateManagerTests
     public void Default_JournalEntry_Template_Should_Be_Available()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // When
         var result = manager.GenerateFromTemplate("journal-entry", null);
@@ -188,7 +210,7 @@ public class TemplateManagerTests
     public void Default_TableOfContents_Template_Should_Be_Available()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // When
         var result = manager.GenerateFromTemplate("table-of-contents", null);
@@ -206,29 +228,27 @@ public class TemplateManagerTests
     public void GenerateFromTemplate_Should_Throw_For_Empty_Template_Names(string templateName)
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // When & Then
-        Should.Throw<ArgumentException>(() => 
-            manager.GenerateFromTemplate(templateName, null));
+        Should.Throw<ArgumentException>(() => manager.GenerateFromTemplate(templateName, null));
     }
 
     [Fact]
     public void GenerateFromTemplate_Should_Throw_For_Null_Template_Name()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
 
         // When & Then
-        Should.Throw<ArgumentException>(() => 
-            manager.GenerateFromTemplate(null!, null));
+        Should.Throw<ArgumentException>(() => manager.GenerateFromTemplate(null!, null));
     }
 
     [Fact]
     public void Multiple_Templates_With_Same_Interface_Should_Work()
     {
         // Given
-        var manager = new TemplateManager();
+        var manager = new TemplateManager(_journalSettings);
         var template1 = new TestTemplateGenerator("multi1", "OUTPUT1");
         var template2 = new TestTemplateGenerator("multi2", "OUTPUT2");
 

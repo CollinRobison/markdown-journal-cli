@@ -1,31 +1,30 @@
 ﻿using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
+using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.New;
 
 [Description("Creates a new markdown journal")]
-public sealed class NewCommand : Command<NewCommand.Settings>
+public sealed class NewCommand(
+    IAnsiConsole console,
+    IFileSystem fileSystem,
+    IJournalInitializer journalInitializer, 
+    IOptions<JournalSettings>  journalSettings
+) : Command<NewCommand.Settings>
 {
-    private readonly IAnsiConsole _console;
-    private readonly IFileSystem _fileSystem;
+    private readonly IAnsiConsole _console =
+        console ?? throw new ArgumentNullException(nameof(console));
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-    private readonly ITemplateManager _templateManager;
+    private readonly IJournalInitializer _journalInitializer =
+        journalInitializer ?? throw new ArgumentNullException(nameof(journalInitializer));
 
-    public NewCommand(
-        IAnsiConsole console,
-        IFileSystem fileSystem,
-        ITemplateManager templateManager
-    )
-    {
-        _console = console ?? throw new ArgumentNullException(nameof(console));
-        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _templateManager =
-            templateManager ?? throw new ArgumentNullException(nameof(templateManager));
-    }
+    private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public sealed class Settings : CommandSettings
     {
@@ -33,8 +32,8 @@ public sealed class NewCommand : Command<NewCommand.Settings>
         [Description(
             "The name of the journal to create. If not specified, a default name will be used."
         )]
-        [DefaultValue("MyJournal")]
-        public required string JournalName { get; set; }
+        //[DefaultValue("MyJournal")]
+        public string? JournalName { get; set; }
 
         [CommandOption("-p|--path <filePath>")]
         [Description(
@@ -45,12 +44,15 @@ public sealed class NewCommand : Command<NewCommand.Settings>
 
         public override ValidationResult Validate()
         {
-            if (string.IsNullOrWhiteSpace(JournalName))
+            // Reject empty or whitespace-only journal names
+            if (JournalName != null && string.IsNullOrWhiteSpace(JournalName))
             {
-                return ValidationResult.Error("Journal name cannot be empty");
+                return ValidationResult.Error("Journal name cannot be empty or whitespace");
             }
-
-            if (JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            
+            // Validate characters if name is provided
+            if (!string.IsNullOrWhiteSpace(JournalName) && 
+                JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
                 return ValidationResult.Error("Journal name contains invalid characters");
             }
@@ -60,58 +62,23 @@ public sealed class NewCommand : Command<NewCommand.Settings>
     }
 
     public override int Execute(CommandContext context, Settings settings)
-    {
+    {   var journalName = settings.JournalName ?? _journalSettings.DefaultJournalName; 
         try
         {
             string journalDirectory = _fileSystem.CombinePaths(
                 settings.FilePath ?? ".",
-                settings.JournalName
+                journalName 
             );
 
             if (_fileSystem.DirectoryExists(journalDirectory))
             {
-                throw new JournalAlreadyExistsException(settings.JournalName, journalDirectory);
+                throw new JournalAlreadyExistsException(journalName, journalDirectory);
             }
 
-            _fileSystem.CreateDirectory(journalDirectory);
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1a-TableOfContents",
-                _templateManager.GenerateFromTemplate("table-of-contents", [])
-            );
-            var introParams = new Dictionary<string, object>
-            {
-                ["title"] = "Introduction",
-                ["body"] = "Add an introduction to your new journal here.",
-                ["addSourceBlock"] = false,
-            };
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1b-Intro",
-                _templateManager.GenerateFromTemplate("journal-entry", introParams)
-            );
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1c-Journal-Entry-Template",
-                _templateManager.GenerateFromTemplate("journal-entry", [])
-            );
-            var allMyJournalsParams = new Dictionary<string, object>
-            {
-                ["title"] = "Journals List",
-                ["body"] =
-                    @"- [example journal 1](link-to-journal)
-- [example journal 2](link-to-journal)
-- [example journal 2](link-to-journal)",
-                ["addSourceBlock"] = false,
-            };
-            _fileSystem.CreateMarkdownFile(
-                journalDirectory,
-                "1h-All-My-Journals",
-                _templateManager.GenerateFromTemplate("journal-entry", allMyJournalsParams)
-            );
+            _journalInitializer.Initialize(journalDirectory, journalName);
 
             _console.MarkupLine(
-                $"[green]Success:[/] Journal [yellow]{settings.JournalName}[/] created at [blue]{journalDirectory}[/]"
+                $"[green]Success:[/] Journal [yellow]{journalName}[/] created at [blue]{journalDirectory}[/]"
             );
 
             return 0;

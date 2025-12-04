@@ -1,5 +1,6 @@
-using markdown_journal_cli.Infrastructure;
+using markdown_journal_cli.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Shouldly;
 using Spectre.Console.Cli;
 using Xunit;
@@ -13,10 +14,14 @@ namespace markdown_journal_cli.Tests.Infrastructure;
 public class TypeRegistrarTests
 {
     [Fact]
-    public void Constructor_Should_Initialize_Empty_ServiceCollection()
+    public void Constructor_With_ServiceProvider_Should_Initialize()
     {
+        // Given
+        var services = new ServiceCollection();
+        var serviceProvider = services.BuildServiceProvider();
+
         // When
-        var registrar = new TypeRegistrar();
+        var registrar = new TypeRegistrar(serviceProvider);
 
         // Then
         registrar.ShouldNotBeNull();
@@ -26,10 +31,12 @@ public class TypeRegistrarTests
     public void Register_Should_Register_Service_And_Implementation()
     {
         // Given
-        var registrar = new TypeRegistrar();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
 
         // When
-        registrar.Register(typeof(ITestService), typeof(TestService));
         var resolver = registrar.Build();
 
         // Then
@@ -42,11 +49,13 @@ public class TypeRegistrarTests
     public void RegisterInstance_Should_Register_Specific_Instance()
     {
         // Given
-        var registrar = new TypeRegistrar();
         var instance = new TestService();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService>(instance);
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
 
         // When
-        registrar.RegisterInstance(typeof(ITestService), instance);
         var resolver = registrar.Build();
 
         // Then
@@ -55,35 +64,20 @@ public class TypeRegistrarTests
     }
 
     [Fact]
-    public void RegisterInstance_Generic_Should_Register_Specific_Instance()
-    {
-        // Given
-        var registrar = new TypeRegistrar();
-        var instance = new TestService();
-
-        // When
-        var result = registrar.RegisterInstance(instance);
-        var resolver = registrar.Build();
-
-        // Then
-        result.ShouldBe(registrar); // Should return self for fluent interface
-        var service = resolver.Resolve(typeof(TestService));
-        service.ShouldBe(instance);
-    }
-
-    [Fact]
     public void RegisterLazy_Should_Register_Factory_Function()
     {
         // Given
-        var registrar = new TypeRegistrar();
         var factoryCalled = false;
-
-        // When
-        registrar.RegisterLazy(typeof(ITestService), () =>
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService>(_ =>
         {
             factoryCalled = true;
             return new TestService();
         });
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
+
+        // When
         var resolver = registrar.Build();
 
         // Then
@@ -98,7 +92,9 @@ public class TypeRegistrarTests
     public void Build_Should_Return_TypeResolver()
     {
         // Given
-        var registrar = new TypeRegistrar();
+        var services = new ServiceCollection();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
 
         // When
         var resolver = registrar.Build();
@@ -109,23 +105,21 @@ public class TypeRegistrarTests
     }
 
     [Fact]
-    public void RegisterInstance_Should_Support_Fluent_Interface()
+    public void Build_Should_Use_Existing_Provider_When_Available()
     {
         // Given
-        var registrar = new TypeRegistrar();
-        var instance1 = new TestService();
-        var instance2 = new AnotherTestService();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
 
         // When
-        var result = registrar
-            .RegisterInstance(instance1)
-            .RegisterInstance(instance2);
+        var resolver = registrar.Build();
 
         // Then
-        result.ShouldBe(registrar);
-        var resolver = registrar.Build();
-        resolver.Resolve(typeof(TestService)).ShouldBe(instance1);
-        resolver.Resolve(typeof(AnotherTestService)).ShouldBe(instance2);
+        var service = resolver.Resolve(typeof(ITestService));
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType<TestService>();
     }
 
     [Fact]
@@ -139,7 +133,9 @@ public class TypeRegistrarTests
     public void TypeResolver_Resolve_Should_Return_Null_For_Null_Type()
     {
         // Given
-        var registrar = new TypeRegistrar();
+        var services = new ServiceCollection();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
         var resolver = registrar.Build();
 
         // When
@@ -153,7 +149,9 @@ public class TypeRegistrarTests
     public void TypeResolver_Resolve_Should_Return_Null_For_Unregistered_Type()
     {
         // Given
-        var registrar = new TypeRegistrar();
+        var services = new ServiceCollection();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
         var resolver = registrar.Build();
 
         // When
@@ -167,8 +165,10 @@ public class TypeRegistrarTests
     public void TypeResolver_Should_Return_Same_Instance_For_Singleton_Services()
     {
         // Given
-        var registrar = new TypeRegistrar();
-        registrar.Register(typeof(ITestService), typeof(TestService));
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
         var resolver = registrar.Build();
 
         // When
@@ -183,12 +183,14 @@ public class TypeRegistrarTests
     public void TypeResolver_Should_Resolve_Multiple_Different_Services()
     {
         // Given
-        var registrar = new TypeRegistrar();
-        registrar.Register(typeof(ITestService), typeof(TestService));
-        registrar.Register(typeof(IAnotherTestService), typeof(AnotherTestService));
-        var resolver = registrar.Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        services.AddSingleton<IAnotherTestService, AnotherTestService>();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
 
         // When
+        var resolver = registrar.Build();
         var service1 = resolver.Resolve(typeof(ITestService));
         var service2 = resolver.Resolve(typeof(IAnotherTestService));
 
@@ -200,10 +202,54 @@ public class TypeRegistrarTests
         service1.ShouldNotBe(service2);
     }
 
+    [Fact]
+    public void TypeResolver_Should_Resolve_Services_From_Existing_Provider()
+    {
+        // Given
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        services.AddSingleton<IAnotherTestService, AnotherTestService>();
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
+        var resolver = registrar.Build();
+
+        // When
+        var service1 = resolver.Resolve(typeof(ITestService));
+        var service2 = resolver.Resolve(typeof(IAnotherTestService));
+
+        // Then
+        service1.ShouldNotBeNull();
+        service1.ShouldBeOfType<TestService>();
+        service2.ShouldNotBeNull();
+        service2.ShouldBeOfType<AnotherTestService>();
+    }
+
+    [Fact]
+    public void RegisterInstance_Should_Work_With_New_Services_Collection()
+    {
+        // Given
+        var instance1 = new TestService();
+        var instance2 = new AnotherTestService();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService>(instance1);
+        services.AddSingleton<IAnotherTestService>(instance2);
+        var serviceProvider = services.BuildServiceProvider();
+        var registrar = new TypeRegistrar(serviceProvider);
+
+        // When
+        var resolver = registrar.Build();
+
+        // Then
+        resolver.Resolve(typeof(ITestService)).ShouldBe(instance1);
+        resolver.Resolve(typeof(IAnotherTestService)).ShouldBe(instance2);
+    }
+
     // Test interfaces and classes
     private interface ITestService { }
+
     private class TestService : ITestService { }
-    
+
     private interface IAnotherTestService { }
+
     private class AnotherTestService : IAnotherTestService { }
 }
