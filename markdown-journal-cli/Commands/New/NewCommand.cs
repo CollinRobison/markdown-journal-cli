@@ -32,7 +32,6 @@ public sealed class NewCommand(
         [Description(
             "The name of the journal to create. If not specified, a default name will be used."
         )]
-        //[DefaultValue("MyJournal")]
         public string? JournalName { get; set; }
 
         [CommandOption("-p|--path <filePath>")]

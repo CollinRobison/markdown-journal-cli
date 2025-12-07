@@ -88,9 +88,10 @@ md-journal new "Travel Journal" --path ~/Documents
 ### Planned Commands
 ```bash
 # TODO: Document these commands when implemented
-md-journal add entry [title]     # Add a new journal entry
-md-journal open [name]           # Open journal in default editor
-md-journal search <term>         # Search across journal entries
+mdjournal add entry [title] [header] [template] [table of contents] [journalrc]   # Add a new journal entry or file
+mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates
+mdjournal open [name]                   # Open journal in default editor (start with vscode and vim support)
+mdjournal search <term>                 # Search across journal entries
 ```
 
 ## Contributing
