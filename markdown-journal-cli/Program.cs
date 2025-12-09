@@ -1,4 +1,5 @@
-﻿using markdown_journal_cli.Commands.New;
+﻿using markdown_journal_cli.Commands.Add;
+using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -40,6 +41,9 @@ public static class Program
         
         // Register commands
         host.Services.AddSingleton<NewCommand>();
+        host.Services.AddSingleton<AddEntry>();
+        host.Services.AddSingleton<AddJournalrc>();
+        host.Services.AddSingleton<AddTableOfContents>();
 
         // Build the host and get the service provider
         var builtHost = host.Build();
@@ -60,6 +64,13 @@ public static class Program
             // New
             config.AddCommand<NewCommand>("new");
             
+            config.AddBranch<AddSettings>("add", add =>
+            {
+                add.SetDescription("Creates a new specified file to an existing journal.");
+                add.AddCommand<AddEntry>("entry");
+                add.AddCommand<AddJournalrc>("config");
+                add.AddCommand<AddTableOfContents>("toc");
+            });
             // Add
             // config.AddBranch<AddSettings>("add", add =>
             // {
