@@ -85,15 +85,6 @@ md-journal new
 md-journal new "Travel Journal" --path ~/Documents
 ```
 
-### Planned Commands
-```bash
-# TODO: Document these commands when implemented
-mdjournal add entry [title] [header] [template] [table of contents] [journalrc]   # Add a new journal entry or file
-mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates
-mdjournal open [name]                   # Open journal in default editor (start with vscode and vim support)
-mdjournal search <term>                 # Search across journal entries
-```
-
 ## Contributing
 
 Interested in contributing? Check out the **[Development Guide](docs/DEVELOPMENT.md)** for:
@@ -118,6 +109,18 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ Additional commands (add, open, search)
 - ⏳ Global tool installation
 - ⏳ Advanced configuration options
+
+### Planned Commands
+```bash
+# TODO: Document these commands when implemented
+mdjournal add entry [title] [header] [template] [table of contents] [journalrc]   # Add a new journal entry or file
+
+mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates. have an option to check all files in directory and if any aren't in journalrc list them out so people can confirm whether they want to update everything --check to list changes before applying to journalrc --all to appky change without listing.
+
+mdjournal open [name]                   # Open journal in default editor (start with vscode and vim support)
+
+mdjournal search <term>                 # Search across journal entries
+```
 
 **Known Limitations:**
 - Global tool installation not yet configured

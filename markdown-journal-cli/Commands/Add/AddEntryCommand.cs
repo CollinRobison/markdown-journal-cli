@@ -23,7 +23,14 @@ public sealed class AddEntry(
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, AddEntrySettings settings)
-    {
+    {   
+        //add tests
+        //verify a journal exists in directory by checking if journalrc exist - (make this a helper function and maybe custom exception)
+        //format entry name and subheading with - in place of spaces. - (make this into helper function)
+        //generate file name by merging heading - subheading - file name. (make this a helper function)
+        //check if file exists
+        //update journalrc - (make this a helper function)
+        //update table of contents based on journalrc - (make this a helper function)
         throw new NotImplementedException();
     }
 
