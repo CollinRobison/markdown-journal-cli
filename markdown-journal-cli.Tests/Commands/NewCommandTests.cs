@@ -43,9 +43,9 @@ public class NewCommandTests
             TableOfContentsTitle = "Table of Contents",
             IntroductionFileName = "1b-Intro",
             IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+            JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
             JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
+            AllJournalsFileName = "1h-All_My_Journals",
             AllJournalsTitle = "All My Journals"
         });
 
@@ -188,9 +188,9 @@ public class NewCommandTests
         _fileSystem.FileExists(Path.Combine(journalPath, "1a-TableOfContents.md")).ShouldBeTrue();
         _fileSystem.FileExists(Path.Combine(journalPath, "1b-Intro.md")).ShouldBeTrue();
         _fileSystem
-            .FileExists(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"))
+            .FileExists(Path.Combine(journalPath, "1c-Journal_Entry_Template.md"))
             .ShouldBeTrue();
-        _fileSystem.FileExists(Path.Combine(journalPath, "1h-All-My-Journals.md")).ShouldBeTrue();
+        _fileSystem.FileExists(Path.Combine(journalPath, "1h-All_My_Journals.md")).ShouldBeTrue();
     }
 
     [Fact]
@@ -218,12 +218,12 @@ public class NewCommandTests
         introContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
 
         var templateContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1c-Journal-Entry-Template.md")
+            Path.Combine(journalPath, "1c-Journal_Entry_Template.md")
         );
         templateContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
 
         var journalsContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1h-All-My-Journals.md")
+            Path.Combine(journalPath, "1h-All_My_Journals.md")
         );
         journalsContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
     }
@@ -407,10 +407,10 @@ public class NewCommandTests
         // All these files should use the journal-entry template
         var introContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1b-Intro.md"));
         var templateContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1c-Journal-Entry-Template.md")
+            Path.Combine(journalPath, "1c-Journal_Entry_Template.md")
         );
         var journalsContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1h-All-My-Journals.md")
+            Path.Combine(journalPath, "1h-All_My_Journals.md")
         );
 
         introContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
@@ -436,8 +436,8 @@ public class NewCommandTests
         journalFiles.Count.ShouldBe(4);
         journalFiles.ShouldContain(f => f.Key.EndsWith("1a-TableOfContents.md"));
         journalFiles.ShouldContain(f => f.Key.EndsWith("1b-Intro.md"));
-        journalFiles.ShouldContain(f => f.Key.EndsWith("1c-Journal-Entry-Template.md"));
-        journalFiles.ShouldContain(f => f.Key.EndsWith("1h-All-My-Journals.md"));
+        journalFiles.ShouldContain(f => f.Key.EndsWith("1c-Journal_Entry_Template.md"));
+        journalFiles.ShouldContain(f => f.Key.EndsWith("1h-All_My_Journals.md"));
     }
 
     [Fact]
@@ -569,8 +569,8 @@ public class NewCommandTests
         // Files should be created in alphabetical order by filename
         allFiles.ShouldContain(Path.Combine(journalPath, "1a-TableOfContents.md"));
         allFiles.ShouldContain(Path.Combine(journalPath, "1b-Intro.md"));
-        allFiles.ShouldContain(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"));
-        allFiles.ShouldContain(Path.Combine(journalPath, "1h-All-My-Journals.md"));
+        allFiles.ShouldContain(Path.Combine(journalPath, "1c-Journal_Entry_Template.md"));
+        allFiles.ShouldContain(Path.Combine(journalPath, "1h-All_My_Journals.md"));
     }
 
     [Fact]
@@ -649,9 +649,9 @@ public class NewCommandTests
             TableOfContentsTitle = "Table of Contents",
             IntroductionFileName = "1b-Intro",
             IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+            JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
             JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
+            AllJournalsFileName = "1h-All_My_Journals",
             AllJournalsTitle = "All My Journals"
         });
 
@@ -1275,8 +1275,8 @@ public class NewCommandTests
             {
                 _fileSystem.CreateMarkdownFile(journalDirectory, "1a-TableOfContents", "# Table of Contents\n\nTEST_TOC_CONTENT");
                 _fileSystem.CreateMarkdownFile(journalDirectory, "1b-Intro", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
-                _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
-                _fileSystem.CreateMarkdownFile(journalDirectory, "1h-All-My-Journals", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
+                _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal_Entry_Template", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
+                _fileSystem.CreateMarkdownFile(journalDirectory, "1h-All_My_Journals", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
             }
 
             InitializedJournals.Add((journalDirectory, journalName));

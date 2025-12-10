@@ -29,7 +29,7 @@ public sealed class AddEntry(
         //format entry name and subheading with - in place of spaces. - (make this into helper function)
         //generate file name by merging heading - subheading - file name. (make this a helper function)
         //check if file exists
-        //update journalrc - (make this a helper function)
+        //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
         //update table of contents based on journalrc - (make this a helper function)
         throw new NotImplementedException();
     }
