@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel;
+using System.Net.Quic;
+using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.JournalTemplates;
 using Microsoft.Extensions.Options;
@@ -24,14 +26,32 @@ public sealed class AddEntry(
 
     public override int Execute(CommandContext context, AddEntrySettings settings)
     {   
-        //add tests
-        //verify a journal exists in directory by checking if journalrc exist - (make this a helper function and maybe custom exception)
-        //format entry name and subheading with - in place of spaces. - (make this into helper function)
-        //generate file name by merging heading - subheading - file name. (make this a helper function)
-        //check if file exists
-        //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
-        //update table of contents based on journalrc - (make this a helper function)
-        throw new NotImplementedException();
+        var journalrc = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
+        try{
+            //add tests
+            //verify a journal exists in directory by checking if journalrc exist - (make this a helper function and maybe custom exception)
+            console.WriteLine(journalrc);
+            if (!_fileSystem.FileExists(journalrc))
+            {
+                throw new JournalrcNotFoundException(settings.FilePath);
+            }
+            //format entry name and subheading with - in place of spaces. - (make this into helper function)
+            //generate file name by merging heading - subheading - file name. (make this a helper function)
+            //check if file exists
+            //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
+            //update table of contents based on journalrc - (make this a helper function)
+            return 0;
+        }
+        catch (JournalrcNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");
+            return 1;
+        }
     }
 
 }

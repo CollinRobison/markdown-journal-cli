@@ -29,7 +29,7 @@ public class AddEntrySettings : AddSettings
     [Description(
         "The name of the file to create."
     )]
-    public required string JournalName { get; set; }
+    public required string EntryName { get; set; }
 
     //heading - allow spaces or _ and program to interpret either along.
     [CommandOption("--he|--heading")]
@@ -50,7 +50,7 @@ public class AddEntrySettings : AddSettings
 
     public override ValidationResult Validate()
     {   
-        if(!JournalName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' '))
+        if(!EntryName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' '))
         {
             return ValidationResult.Error("Entry name contains a character that is not a letter, digit, underscore, or space.");
         }

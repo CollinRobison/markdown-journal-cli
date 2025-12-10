@@ -25,27 +25,36 @@ public class JournalException : Exception
 /// <summary>
 /// Exception thrown when attempting to create a journal that already exists at the specified location.
 /// </summary>
-public class JournalAlreadyExistsException : JournalException
+/// <remarks>
+/// Initializes a new instance of the <see cref="JournalAlreadyExistsException"/> class.
+/// </remarks>
+/// <param name="journalName">The name of the journal that already exists.</param>
+/// <param name="path">The path where the journal already exists.</param>
+public class JournalAlreadyExistsException(string journalName, string path) : JournalException($"Journal '{journalName}' already exists at '{path}'")
 {
     /// <summary>
     /// Gets the name of the journal that already exists.
     /// </summary>
-    public string JournalName { get; }
+    public string JournalName { get; } = journalName;
 
     /// <summary>
     /// Gets the path where the journal already exists.
     /// </summary>
-    public string Path { get; }
+    public string Path { get; } = path;
+}
 
+
+/// <summary>
+/// Exception thrown when attempting to find a .journalrc.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="JournalrcNotFoundException"/> class.
+/// </remarks>
+/// <param name="path">The path expecting .journalrc file.</param>
+public class JournalrcNotFoundException(string path) : JournalException($".journalrc not found at '{path}'")
+{
     /// <summary>
-    /// Initializes a new instance of the <see cref="JournalAlreadyExistsException"/> class.
+    /// Gets the path expecting .journalrc.
     /// </summary>
-    /// <param name="journalName">The name of the journal that already exists.</param>
-    /// <param name="path">The path where the journal already exists.</param>
-    public JournalAlreadyExistsException(string journalName, string path)
-        : base($"Journal '{journalName}' already exists at '{path}'")
-    {
-        JournalName = journalName;
-        Path = path;
-    }
+    public string Path { get; } = path;
 }
