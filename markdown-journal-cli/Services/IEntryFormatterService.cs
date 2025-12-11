@@ -21,16 +21,16 @@ public interface IEntryFormatterService
     string RemoveSpaceSeperators(string input);
 
     /// <summary>
-    /// parses subheading string and returns an array of subheadings without space seperators.
+    /// Parses subheading string and returns an array of subheadings without space seperators.
     /// </summary>
-    /// <param name="subheadings">the string of subheadings to parse. must be in seperator format.</param>
-    /// <returns>array of subheadings without seperators</returns>
+    /// <param name="subheadings">The string of subheadings to parse. must be in seperator format.</param>
+    /// <returns>Array of subheadings without seperators</returns>
     string[] SeperateSubheadingString(string subheadings);
 
     /// <summary>
-    /// combines sections together with section and space seperators.
+    /// Combines sections together with section and space seperators.
     /// </summary>
-    /// <param name="sections">the string array of sections to combine.</param>
-    /// <returns>string of combined sections with section and space seperators.</returns>
+    /// <param name="sections">The string array of sections to combine.</param>
+    /// <returns>String of combined sections with section and space seperators.</returns>
     string AddSectionSeperators(string[] sections);
 }

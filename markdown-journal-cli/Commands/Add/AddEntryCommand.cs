@@ -29,7 +29,7 @@ public sealed class AddEntry(
         var journalrc = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
         try{
             //add tests
-            //verify a journal exists in directory by checking if journalrc exist - (make this a helper function and maybe custom exception)
+            //verify a journal exists in directory by checking if journalrc exist - maybe make this a middleware
             console.WriteLine(journalrc);
             if (!_fileSystem.FileExists(journalrc))
             {
@@ -38,6 +38,7 @@ public sealed class AddEntry(
             //format entry name and subheading with - in place of spaces. - (make this into helper function)
             //generate file name by merging heading - subheading - file name. (make this a helper function)
             //check if file exists
+            //create file - make sure to use entryTitle if exists if not use formatted entryName
             //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
             //update table of contents based on journalrc - (make this a helper function)
             return 0;

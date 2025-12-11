@@ -27,9 +27,15 @@ public class AddEntrySettings : AddSettings
     //title - allow spaces or _ and program to interpret either along. set filename and title to this
     [CommandArgument(0, "<name>")]
     [Description(
-        "The name of the file to create."
+        "The name of the journal entry to create. This will be used in both the file name and the entry TOC title unless title option is specified."
     )]
     public required string EntryName { get; set; }
+
+    [CommandOption("-t|--title")]
+    [Description(
+        "The title of the journal entry. use this if it's different than the file name."
+    )]
+    public string? EntryTitle {get; set;}
 
     //heading - allow spaces or _ and program to interpret either along.
     [CommandOption("--he|--heading")]
@@ -46,7 +52,7 @@ public class AddEntrySettings : AddSettings
     )]
     public string? Subheading {get; set;}
 
-    //template - this one could be introduced late with just the basic entry to start 
+    //template - Add this option later. For right now just use the basic template. 
 
     public override ValidationResult Validate()
     {   
