@@ -41,9 +41,9 @@ public class JournalSettings
     public string AllJournalsTitle {get; set;} = "All My Journals";
 
     [Required]
-    public string TitleSpaceSeperator {get; set;} = "-";
+    public string TitleSpaceSeperator {get; set;} = "_";
 
     [Required]
-    public string HeadingSeperator {get; set;} = "_";
+    public string HeadingSeperator {get; set;} = "-";
 
 }

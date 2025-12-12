@@ -28,9 +28,9 @@ public interface IEntryFormatterService
     string[] SeperateSubheadingString(string subheadings);
 
     /// <summary>
-    /// Combines sections together with section and space seperators.
+    /// Combines nested headings together with heading and space seperators.
     /// </summary>
-    /// <param name="sections">The string array of sections to combine.</param>
-    /// <returns>String of combined sections with section and space seperators.</returns>
-    string AddSectionSeperators(string[] sections);
+    /// <param name="headings">The string array of headings to combine.</param>
+    /// <returns>String of combined headings with heading and space seperators.</returns>
+    string AddHeadingSeperators(string[] heading);
 }
