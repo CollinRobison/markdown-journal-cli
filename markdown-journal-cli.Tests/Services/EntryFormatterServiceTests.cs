@@ -169,6 +169,21 @@ public class EntryFormatterServiceTests
         result.ShouldBe(expected);
     }
 
+    [Fact]
+    public void AddSpaceSeperators_Handles_Very_Long_String()
+    {
+        // Given - Very long string (1000 words)
+        var longString = string.Join(" ", Enumerable.Repeat("word", 1000));
+
+        // When
+        var result = _formatterService.AddSpaceSeperators(longString);
+
+        // Then
+        result.Split('_').Length.ShouldBe(1000);
+        result.ShouldStartWith("word_");
+        result.ShouldEndWith("_word");
+    }
+
     // ==========================
     // Tests for RemoveSpaceSeperators
     // ==========================
@@ -317,6 +332,17 @@ public class EntryFormatterServiceTests
         var result = _formatterService.RemoveSpaceSeperators(input);
         // Then
         result.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void RemoveSpaceSeperators_handles_only_underscores()
+    {
+        // Given
+        string test = "____";
+        // When
+        var result = _formatterService.RemoveSpaceSeperators(test);
+        // Then
+        result.ShouldBe("");
     }
 
     // ==========================
@@ -470,6 +496,45 @@ public class EntryFormatterServiceTests
         result.ShouldBe(expected);
     }
 
+    [Fact]
+    public void SeperateSubheadingString_Handles_Only_Whitespace()
+    {
+        // Given
+        string test = "     ";
+        // When
+        var result = _formatterService.SeperateSubheadingString(test);
+        // Then
+        result.ShouldBe([]);
+    }
+
+    [Fact]
+    public void SeperateSubheadingString_Handles_Single_Character_Headings()
+    {
+        // Given
+        string test = "a-b-c-d";
+        // When
+        var result = _formatterService.SeperateSubheadingString(test);
+        // Then
+        result.ShouldBe(["a", "b", "c", "d"]);
+    }
+
+    [Fact]
+    public void SeperateSubheadingString_Handles_Very_Long_Heading_Names()
+    {
+        // Given - Very long heading names
+        var longHeading = string.Concat(Enumerable.Repeat("VeryLongHeadingName", 50));
+        var test = $"{longHeading}-heading2-heading3";
+
+        // When
+        var result = _formatterService.SeperateSubheadingString(test);
+
+        // Then
+        result.Length.ShouldBe(3);
+        result[0].ShouldBe(longHeading);
+        result[1].ShouldBe("heading2");
+        result[2].ShouldBe("heading3");
+    }
+
     // ==========================
     // Tests for AddHeadingSeperators
     // ==========================
@@ -594,5 +659,53 @@ public class EntryFormatterServiceTests
         var result = _formatterService.AddHeadingSeperators(input);
         // Then
         result.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void AddHeadingSeperators_Handles_Only_Whitespace_Strings()
+    {
+        // Given
+        string[] test = ["  ", "   ", "  "];
+        // When
+        var result = _formatterService.AddHeadingSeperators(test);
+        // Then
+        result.ShouldBe("");
+    }
+
+    [Fact]
+    public void AddHeadingSeperators_Handles_Single_Element_With_Spaces()
+    {
+        // Given
+        string[] test = ["Hello World Test"];
+        // When
+        var result = _formatterService.AddHeadingSeperators(test);
+        // Then
+        result.ShouldBe("Hello_World_Test");
+    }
+
+    [Fact]
+    public void AddHeadingSeperators_Handles_Tabs_And_Newlines_In_Sections()
+    {
+        // Given
+        string[] test = ["Hello\tWorld", "Test\nEntry", "Sample\rData"];
+        // When
+        var result = _formatterService.AddHeadingSeperators(test);
+        // Then
+        result.ShouldBe("Hello_World-Test_Entry-Sample_Data");
+    }
+
+    [Fact]
+    public void AddHeadingSeperators_Handles_Large_Array()
+    {
+        // Given - Large array (100 sections)
+        var largeArray = Enumerable.Range(1, 100).Select(i => $"Section {i}").ToArray();
+
+        // When
+        var result = _formatterService.AddHeadingSeperators(largeArray);
+
+        // Then
+        result.Split('-').Length.ShouldBe(100);
+        result.ShouldStartWith("Section_1-");
+        result.ShouldEndWith("-Section_100");
     }
 }
