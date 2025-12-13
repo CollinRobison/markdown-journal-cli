@@ -16,15 +16,17 @@ public class TableOfContentsTemplateTests
 
     public TableOfContentsTemplateTests()
     {
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            IntroductionTitle = "Introduction",
-            IntroductionFileName = "1b-Intro",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template.md",
-            AllJournalsTitle = "All My Journals",
-            AllJournalsFileName = "1h-All-My-Journals.md"
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                IntroductionTitle = "Introduction",
+                IntroductionFileName = "1b-Intro",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                JournalEntryTemplateFileName = "1c-Journal-Entry-Template.md",
+                AllJournalsTitle = "All My Journals",
+                AllJournalsFileName = "1h-All-My-Journals.md",
+            }
+        );
         _template = new TableOfContentsTemplate(_journalSettings);
     }
 

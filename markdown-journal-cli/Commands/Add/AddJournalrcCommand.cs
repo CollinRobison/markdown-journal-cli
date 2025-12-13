@@ -9,7 +9,7 @@ namespace markdown_journal_cli.Commands.Add;
 
 [Description("Creates a new journal config file if one does not already exist")]
 public class AddJournalrc(
-    IAnsiConsole console, 
+    IAnsiConsole console,
     IFileSystem fileSystem,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddJournalrcSettings>

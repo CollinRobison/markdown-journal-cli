@@ -30,7 +30,8 @@ public class JournalException : Exception
 /// </remarks>
 /// <param name="journalName">The name of the journal that already exists.</param>
 /// <param name="path">The path where the journal already exists.</param>
-public class JournalAlreadyExistsException(string journalName, string path) : JournalException($"Journal '{journalName}' already exists at '{path}'")
+public class JournalAlreadyExistsException(string journalName, string path)
+    : JournalException($"Journal '{journalName}' already exists at '{path}'")
 {
     /// <summary>
     /// Gets the name of the journal that already exists.
@@ -43,7 +44,6 @@ public class JournalAlreadyExistsException(string journalName, string path) : Jo
     public string Path { get; } = path;
 }
 
-
 /// <summary>
 /// Exception thrown when attempting to find a .journalrc.
 /// </summary>
@@ -51,7 +51,8 @@ public class JournalAlreadyExistsException(string journalName, string path) : Jo
 /// Initializes a new instance of the <see cref="JournalrcNotFoundException"/> class.
 /// </remarks>
 /// <param name="path">The path expecting .journalrc file.</param>
-public class JournalrcNotFoundException(string path) : JournalException($".journalrc not found at '{path}'")
+public class JournalrcNotFoundException(string path)
+    : JournalException($".journalrc not found at '{path}'")
 {
     /// <summary>
     /// Gets the path expecting .journalrc.

@@ -22,7 +22,8 @@ public class TemplateManager : ITemplateManager
     /// </summary>
     public TemplateManager(IOptions<JournalSettings> journalSettings)
     {
-        _journalSettings = journalSettings ?? throw new ArgumentNullException(nameof(journalSettings));
+        _journalSettings =
+            journalSettings ?? throw new ArgumentNullException(nameof(journalSettings));
         _templates = new Dictionary<string, ITemplateGenerator>();
         RegisterDefaultTemplates();
     }

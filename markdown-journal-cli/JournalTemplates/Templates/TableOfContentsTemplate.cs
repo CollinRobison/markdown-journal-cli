@@ -7,7 +7,7 @@ public class TableOfContentsTemplate : ITemplateGenerator
 {
     private readonly JournalSettings _journalSettings;
     public string TemplateName => "table-of-contents";
-    
+
     public TableOfContentsTemplate(IOptions<JournalSettings> journalSettings)
     {
         _journalSettings = journalSettings.Value;

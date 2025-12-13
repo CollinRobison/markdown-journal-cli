@@ -6,17 +6,15 @@ using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
 
-public class JournalConfiguration(IFileSystem fileSystem, 
-    IOptions<JournalSettings> journalSettings) : IJournalConfiguration
+public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettings> journalSettings)
+    : IJournalConfiguration
 {
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
-    
 
     public void Create(string directory, JournalConfig config)
     {
-        
         var journalConfName = _journalSettings.JournalConfigFileName;
         var journalrcPath = directory.Contains(journalConfName)
             ? directory
@@ -39,7 +37,6 @@ public class JournalConfiguration(IFileSystem fileSystem,
 
     public void Delete(string directory)
     {
-        
         var journalConfName = _journalSettings.JournalConfigFileName;
         var journalrcPath = directory.Contains(journalConfName)
             ? directory
@@ -56,7 +53,6 @@ public class JournalConfiguration(IFileSystem fileSystem,
 
     public void Update(string directory, Action<JournalConfig> config)
     {
-        
         var journalConfName = _journalSettings.JournalConfigFileName;
         var journalrcPath = directory.Contains(journalConfName)
             ? directory

@@ -22,7 +22,6 @@ public class TableOfContents
 
     [JsonPropertyName("indexCache")]
     public required IndexCache IndexCache { get; set; }
-    
 }
 
 public class Topic

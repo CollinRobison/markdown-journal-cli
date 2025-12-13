@@ -12,8 +12,8 @@ namespace markdown_journal_cli.Commands.New;
 public sealed class NewCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,
-    IJournalInitializer journalInitializer, 
-    IOptions<JournalSettings>  journalSettings
+    IJournalInitializer journalInitializer,
+    IOptions<JournalSettings> journalSettings
 ) : Command<NewCommand.Settings>
 {
     private readonly IAnsiConsole _console =
@@ -48,10 +48,12 @@ public sealed class NewCommand(
             {
                 return ValidationResult.Error("Journal name cannot be empty or whitespace");
             }
-            
+
             // Validate characters if name is provided
-            if (!string.IsNullOrWhiteSpace(JournalName) && 
-                JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            if (
+                !string.IsNullOrWhiteSpace(JournalName)
+                && JournalName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+            )
             {
                 return ValidationResult.Error("Journal name contains invalid characters");
             }
@@ -61,12 +63,13 @@ public sealed class NewCommand(
     }
 
     public override int Execute(CommandContext context, Settings settings)
-    {   var journalName = settings.JournalName ?? _journalSettings.DefaultJournalName; 
+    {
+        var journalName = settings.JournalName ?? _journalSettings.DefaultJournalName;
         try
         {
             string journalDirectory = _fileSystem.CombinePaths(
                 settings.FilePath ?? ".",
-                journalName 
+                journalName
             );
 
             if (_fileSystem.DirectoryExists(journalDirectory))

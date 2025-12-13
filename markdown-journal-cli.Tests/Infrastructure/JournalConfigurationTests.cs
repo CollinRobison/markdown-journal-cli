@@ -17,17 +17,16 @@ public class JournalConfigurationTests
     private readonly string _testDirectory;
 
     private readonly IOptions<JournalSettings> _journalSettings;
+
     public JournalConfigurationTests()
     {
         _fileSystem = new TestFileSystem();
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            JournalConfigFileName = ".journalrc"
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings { JournalConfigFileName = ".journalrc" }
+        );
         _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings);
         _testDirectory = "/test/directory";
     }
-
 
     private JournalConfig CreateTestConfig()
     {

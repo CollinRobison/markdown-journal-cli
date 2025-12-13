@@ -12,7 +12,7 @@ namespace markdown_journal_cli.Commands.Add;
 
 [Description("Creates a new journal entry")]
 public sealed class AddEntry(
-    IAnsiConsole console, 
+    IAnsiConsole console,
     IFileSystem fileSystem,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
@@ -25,9 +25,10 @@ public sealed class AddEntry(
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, AddEntrySettings settings)
-    {   
+    {
         var journalrc = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
-        try{
+        try
+        {
             //add tests
             //verify a journal exists in directory by checking if journalrc exist - maybe make this a middleware
             console.WriteLine(journalrc);
@@ -54,5 +55,4 @@ public sealed class AddEntry(
             return 1;
         }
     }
-
 }

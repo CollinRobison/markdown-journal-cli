@@ -8,8 +8,8 @@ using Spectre.Console.Cli;
 namespace markdown_journal_cli.Commands.Add;
 
 [Description("Creates a new Table of Contents for a journal if one does not already exist")]
-public class AddTableOfContents(    
-    IAnsiConsole console, 
+public class AddTableOfContents(
+    IAnsiConsole console,
     IFileSystem fileSystem,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddTableOfContentsSettings>
@@ -26,4 +26,3 @@ public class AddTableOfContents(
         throw new NotImplementedException();
     }
 }
-

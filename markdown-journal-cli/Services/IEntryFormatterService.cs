@@ -1,20 +1,21 @@
 using System;
-//TODO implement interface and add tests
+
 namespace markdown_journal_cli.Services;
+
 /// <summary>
 /// Provides an abstraction layer for file entry formatting operations, enabling testability and cross-platform compatibility.
 /// </summary>
 public interface IEntryFormatterService
 {
     /// <summary>
-    /// Replaces spaces from input with space seperators. 
+    /// Replaces spaces from input with space seperators.
     /// </summary>
     /// <param name="input">the string to add space seperators.</param>
     /// <returns>formatted string with spaces seperators instead of spaces.</returns>
     string AddSpaceSeperators(string input);
 
     /// <summary>
-    /// Replaces space seperators from input with spaces. 
+    /// Replaces space seperators from input with spaces.
     /// </summary>
     /// <param name="input">the string to remove spaced seperators.</param>
     /// <returns>formatted string with spaces instead of space seperators.</returns>

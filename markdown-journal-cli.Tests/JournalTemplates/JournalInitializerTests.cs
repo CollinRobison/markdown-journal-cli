@@ -20,21 +20,28 @@ public class JournalInitializerTests
         _testFileSystem = new TestFileSystem();
         _testTemplateManager = new TestTemplateManager();
         _testJournalConfiguration = new TestJournalConfiguration();
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            DefaultJournalName = "MyJournal",
-            TableOfContentsFileName = "1a-TableOfContents",
-            TableOfContentsTitle = "Table of Contents",
-            IntroductionFileName = "1b-Intro",
-            IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
-            AllJournalsTitle = "All My Journals"
-        });
-        _journalInitializer = new JournalInitializer(_testFileSystem, _testTemplateManager, _testJournalConfiguration, _journalSettings);
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                DefaultJournalName = "MyJournal",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                IntroductionFileName = "1b-Intro",
+                IntroductionTitle = "Introduction",
+                JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                AllJournalsFileName = "1h-All-My-Journals",
+                AllJournalsTitle = "All My Journals",
+            }
+        );
+        _journalInitializer = new JournalInitializer(
+            _testFileSystem,
+            _testTemplateManager,
+            _testJournalConfiguration,
+            _journalSettings
+        );
     }
 
     [Fact]
@@ -85,9 +92,18 @@ public class JournalInitializerTests
         var config = _testJournalConfiguration.CreatedConfigurations[journalDirectory];
         Assert.Equal(journalName, config.JournalName);
         Assert.Equal(3, config.TableOfContents.RootEntries.Length);
-        Assert.Contains(config.TableOfContents.RootEntries, re => re.Name == "Introduction" && re.File == "1b-Intro.md");
-        Assert.Contains(config.TableOfContents.RootEntries, re => re.Name == "Journal Entry Template" && re.File == "1c-Journal-Entry-Template.md");
-        Assert.Contains(config.TableOfContents.RootEntries, re => re.Name == "All My Journals" && re.File == "1h-All-My-Journals.md");
+        Assert.Contains(
+            config.TableOfContents.RootEntries,
+            re => re.Name == "Introduction" && re.File == "1b-Intro.md"
+        );
+        Assert.Contains(
+            config.TableOfContents.RootEntries,
+            re => re.Name == "Journal Entry Template" && re.File == "1c-Journal-Entry-Template.md"
+        );
+        Assert.Contains(
+            config.TableOfContents.RootEntries,
+            re => re.Name == "All My Journals" && re.File == "1h-All-My-Journals.md"
+        );
     }
 
     [Fact]
@@ -97,7 +113,9 @@ public class JournalInitializerTests
         string journalName = "TestJournal";
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _journalInitializer.Initialize(null!, journalName));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _journalInitializer.Initialize(null!, journalName)
+        );
         Assert.Contains("Journal directory cannot be null or whitespace", exception.Message);
         Assert.Equal("journalDirectory", exception.ParamName);
     }
@@ -110,7 +128,9 @@ public class JournalInitializerTests
         string journalName = "TestJournal";
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _journalInitializer.Initialize(journalDirectory, journalName));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _journalInitializer.Initialize(journalDirectory, journalName)
+        );
         Assert.Contains("Journal directory cannot be null or whitespace", exception.Message);
         Assert.Equal("journalDirectory", exception.ParamName);
     }
@@ -123,7 +143,9 @@ public class JournalInitializerTests
         string journalName = "TestJournal";
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _journalInitializer.Initialize(journalDirectory, journalName));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _journalInitializer.Initialize(journalDirectory, journalName)
+        );
         Assert.Contains("Journal directory cannot be null or whitespace", exception.Message);
         Assert.Equal("journalDirectory", exception.ParamName);
     }
@@ -135,7 +157,9 @@ public class JournalInitializerTests
         string journalDirectory = "/test/journal";
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _journalInitializer.Initialize(journalDirectory, null!));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _journalInitializer.Initialize(journalDirectory, null!)
+        );
         Assert.Contains("Journal name cannot be null or whitespace", exception.Message);
         Assert.Equal("journalName", exception.ParamName);
     }
@@ -148,7 +172,9 @@ public class JournalInitializerTests
         string journalName = "";
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _journalInitializer.Initialize(journalDirectory, journalName));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _journalInitializer.Initialize(journalDirectory, journalName)
+        );
         Assert.Contains("Journal name cannot be null or whitespace", exception.Message);
         Assert.Equal("journalName", exception.ParamName);
     }
@@ -161,7 +187,9 @@ public class JournalInitializerTests
         string journalName = "   ";
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _journalInitializer.Initialize(journalDirectory, journalName));
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _journalInitializer.Initialize(journalDirectory, journalName)
+        );
         Assert.Contains("Journal name cannot be null or whitespace", exception.Message);
         Assert.Equal("journalName", exception.ParamName);
     }
@@ -170,7 +198,14 @@ public class JournalInitializerTests
     public void Constructor_WithNullFileSystem_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(null!, _testTemplateManager, _testJournalConfiguration, _journalSettings));
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new JournalInitializer(
+                null!,
+                _testTemplateManager,
+                _testJournalConfiguration,
+                _journalSettings
+            )
+        );
         Assert.Equal("fileSystem", exception.ParamName);
     }
 
@@ -178,7 +213,14 @@ public class JournalInitializerTests
     public void Constructor_WithNullTemplateManager_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(_testFileSystem, null!, _testJournalConfiguration, _journalSettings));
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new JournalInitializer(
+                _testFileSystem,
+                null!,
+                _testJournalConfiguration,
+                _journalSettings
+            )
+        );
         Assert.Equal("templateManager", exception.ParamName);
     }
 
@@ -186,7 +228,9 @@ public class JournalInitializerTests
     public void Constructor_WithNullJournalConfiguration_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new JournalInitializer(_testFileSystem, _testTemplateManager, null!, _journalSettings));
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new JournalInitializer(_testFileSystem, _testTemplateManager, null!, _journalSettings)
+        );
         Assert.Equal("journalConfiguration", exception.ParamName);
     }
 
@@ -203,7 +247,7 @@ public class JournalInitializerTests
         // Assert
         var journalEntryParams = _testTemplateManager.GeneratedTemplates["journal-entry"];
         var introParams = journalEntryParams[0]; // First journal-entry template call should be for introduction
-        
+
         Assert.NotNull(introParams);
         Assert.Equal("Introduction", introParams["title"]);
         Assert.Equal("Add an introduction to your new journal here.", introParams["body"]);
@@ -223,7 +267,7 @@ public class JournalInitializerTests
         // Assert
         var journalEntryParams = _testTemplateManager.GeneratedTemplates["journal-entry"];
         var allJournalsParams = journalEntryParams[2]; // Third journal-entry template call should be for all journals
-        
+
         Assert.NotNull(allJournalsParams);
         Assert.Equal("Journals List", allJournalsParams["title"]);
         Assert.Contains("example journal 1", (string)allJournalsParams["body"]);
@@ -245,8 +289,8 @@ public class TestJournalConfiguration : IJournalConfiguration
 
     public JournalConfig Read(string journalDirectory)
     {
-        return CreatedConfigurations.TryGetValue(journalDirectory, out var config) 
-            ? config 
+        return CreatedConfigurations.TryGetValue(journalDirectory, out var config)
+            ? config
             : throw new FileNotFoundException($"No configuration found for {journalDirectory}");
     }
 
@@ -278,7 +322,8 @@ public class TestJournalConfiguration : IJournalConfiguration
 /// </summary>
 public class TestTemplateManager : ITemplateManager
 {
-    public Dictionary<string, List<Dictionary<string, object>?>> GeneratedTemplates { get; } = new();
+    public Dictionary<string, List<Dictionary<string, object>?>> GeneratedTemplates { get; } =
+        new();
 
     public void RegisterTemplate(ITemplateGenerator template)
     {

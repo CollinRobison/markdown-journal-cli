@@ -19,12 +19,14 @@ public static class Program
     public static int Main(string[] args)
     {
         // Create host with configuration from the application directory
-        var host = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
-        {
-            Args = args,
-            ContentRootPath = AppContext.BaseDirectory
-        });
-        
+        var host = Host.CreateApplicationBuilder(
+            new HostApplicationBuilderSettings
+            {
+                Args = args,
+                ContentRootPath = AppContext.BaseDirectory,
+            }
+        );
+
         // Configure options
         host.Services.AddOptions<JournalSettings>()
             .BindConfiguration(JournalSettings.SectionName)
@@ -40,7 +42,7 @@ public static class Program
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
         host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
-        
+
         // Register commands
         host.Services.AddSingleton<NewCommand>();
         host.Services.AddSingleton<AddEntry>();
@@ -49,10 +51,10 @@ public static class Program
 
         // Build the host and get the service provider
         var builtHost = host.Build();
-        
+
         // Get settings
         var settings = builtHost.Services.GetRequiredService<IOptions<JournalSettings>>().Value;
-        
+
         // Set up dependency injection
         var registrar = new TypeRegistrar(builtHost.Services);
 
@@ -65,14 +67,17 @@ public static class Program
 
             // New
             config.AddCommand<NewCommand>("new");
-            
-            config.AddBranch<AddSettings>("add", add =>
-            {
-                add.SetDescription("Creates a new specified file to an existing journal.");
-                add.AddCommand<AddEntry>("entry");
-                add.AddCommand<AddJournalrc>("config");
-                add.AddCommand<AddTableOfContents>("toc");
-            });
+
+            config.AddBranch<AddSettings>(
+                "add",
+                add =>
+                {
+                    add.SetDescription("Creates a new specified file to an existing journal.");
+                    add.AddCommand<AddEntry>("entry");
+                    add.AddCommand<AddJournalrc>("config");
+                    add.AddCommand<AddTableOfContents>("toc");
+                }
+            );
             // Add
             // config.AddBranch<AddSettings>("add", add =>
             // {

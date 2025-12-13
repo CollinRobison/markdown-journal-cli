@@ -14,7 +14,7 @@ public class JournalInitializer : IJournalInitializer
     private readonly ITemplateManager _templateManager;
     private readonly IJournalConfiguration _journalConfiguration;
 
-    private readonly JournalSettings _journalSettings; 
+    private readonly JournalSettings _journalSettings;
 
     /// <summary>
     /// Initializes a new instance of the JournalInitializer class.
@@ -27,11 +27,14 @@ public class JournalInitializer : IJournalInitializer
         IFileSystem fileSystem,
         ITemplateManager templateManager,
         IJournalConfiguration journalConfiguration,
-        IOptions<JournalSettings> journalSettings)
+        IOptions<JournalSettings> journalSettings
+    )
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
-        _journalConfiguration = journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        _templateManager =
+            templateManager ?? throw new ArgumentNullException(nameof(templateManager));
+        _journalConfiguration =
+            journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
         _journalSettings = journalSettings.Value;
     }
 
@@ -40,12 +43,18 @@ public class JournalInitializer : IJournalInitializer
     {
         if (string.IsNullOrWhiteSpace(journalDirectory))
         {
-            throw new ArgumentException("Journal directory cannot be null or whitespace.", nameof(journalDirectory));
+            throw new ArgumentException(
+                "Journal directory cannot be null or whitespace.",
+                nameof(journalDirectory)
+            );
         }
 
         if (string.IsNullOrWhiteSpace(journalName))
         {
-            throw new ArgumentException("Journal name cannot be null or whitespace.", nameof(journalName));
+            throw new ArgumentException(
+                "Journal name cannot be null or whitespace.",
+                nameof(journalName)
+            );
         }
 
         // Create the journal directory
@@ -100,7 +109,8 @@ public class JournalInitializer : IJournalInitializer
         var allMyJournalsParams = new Dictionary<string, object>
         {
             ["title"] = "Journals List",
-            ["body"] = @"- [example journal 1](link-to-journal)
+            ["body"] =
+                @"- [example journal 1](link-to-journal)
 - [example journal 2](link-to-journal)
 - [example journal 3](link-to-journal)",
             ["addSourceBlock"] = false,
@@ -117,9 +127,21 @@ public class JournalInitializer : IJournalInitializer
     {
         RootEntries[] rootConfig =
         [
-            new() { Name = _journalSettings.IntroductionTitle, File = $"{_journalSettings.IntroductionFileName}.md" },
-            new() { Name = _journalSettings.JournalEntryTemplateTitle, File = $"{_journalSettings.JournalEntryTemplateFileName}.md" },
-            new() { Name = _journalSettings.AllJournalsTitle, File = $"{_journalSettings.AllJournalsFileName}.md" }
+            new()
+            {
+                Name = _journalSettings.IntroductionTitle,
+                File = $"{_journalSettings.IntroductionFileName}.md",
+            },
+            new()
+            {
+                Name = _journalSettings.JournalEntryTemplateTitle,
+                File = $"{_journalSettings.JournalEntryTemplateFileName}.md",
+            },
+            new()
+            {
+                Name = _journalSettings.AllJournalsTitle,
+                File = $"{_journalSettings.AllJournalsFileName}.md",
+            },
         ];
 
         JournalConfig journalrc = new()
@@ -127,18 +149,15 @@ public class JournalInitializer : IJournalInitializer
             JournalName = journalName,
             TableOfContents = new()
             {
-                Structure = new()
-                {
-                    Topics = []
-                },
+                Structure = new() { Topics = [] },
                 RootEntries = rootConfig,
                 IndexCache = new()
                 {
                     UpdatedAt = DateTime.Now,
                     Topics = [],
-                    RootEntries = rootConfig
-                }
-            }
+                    RootEntries = rootConfig,
+                },
+            },
         };
 
         _journalConfiguration.Create(journalDirectory, journalrc);
