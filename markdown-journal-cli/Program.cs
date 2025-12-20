@@ -78,13 +78,6 @@ public static class Program
                     add.AddCommand<AddTableOfContents>("toc");
                 }
             );
-            // Add
-            // config.AddBranch<AddSettings>("add", add =>
-            // {
-            //     add.SetDescription("Add a package or reference to a .NET project");
-            //     add.AddCommand<AddPackageCommand>("package");
-            //     add.AddCommand<AddReferenceCommand>("reference");
-            // });
         });
 
         return app.Run(args);

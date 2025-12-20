@@ -117,9 +117,12 @@ mdjournal add entry [title] [header] [template] [table of contents] [journalrc] 
 
 mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates. have an option to check all files in directory and if any aren't in journalrc list them out so people can confirm whether they want to update everything --check to list changes before applying to journalrc --all to appky change without listing.
 
+mdjournal rename <file> --file-added # A command that renames a file and updates that change in the journalrc and table of contents. (maybe have it search and update in other places as well such a places where referenced) --file-added flag is saying someone renamed the file manually and it just needs to be reflected everywhere else. 
+
 mdjournal open [name]                   # Open journal in default editor (start with vscode and vim support)
 
 mdjournal search <term>                 # Search across journal entries
+
 ```
 
 **Known Limitations:**
