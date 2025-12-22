@@ -59,3 +59,25 @@ public class JournalrcNotFoundException(string path)
     /// </summary>
     public string Path { get; } = path;
 }
+
+/// <summary>
+/// Exception thrown when attempting to create a journal entry that already exists.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="JournalEntryAlreadyExistsException"/> class.
+/// </remarks>
+/// <param name="entryName">The name of the entry that already exists.</param>
+/// <param name="filePath">The file path where the entry already exists.</param>
+public class JournalEntryAlreadyExistsException(string entryName, string filePath)
+    : JournalException($"Journal entry '{entryName}' already exists at '{filePath}'")
+{
+    /// <summary>
+    /// Gets the name of the entry that already exists.
+    /// </summary>
+    public string EntryName { get; } = entryName;
+
+    /// <summary>
+    /// Gets the file path where the entry already exists.
+    /// </summary>
+    public string FilePath { get; } = filePath;
+}
