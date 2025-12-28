@@ -14,6 +14,7 @@ namespace markdown_journal_cli.Commands.Add;
 public sealed class AddEntry(
     IAnsiConsole console,
     IFileSystem fileSystem,
+    ITemplateManager templateManager,
     IEntryFormatterService entryFormatter,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
@@ -22,6 +23,9 @@ public sealed class AddEntry(
         console ?? throw new ArgumentNullException(nameof(console));
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+
+    private readonly ITemplateManager _templateManager = 
+        templateManager ?? throw new ArgumentNullException(nameof(templateManager));
 
     private readonly IEntryFormatterService _entryFormatter =
         entryFormatter ?? throw new ArgumentNullException(nameof(entryFormatter));
@@ -68,7 +72,19 @@ public sealed class AddEntry(
             {
                 throw new JournalEntryAlreadyExistsException(entryFilePath, entryFilePath);
             }
+
             //create file - make sure to use entryTitle if exists if not use formatted entryName
+            var entryParams = new Dictionary<string, object>
+            {
+                ["title"] = entryTitle, 
+                ["addSourceBlock"] = true
+            };
+
+            _fileSystem.CreateMarkdownFile(
+                settings.FilePath,
+                fileNameFormatted,
+                _templateManager.GenerateFromTemplate("journal-entry", entryParams)
+            );
             //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
             //update table of contents based on journalrc - (make this a helper function)
             return 0;
@@ -90,3 +106,5 @@ public sealed class AddEntry(
         }
     }
 }
+
+// Future TODO: allow add entry to include all aspects of a file including body, sources, etc. from the command line. 
