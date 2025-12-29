@@ -1,6 +1,7 @@
 
 - [x] Finish JournalConfiguration Implementations and add tests
 - [x] create initial journalrc (run control) file in new command
+- [ ] Update the journalrc to not have the index cache and instead implement a hash system with its own .journal file for all files similar to how git tracks files but simple where it only remembers last change before update. the journal rc will define what gets ignored by the .journal file.  
 - [ ] update readme
 - [ ] add the add command 
   - https://spectreconsole.net/cli/composing 
