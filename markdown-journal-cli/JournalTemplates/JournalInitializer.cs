@@ -1,5 +1,5 @@
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
 

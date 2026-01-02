@@ -1,6 +1,6 @@
 using System;
 using System.Text.Json;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
 

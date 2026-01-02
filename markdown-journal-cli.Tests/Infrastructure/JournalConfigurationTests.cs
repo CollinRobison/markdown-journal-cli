@@ -1,6 +1,6 @@
 using System.Text.Json;
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;

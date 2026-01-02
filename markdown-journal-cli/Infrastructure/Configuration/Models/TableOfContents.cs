@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace markdown_journal_cli.Infrastructure.Configuration.Objects;
+namespace markdown_journal_cli.Infrastructure.Configuration.Models;
 
 public class TableOfContents
 {

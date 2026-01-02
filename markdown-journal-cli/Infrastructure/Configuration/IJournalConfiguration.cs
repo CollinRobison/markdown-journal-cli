@@ -1,5 +1,5 @@
 using System;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
 
