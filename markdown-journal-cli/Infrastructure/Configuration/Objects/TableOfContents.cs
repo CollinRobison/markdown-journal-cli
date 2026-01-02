@@ -20,8 +20,6 @@ public class TableOfContents
     [JsonPropertyName("rootEntries")]
     public required RootEntries[] RootEntries { get; set; }
 
-    [JsonPropertyName("indexCache")]
-    public required IndexCache IndexCache { get; set; }
 }
 
 public class Topic
@@ -37,18 +35,6 @@ public class Structure
 {
     [JsonPropertyName("topics")]
     public required Topic[] Topics { get; set; }
-}
-
-public class IndexCache
-{
-    [JsonPropertyName("updatedAt")]
-    public required DateTime UpdatedAt { get; set; }
-
-    [JsonPropertyName("topics")]
-    public required Topic[] Topics { get; set; }
-
-    [JsonPropertyName("rootEntries")]
-    public required RootEntries[] RootEntries { get; set; }
 }
 
 public class RootEntries

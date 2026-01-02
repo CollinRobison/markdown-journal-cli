@@ -41,12 +41,6 @@ public class JournalConfigurationTests
                 {
                     Topics = [new Topic { Name = "General", Subtopics = null }],
                 },
-                IndexCache = new IndexCache
-                {
-                    UpdatedAt = DateTime.Now,
-                    Topics = [new Topic { Name = "General", Subtopics = null }],
-                    RootEntries = [new RootEntries { Name = "Home", File = "home.md" }],
-                },
                 RootEntries = [new RootEntries { Name = "Home", File = "home.md" }],
             },
         };

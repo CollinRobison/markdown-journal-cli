@@ -151,12 +151,6 @@ public class JournalInitializer : IJournalInitializer
             {
                 Structure = new() { Topics = [] },
                 RootEntries = rootConfig,
-                IndexCache = new()
-                {
-                    UpdatedAt = DateTime.Now,
-                    Topics = [],
-                    RootEntries = rootConfig,
-                },
             },
         };
 
