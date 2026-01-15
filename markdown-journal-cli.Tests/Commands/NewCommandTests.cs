@@ -871,6 +871,11 @@ public class NewCommandTests
         {
             throw new NotImplementedException();
         }
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            throw new IOException("Simulated I/O error");
+        }
     }
 
     [Fact]
@@ -1200,6 +1205,11 @@ public class NewCommandTests
         public string GetFileContent(string filePath)
         {
             throw new NotImplementedException();
+        }
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            return Array.Empty<string>();
         }
     }
 

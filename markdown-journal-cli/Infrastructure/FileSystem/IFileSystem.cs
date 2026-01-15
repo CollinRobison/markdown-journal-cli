@@ -138,4 +138,18 @@ public interface IFileSystem
     /// <exception cref="PathTooLongException">Thrown when the specified path exceeds the system-defined maximum length.</exception>
     /// <exception cref="System.Security.SecurityException">Thrown when the caller does not have the required permission.</exception>
     string GetFileContent(string filePath);
+
+    /// <summary>
+    /// Gets the files that match the specified search pattern in the specified directory.
+    /// </summary>
+    /// <param name="path">The directory path to search.</param>
+    /// <param name="searchPattern">The search pattern to match against file names (e.g., "*.md").</param>
+    /// <param name="searchOption">Specifies whether to search only the current directory or all subdirectories.</param>
+    /// <returns>An array of file paths that match the search pattern.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> or <paramref name="searchPattern"/> contains invalid characters.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> or <paramref name="searchPattern"/> is null.</exception>
+    /// <exception cref="DirectoryNotFoundException">Thrown when the specified directory cannot be found.</exception>
+    /// <exception cref="IOException">Thrown when an I/O error occurs.</exception>
+    /// <exception cref="UnauthorizedAccessException">Thrown when the caller does not have permission to access the directory.</exception>
+    string[] GetFiles(string path, string searchPattern, SearchOption searchOption);
 }

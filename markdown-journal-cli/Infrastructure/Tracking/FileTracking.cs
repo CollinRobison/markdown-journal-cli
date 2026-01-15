@@ -37,7 +37,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
     /// <returns>all markdown files in the journal directory (excluding metadata directory).</returns>
     private HashSet<string> GetCurrentMarkdownFiles(string path)
     {
-        return [.. Directory.GetFiles(path, "*.md", SearchOption.AllDirectories)
+        return [.. _fileSystem.GetFiles(path, "*.md", SearchOption.AllDirectories)
             .Where(f => !f.Contains(_indexFileName))
             .Select(f => Path.GetRelativePath(path, f))];
     }
@@ -151,7 +151,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
         var index = LoadIndex(path);
         var fullPath = Path.Combine(path, relativeFilePath);
 
-        if (File.Exists(fullPath))
+        if (_fileSystem.FileExists(fullPath))
         {
             var hash = _hashService.ComputeFileHash(fullPath);
             index.Files[relativeFilePath] = new FileState
