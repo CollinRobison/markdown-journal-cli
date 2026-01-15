@@ -3,6 +3,7 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +43,8 @@ public static class Program
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
         host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
+        host.Services.AddSingleton<IHashService, HashService>(); 
+        host.Services.AddSingleton<IFileTracking, FileTracking>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
