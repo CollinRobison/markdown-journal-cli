@@ -2,10 +2,13 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.JournalTemplates;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Shouldly;
@@ -319,6 +322,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(faultyTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
         services.AddSingleton<NewCommand>();
 
@@ -591,6 +597,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -766,10 +775,15 @@ public class NewCommandTests
         // Use real JournalInitializer with test template manager
         var testTemplateManager = new TestTemplateManager();
         var testJournalConfig = new TestJournalConfiguration();
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         var realInitializer = new JournalInitializer(
             testFileSystem,
             testTemplateManager,
             testJournalConfig,
+            mockFileTracking.Object,
             customSettings
         );
 
@@ -893,6 +907,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -938,6 +955,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -984,6 +1004,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1024,6 +1047,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1063,6 +1089,9 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1112,11 +1141,11 @@ public class NewCommandTests
     /// </summary>
     private class TestTemplateManagerWithParameterCapture : ITemplateManager
     {
-        private readonly Dictionary<string, ITemplateGenerator> _templates = new();
+        private readonly Dictionary<string, ITemplateGenerator> _templates = [];
         private readonly List<(
             string templateName,
             Dictionary<string, object>? parameters
-        )> _templateCalls = new();
+        )> _templateCalls = [];
 
         public void RegisterTemplate(ITemplateGenerator template)
         {
@@ -1164,7 +1193,7 @@ public class NewCommandTests
                 );
             }
 
-            return calls[callIndex].parameters ?? new Dictionary<string, object>();
+            return calls[callIndex].parameters ?? [];
         }
     }
 
@@ -1274,7 +1303,7 @@ public class NewCommandTests
         private readonly IFileSystem? _fileSystem;
 
         public List<(string journalDirectory, string journalName)> InitializedJournals { get; } =
-            new();
+            [];
         public bool ShouldThrow { get; set; } = false;
         public Exception? ExceptionToThrow { get; set; }
 

@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.JournalTemplates;
@@ -13,7 +14,7 @@ public class JournalInitializer : IJournalInitializer
     private readonly IFileSystem _fileSystem;
     private readonly ITemplateManager _templateManager;
     private readonly IJournalConfiguration _journalConfiguration;
-
+    private readonly IFileTracking _fileTracking;
     private readonly JournalSettings _journalSettings;
 
     /// <summary>
@@ -27,6 +28,7 @@ public class JournalInitializer : IJournalInitializer
         IFileSystem fileSystem,
         ITemplateManager templateManager,
         IJournalConfiguration journalConfiguration,
+        IFileTracking fileTracking,
         IOptions<JournalSettings> journalSettings
     )
     {
@@ -35,6 +37,7 @@ public class JournalInitializer : IJournalInitializer
             templateManager ?? throw new ArgumentNullException(nameof(templateManager));
         _journalConfiguration =
             journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
         _journalSettings = journalSettings.Value;
     }
 
@@ -68,6 +71,10 @@ public class JournalInitializer : IJournalInitializer
 
         // Create journal configuration
         CreateJournalConfiguration(journalDirectory, journalName);
+
+        // create file tracking 
+        CreateFileTrackingIndex(journalDirectory);
+
     }
 
     private void CreateTableOfContents(string journalDirectory)
@@ -155,5 +162,11 @@ public class JournalInitializer : IJournalInitializer
         };
 
         _journalConfiguration.Create(journalDirectory, journalrc);
+    }
+
+    private void CreateFileTrackingIndex(string journalDirectory)
+    {
+        _fileTracking.LoadIndex(journalDirectory);
+        _fileTracking.UpdateIndex(journalDirectory);
     }
 }

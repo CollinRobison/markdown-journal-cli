@@ -42,6 +42,7 @@ public sealed class AddEntry(
             console.WriteLine(journalrc);
             if (!_fileSystem.FileExists(journalrc))
             {
+                // TODO add another version of this for file tracking file ----needs done----
                 throw new JournalrcNotFoundException(settings.FilePath);
             }
             //format entry name and subheading with - in place of spaces. - (make this into helper function)
@@ -86,6 +87,7 @@ public sealed class AddEntry(
                 _templateManager.GenerateFromTemplate("journal-entry", entryParams)
             );
             //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
+            //add file to file tracking index
             //update table of contents based on journalrc - (make this a helper function)
             return 0;
         }

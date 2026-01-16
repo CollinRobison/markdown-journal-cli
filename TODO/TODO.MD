@@ -3,7 +3,6 @@
 - [x] create initial journalrc (run control) file in new command
 - [x] Update the journalrc to not have the index cache 
   - [x] and instead implement a hash system with its own .mdjournal file for all files similar to how git tracks files but simple where it only remembers last change before update. 
-  - [ ] the journal rc will define what gets ignored by the .mdjournal file. look into this piece.
 - [ ] update readme
 - [ ] add the add command 
   - https://spectreconsole.net/cli/composing 
