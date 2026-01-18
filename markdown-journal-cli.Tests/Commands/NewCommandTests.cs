@@ -324,7 +324,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
         services.AddSingleton<NewCommand>();
 
@@ -599,7 +599,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -909,7 +909,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -957,7 +957,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1006,7 +1006,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1049,7 +1049,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1091,7 +1091,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
-        services.AddSingleton<IFileTracking>(mockFileTracking.Object);
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration

@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ public sealed class AddEntry(
     IFileSystem fileSystem,
     ITemplateManager templateManager,
     IEntryFormatterService entryFormatter,
+    IFileTracking fileTracking,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
 {
@@ -30,20 +32,28 @@ public sealed class AddEntry(
     private readonly IEntryFormatterService _entryFormatter =
         entryFormatter ?? throw new ArgumentNullException(nameof(entryFormatter));
 
+    private readonly IFileTracking _fileTracking =
+        fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, AddEntrySettings settings)
     {
         var journalrc = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
+        var trackingFileName = $".{_journalSettings.AppName}";
+        var trackingFilePath = $"{settings.FilePath}/{trackingFileName}";
         try
         {
             //add tests
-            //verify a journal exists in directory by checking if journalrc exist - maybe make this a middleware
+            //verify a journal exists in directory by checking if journalrc and tracking index file exist - maybe make this a middleware
             console.WriteLine(journalrc);
             if (!_fileSystem.FileExists(journalrc))
             {
-                // TODO add another version of this for file tracking file ----needs done----
                 throw new JournalrcNotFoundException(settings.FilePath);
+            }
+            if (!_fileSystem.FileExists(trackingFilePath))
+            {
+                throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
             }
             //format entry name and subheading with - in place of spaces. - (make this into helper function)
 
