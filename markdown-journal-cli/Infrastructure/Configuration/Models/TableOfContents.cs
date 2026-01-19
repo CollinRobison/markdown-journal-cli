@@ -18,7 +18,7 @@ public class TableOfContents
     public required Structure Structure { get; set; }
 
     [JsonPropertyName("rootEntries")]
-    public required RootEntries[] RootEntries { get; set; }
+    public required Entries[] RootEntries { get; set; }
 
 }
 
@@ -26,6 +26,9 @@ public class Topic
 {
     [JsonPropertyName("name")]
     public required string Name { get; set; }
+
+    [JsonPropertyName("Entries")]
+    public required Entries[] Entries { get; set; }
 
     [JsonPropertyName("subtopics")]
     public Topic[]? Subtopics { get; set; }
@@ -36,8 +39,7 @@ public class Structure
     [JsonPropertyName("topics")]
     public required Topic[] Topics { get; set; }
 }
-
-public class RootEntries
+public class Entries
 {
     [JsonPropertyName("name")]
     public required string Name { get; set; }

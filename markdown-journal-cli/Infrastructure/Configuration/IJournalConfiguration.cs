@@ -34,4 +34,42 @@ public interface IJournalConfiguration
     /// <param name="directory">The directory from which to remove the configuration file.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="directory"/> is <c>null</c> or empty.</exception>
     void Delete(string directory);
+
+    /// <summary>
+    /// Reads and returns the journal configuration from the specified <paramref name="directory"/>.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration to read.</param>
+    /// <returns>The deserialized <see cref="JournalConfig"/> or null if not found or invalid.</returns>
+    JournalConfig? Read(string directory);
+
+    /// <summary>
+    /// Adds a root entry to the journal configuration. Root entries are top-level files
+    /// that appear at the beginning of the table of contents (e.g., 1b-Introduction.md).
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="name">The display name of the root entry.</param>
+    /// <param name="file">The filename of the root entry.</param>
+    void AddRootEntry(string directory, string name, string file);
+
+    /// <summary>
+    /// Adds a file to the journal configuration's topic structure based on the topic path.
+    /// Creates missing topics/subtopics as needed and avoids duplicates.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="topicPath">Array of topic names forming the hierarchy (e.g., ["Learning", "Rust Programming"]).</param>
+    /// <param name="entryName">The display name of the entry.</param>
+    /// <param name="file">The filename to add to the structure.</param>
+    /// <param name="maxDepth">Maximum nesting depth allowed. Use null for unlimited depth.</param>
+    /// <param name="sortAlphabetically">Whether to sort topics alphabetically (true) or maintain insertion order (false).</param>
+    void AddTopicEntry(string directory, string[] topicPath, string entryName, string file, int? maxDepth = null, bool sortAlphabetically = true);
+
+    /// <summary>
+    /// Updates the display name of an entry identified by its file name.
+    /// Searches through root entries and all topics/subtopics recursively.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="file">The filename of the entry to update.</param>
+    /// <param name="newEntryName">The new display name for the entry.</param>
+    /// <returns>True if the entry was found and updated, false otherwise.</returns>
+    bool UpdateEntryName(string directory, string file, string newEntryName);
 }

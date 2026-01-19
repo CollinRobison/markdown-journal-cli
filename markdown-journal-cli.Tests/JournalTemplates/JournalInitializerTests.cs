@@ -323,6 +323,24 @@ public class TestJournalConfiguration : IJournalConfiguration
     {
         CreatedConfigurations.Remove(directory);
     }
+
+    public void AddRootEntry(string directory, string name, string file)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
+
+    public void AddTopicEntry(string directory, string[] topicPath, string entryName, string file, int? maxDepth = null, bool sortAlphabetically = true)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
+
+    public bool UpdateEntryName(string directory, string file, string newEntryName)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
 }
 
 /// <summary>

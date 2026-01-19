@@ -132,7 +132,7 @@ public class JournalInitializer : IJournalInitializer
 
     private void CreateJournalConfiguration(string journalDirectory, string journalName)
     {
-        RootEntries[] rootConfig =
+        Entries[] rootConfig =
         [
             new()
             {
