@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
@@ -146,6 +147,30 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         });
     }
 
+    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true)
+    {
+        // Extract filename without path and extension
+        var fileName = Path.GetFileNameWithoutExtension(file);
+        
+        if (IsRootEntry(fileName))
+        {
+            // File matches root entry pattern (1a-9z), add as root entry
+            AddRootEntry(directory, name, file);
+        }
+        else
+        {
+            // File doesn't match root entry pattern, add as topic entry
+            // If no topic path provided, parse it from the filename
+            var effectiveTopicPath = topicPath;
+            if (effectiveTopicPath == null || effectiveTopicPath.Length == 0)
+            {
+                effectiveTopicPath = ParseTopicPathFromFilename(fileName);
+            }
+            
+            AddTopicEntry(directory, effectiveTopicPath, name, file, maxDepth, sortAlphabetically);
+        }
+    }
+
     public bool UpdateEntryName(string directory, string file, string newEntryName)
     {
         var config = Read(directory);
@@ -218,6 +243,50 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
     {
         return rootEntries.Any(entry => 
             string.Equals(entry.File, file, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Determines if a filename matches the root entry pattern (1a-9z).
+    /// Checks if the filename starts with the pattern followed by the heading separator or end of string.
+    /// Examples: 1a, 2b, 5h, 9z, 3z-test_file, 1a-Introduction
+    /// NOT valid: 3zebra, 3z_ebra (underscore is title separator, not heading separator)
+    /// </summary>
+    private bool IsRootEntry(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return false;
+        }
+
+        // Pattern matches: starts with single digit 1-9 followed by single lowercase letter a-z
+        // Followed by either end of string or the heading separator from settings
+        var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
+        var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
+        return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// Parses a topic path from a filename by splitting on the heading separator
+    /// and converting title separators to spaces for display.
+    /// Examples: 
+    /// - "new_entry" → ["New Entry"]
+    /// - "Learning-Rust_Programming" → ["Learning", "Rust Programming"]
+    /// </summary>
+    private string[] ParseTopicPathFromFilename(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return new[] { "General" };
+        }
+
+        // Split by heading separator to get topic hierarchy
+        var parts = fileName.Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Convert each part: replace title separators with spaces for display
+        return parts
+            .Select(part => part.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim())
+            .Where(part => !string.IsNullOrEmpty(part))
+            .ToArray();
     }
 
     private static bool UpdateEntryNameInTopics(Topic[] topics, string file, string newEntryName)

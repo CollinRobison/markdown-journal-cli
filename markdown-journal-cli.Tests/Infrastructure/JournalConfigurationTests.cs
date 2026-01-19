@@ -1064,4 +1064,334 @@ public class JournalConfigurationTests
     }
 
     #endregion
+
+    #region AddEntry Tests
+
+    [Theory]
+    [InlineData("1a")]
+    [InlineData("2b")]
+    [InlineData("5h")]
+    [InlineData("9z")]
+    [InlineData("1A")]
+    [InlineData("9Z")]
+    [InlineData("3z-test_file")]
+    [InlineData("1a-Introduction")]
+    public void AddEntry_ShouldAddAsRootEntry_WhenFileNameMatchesRootPattern(string fileName)
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(_testDirectory, "Root Entry", $"{fileName}.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.RootEntries[0].Name.ShouldBe("Root Entry");
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe($"{fileName}.md");
+    }
+
+    [Theory]
+    [InlineData("0a")] // 0 not allowed
+    [InlineData("10a")] // multiple digits
+    [InlineData("1")] // missing letter
+    [InlineData("a1")] // reversed order
+    [InlineData("1ab")] // multiple letters
+    [InlineData("learning")] // full word
+    [InlineData("Tech-Tutorial")]
+    [InlineData("3zebra")] // looks like root but continues with letters
+    [InlineData("3z_ebra")] // has underscore instead of hyphen
+    [InlineData("2bapple")] // looks like root but continues
+    public void AddEntry_ShouldAddAsTopicEntry_WhenFileNameDoesNotMatchRootPattern(string fileName)
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Topic Entry", 
+            $"{fileName}.md", 
+            topicPath: ["Learning"]
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Entries.Length.ShouldBe(1);
+        learningTopic.Entries[0].Name.ShouldBe("Topic Entry");
+        learningTopic.Entries[0].File.ShouldBe($"{fileName}.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldAddAsRootEntry_WithFullPathInFileName()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(_testDirectory, "Root Entry", "some/path/3c.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.RootEntries[0].Name.ShouldBe("Root Entry");
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("some/path/3c.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldNotAddTopicEntry_WhenTopicPathIsNull()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Topic Entry", 
+            "learning.md", 
+            topicPath: null
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        // Should parse filename and create "learning" topic
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Entries.Length.ShouldBe(1);
+        learningTopic.Entries[0].Name.ShouldBe("Topic Entry");
+        learningTopic.Entries[0].File.ShouldBe("learning.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldNotAddTopicEntry_WhenTopicPathIsEmpty()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Topic Entry", 
+            "learning.md", 
+            topicPath: []
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        // Should parse filename and create "learning" topic
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Entries.Length.ShouldBe(1);
+        learningTopic.Entries[0].Name.ShouldBe("Topic Entry");
+        learningTopic.Entries[0].File.ShouldBe("learning.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldParseTopicFromFilename_WithUnderscores()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - filename with underscores should be converted to spaces
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "New Entry", 
+            "new_entry.md"
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var newEntryTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "new entry");
+        newEntryTopic.ShouldNotBeNull();
+        newEntryTopic.Entries.Length.ShouldBe(1);
+        newEntryTopic.Entries[0].Name.ShouldBe("New Entry");
+        newEntryTopic.Entries[0].File.ShouldBe("new_entry.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldParseNestedTopicsFromFilename_WithHyphens()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - filename with hyphens should create nested topics
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Tutorial", 
+            "Learning-Rust-Tutorial.md"
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Subtopics.ShouldNotBeNull();
+        
+        var rustTopic = learningTopic.Subtopics.FirstOrDefault(t => t.Name == "Rust");
+        rustTopic.ShouldNotBeNull();
+        rustTopic.Subtopics.ShouldNotBeNull();
+        
+        var tutorialTopic = rustTopic.Subtopics.FirstOrDefault(t => t.Name == "Tutorial");
+        tutorialTopic.ShouldNotBeNull();
+        tutorialTopic.Entries.Length.ShouldBe(1);
+        tutorialTopic.Entries[0].Name.ShouldBe("Tutorial");
+        tutorialTopic.Entries[0].File.ShouldBe("Learning-Rust-Tutorial.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldParseTopicFromFilename_WithBothSeparators()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - filename with both underscores and hyphens
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Rust Programming", 
+            "Learning-Rust_Programming.md"
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Subtopics.ShouldNotBeNull();
+        
+        var rustTopic = learningTopic.Subtopics.FirstOrDefault(t => t.Name == "Rust Programming");
+        rustTopic.ShouldNotBeNull();
+        rustTopic.Entries.Length.ShouldBe(1);
+        rustTopic.Entries[0].Name.ShouldBe("Rust Programming");
+        rustTopic.Entries[0].File.ShouldBe("Learning-Rust_Programming.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldPassThroughParameters_ToAddTopicEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - Add multiple entries with sorting
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Z Entry", 
+            "learning-z.md", 
+            topicPath: ["Learning"],
+            sortAlphabetically: true
+        );
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "A Entry", 
+            "learning-a.md", 
+            topicPath: ["Learning"],
+            sortAlphabetically: true
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Entries.Length.ShouldBe(2);
+        // Should be sorted alphabetically by file name
+        learningTopic.Entries[0].File.ShouldBe("learning-a.md");
+        learningTopic.Entries[1].File.ShouldBe("learning-z.md");
+    }
+
+    #endregion
 }

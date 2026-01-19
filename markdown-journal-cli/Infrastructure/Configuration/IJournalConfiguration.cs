@@ -64,6 +64,19 @@ public interface IJournalConfiguration
     void AddTopicEntry(string directory, string[] topicPath, string entryName, string file, int? maxDepth = null, bool sortAlphabetically = true);
 
     /// <summary>
+    /// Adds an entry to the journal configuration, automatically determining whether it should be
+    /// a root entry or topic entry based on the filename pattern (1a-9z for root entries).
+    /// If no topic path is provided for non-root entries, parses the filename to extract topic hierarchy.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="name">The display name of the entry.</param>
+    /// <param name="file">The filename to add.</param>
+    /// <param name="topicPath">Array of topic names forming the hierarchy. If null or empty, parses from filename (e.g., "Learning-Rust" becomes ["Learning", "Rust"]).</param>
+    /// <param name="maxDepth">Maximum nesting depth allowed for topic entries. Use null for unlimited depth.</param>
+    /// <param name="sortAlphabetically">Whether to sort topics alphabetically (true) or maintain insertion order (false).</param>
+    void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true);
+
+    /// <summary>
     /// Updates the display name of an entry identified by its file name.
     /// Searches through root entries and all topics/subtopics recursively.
     /// </summary>

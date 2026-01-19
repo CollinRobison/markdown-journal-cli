@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
@@ -17,6 +18,7 @@ public sealed class AddEntry(
     IFileSystem fileSystem,
     ITemplateManager templateManager,
     IEntryFormatterService entryFormatter,
+    IJournalConfiguration journalConfiguration,
     IFileTracking fileTracking,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
@@ -31,6 +33,9 @@ public sealed class AddEntry(
 
     private readonly IEntryFormatterService _entryFormatter =
         entryFormatter ?? throw new ArgumentNullException(nameof(entryFormatter));
+
+    private readonly IJournalConfiguration _journalConfiguration = 
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
 
     private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
@@ -97,6 +102,16 @@ public sealed class AddEntry(
                 _templateManager.GenerateFromTemplate("journal-entry", entryParams)
             );
             //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
+            string[] headings = (settings.Heading != null 
+                    ? [entryFormatter.RemoveSpaceSeperators(settings.Heading)] 
+                    : Array.Empty<string>())
+                .Concat(settings.Subheading != null 
+                    ? entryFormatter.SeperateSubheadingString(settings.Subheading) 
+                    : [])
+                .Where(h => !string.IsNullOrEmpty(h))
+                .ToArray();
+            
+            _journalConfiguration.AddEntry(settings.FilePath, entryTitle, fileNameFormatted, headings.Length > 0 ? headings : null);
             //add file to file tracking index
             //update table of contents based on journalrc - (make this a helper function)
             return 0;

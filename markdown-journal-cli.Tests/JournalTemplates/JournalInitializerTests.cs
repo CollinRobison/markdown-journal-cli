@@ -336,6 +336,12 @@ public class TestJournalConfiguration : IJournalConfiguration
         throw new NotImplementedException();
     }
 
+    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
+
     public bool UpdateEntryName(string directory, string file, string newEntryName)
     {
         // Not implemented for tests - can be added if needed
