@@ -113,6 +113,7 @@ public sealed class AddEntry(
             
             _journalConfiguration.AddEntry(settings.FilePath, entryTitle, fileNameFormatted, headings.Length > 0 ? headings : null);
             //add file to file tracking index
+            _fileTracking.UpdateFileInIndex(settings.FilePath, fileNameFormatted);
             //update table of contents based on journalrc - (make this a helper function)
             return 0;
         }
