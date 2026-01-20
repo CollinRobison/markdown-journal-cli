@@ -318,6 +318,7 @@ public class TableOfContentsGeneratorTests
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
 
+        // Topic name preserves casing (APIs stays APIs)
         Assert.Contains("## [APIs](APIs.md)", content);
         // Should not have a separate entry line
         Assert.DoesNotContain("  - [APIs](APIs.md)", content);
@@ -387,7 +388,7 @@ public class TableOfContentsGeneratorTests
         Assert.Contains("- [Introduction](1b-Intro.md)", content);
         Assert.Contains("- [All My Journals](1h-All-My-Journals.md)", content);
 
-        // AI topic
+        // AI topic (preserves casing as 'AI')
         Assert.Contains("## AI", content);
         Assert.Contains("  - [AI Protocols](AI-Protocols.md)", content);
         Assert.Contains("  - [AI Resources](AI-Resources.md)", content);
@@ -430,5 +431,354 @@ public class TableOfContentsGeneratorTests
         Assert.Throws<FileNotFoundException>(
             () => _generator.UpdateTableOfContents(journalDir)
         );
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_WithLowercaseTopicName_ConvertsToTitleCase()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "cloud computing",
+                            Entries =
+                            [
+                                new() { Name = "Azure Notes", File = "cloud-azure.md" },
+                            ],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        Assert.Contains("## Cloud Computing", content);
+        Assert.DoesNotContain("## cloud computing", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_WithUppercaseTopicName_ConvertsToTitleCase()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "ARTIFICIAL INTELLIGENCE",
+                            Entries =
+                            [
+                                new() { Name = "AI Resources", File = "ai-resources.md" },
+                            ],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        // Each word starts with capital, rest preserved
+        Assert.Contains("## ARTIFICIAL INTELLIGENCE", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_WithMixedCaseTopicName_ConvertsToTitleCase()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "mAchIne LeArNinG",
+                            Entries =
+                            [
+                                new() { Name = "ML Guide", File = "ml-guide.md" },
+                            ],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        // Only first letter of each word capitalized, rest preserved
+        Assert.Contains("## MAchIne LeArNinG", content);
+        Assert.DoesNotContain("## mAchIne LeArNinG", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_WithLinkedHeading_AppliesTitleCase()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "web development",
+                            Entries = [new() { Name = "web development", File = "web-dev.md" }],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        // Only first letter capitalized, rest preserved
+        Assert.Contains("## [Web Development](web-dev.md)", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_SubtopicsAlsoTitleCased_WhenFlagIsTrue()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "programming languages",
+                            Entries = [],
+                            Subtopics =
+                            [
+                                new Topic
+                                {
+                                    Name = "rust language",
+                                    Entries =
+                                    [
+                                        new() { Name = "Rust Guide", File = "rust.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        // Top-level topic should be title-cased
+        Assert.Contains("## Programming Languages", content);
+        // Subtopic should also be title-cased when flag is true
+        Assert.Contains("  - Rust Language", content);
+        Assert.DoesNotContain("  - rust language", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_WithCapitalizationDisabled_LeavesAllTopicsAsIs()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var settingsWithoutCaps = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                CapitalizeTopicHeadings = false, // Disable capitalization
+            }
+        );
+
+        var generatorWithoutCaps = new TableOfContentsGenerator(
+            _fileSystem,
+            _journalConfiguration,
+            settingsWithoutCaps
+        );
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "cloud computing",
+                            Entries = [],
+                            Subtopics =
+                            [
+                                new Topic
+                                {
+                                    Name = "azure services",
+                                    Entries =
+                                    [
+                                        new() { Name = "Azure Notes", File = "cloud-azure.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        generatorWithoutCaps.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        // Topic and subtopic should remain lowercase since capitalization is disabled
+        Assert.Contains("## cloud computing", content);
+        Assert.DoesNotContain("## Cloud Computing", content);
+        Assert.Contains("  - azure services", content);
+        Assert.DoesNotContain("  - Azure Services", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_WithCapitalizationEnabled_CapitalizesTopics()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var settingsWithCaps = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                CapitalizeTopicHeadings = true, // Enable capitalization
+            }
+        );
+
+        var generatorWithCaps = new TableOfContentsGenerator(
+            _fileSystem,
+            _journalConfiguration,
+            settingsWithCaps
+        );
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "machine learning",
+                            Entries =
+                            [
+                                new() { Name = "ML Guide", File = "ml-guide.md" },
+                            ],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        generatorWithCaps.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+
+        // Topic should be capitalized
+        Assert.Contains("## Machine Learning", content);
+        Assert.DoesNotContain("## machine learning", content);
     }
 }

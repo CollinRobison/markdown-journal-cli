@@ -99,25 +99,32 @@ public class TableOfContentsGenerator(
         
         if (indentLevel == 0)
         {
-            // Top-level topic: use heading
+            // Top-level topic: use heading with optional title-casing
+            var displayName = _journalSettings.CapitalizeTopicHeadings 
+                ? ToTitleCase(topic.Name) 
+                : topic.Name;
+            
             // Edge case: if topic has exactly one entry and the entry name matches the topic name,
             // make the topic heading a link
             if (topic.Entries != null && topic.Entries.Length == 1 && 
                 string.Equals(topic.Name, topic.Entries[0].Name, StringComparison.OrdinalIgnoreCase))
             {
-                sb.AppendLine($"## [{topic.Name}]({topic.Entries[0].File})");
+                sb.AppendLine($"## [{displayName}]({topic.Entries[0].File})");
             }
             else
             {
                 // Normal case: plain heading with entries and subtopics listed below
-                sb.AppendLine($"## {topic.Name}");
+                sb.AppendLine($"## {displayName}");
             }
         }
         else
         {
-            // Subtopic: render as indented list item
+            // Subtopic: render as indented list item with optional title-casing
             var indent = new string(' ', indentLevel * 2);
-            sb.AppendLine($"{indent}- {topic.Name}");
+            var displayName = _journalSettings.CapitalizeTopicHeadings 
+                ? ToTitleCase(topic.Name) 
+                : topic.Name;
+            sb.AppendLine($"{indent}- {displayName}");
         }
 
         // Add entries (only if not the edge case with single matching entry at top level)
@@ -143,5 +150,25 @@ public class TableOfContentsGenerator(
                 GenerateTopicSection(sb, subtopic, indentLevel + 1);
             }
         }
+    }
+
+    private static string ToTitleCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return input;
+        }
+
+        var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (words[i].Length > 0)
+            {
+                // Only capitalize first letter, preserve the rest as-is
+                words[i] = char.ToUpper(words[i][0]) + words[i][1..];
+            }
+        }
+
+        return string.Join(' ', words);
     }
 }

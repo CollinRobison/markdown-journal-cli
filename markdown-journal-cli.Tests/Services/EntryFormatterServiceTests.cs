@@ -368,7 +368,7 @@ public class EntryFormatterServiceTests
         // When
         var result = _formatterService.SeperateSubheadingString(test);
         // Then
-        result.ShouldBe(["heading_1", "heading_2", "heading_3"]);
+        result.ShouldBe(["heading 1", "heading 2", "heading 3"]);
     }
 
     [Fact]
@@ -454,7 +454,7 @@ public class EntryFormatterServiceTests
         // When
         var result = _formatterService.SeperateSubheadingString(test);
         // Then
-        result.ShouldBe(["heading1", "heading_2", "heading3"]);
+        result.ShouldBe(["heading1", "heading 2", "heading3"]);
     }
 
     [Fact]
@@ -481,7 +481,7 @@ public class EntryFormatterServiceTests
 
     [Theory]
     [InlineData("heading1-heading2-heading3", new[] { "heading1", "heading2", "heading3" })]
-    [InlineData("heading_1-heading_2-heading_3", new[] { "heading_1", "heading_2", "heading_3" })]
+    [InlineData("heading_1-heading_2-heading_3", new[] { "heading 1", "heading 2", "heading 3" })]
     [InlineData(
         "heading1--heading2---heading3-----Heading4",
         new[] { "heading1", "heading2", "heading3", "Heading4" }
