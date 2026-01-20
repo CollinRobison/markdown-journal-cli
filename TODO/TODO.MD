@@ -15,3 +15,7 @@
   - // the seperators to tell where a file is located logically is defined as a dash - 
   - //with the title of the file entry always being listed last
   - // ex: heading 1 -> heading 2 -> this is the title = heading_1-heading_2-this_is_the_title
+
+
+- look into using the hash tracking to eventually make a command that regenerates a file or brings back the last version of it.
+- Also using hash tracking if noticed a file was deleted but actually was just manually renamed allows user to reassign it to the new file name.
