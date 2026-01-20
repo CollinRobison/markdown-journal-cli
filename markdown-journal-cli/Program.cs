@@ -45,6 +45,7 @@ public static class Program
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
         host.Services.AddSingleton<IHashService, HashService>(); 
         host.Services.AddSingleton<IFileTracking, FileTracking>();
+        host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();

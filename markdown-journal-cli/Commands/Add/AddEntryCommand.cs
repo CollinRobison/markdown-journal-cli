@@ -20,6 +20,7 @@ public sealed class AddEntry(
     IEntryFormatterService entryFormatter,
     IJournalConfiguration journalConfiguration,
     IFileTracking fileTracking,
+    ITableOfContentsGenerator tableOfContentsGenerator,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
 {
@@ -39,6 +40,9 @@ public sealed class AddEntry(
 
     private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+
+    private readonly ITableOfContentsGenerator _tableOfContentsGenerator = 
+        tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
@@ -114,7 +118,8 @@ public sealed class AddEntry(
             _journalConfiguration.AddEntry(settings.FilePath, entryTitle, fileNameFormatted, headings.Length > 0 ? headings : null);
             //add file to file tracking index
             _fileTracking.UpdateFileInIndex(settings.FilePath, fileNameFormatted);
-            //update table of contents based on journalrc - (make this a helper function)
+            //update table of contents based on journalrc
+            _tableOfContentsGenerator.UpdateTableOfContents(settings.FilePath, lastEditedDate: DateTime.Now);
             return 0;
         }
         catch (JournalrcNotFoundException ex)
