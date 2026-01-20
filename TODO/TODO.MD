@@ -6,11 +6,10 @@
 - [ ] update readme
 - [ ] add the add command 
   - https://spectreconsole.net/cli/composing 
-  - [ ] decide how to update journalrc/table of contents when its added
+  - [x] decide how to update journalrc/table of contents when its added
 - [ ] create a command to add a journal rc for an existing journal without one.
-- [ ] u r so sexy <3
 
-- [ ] implement this into the new structure: 
+- [x] implement this into the new structure: 
   - // lets make a file be composed like this heading_1-heading_2-this_is_the_title
   - // so if a title or a heading has a space the space is defined as an underscore _
   - // the seperators to tell where a file is located logically is defined as a dash - 
