@@ -55,7 +55,6 @@ public sealed class AddEntry(
         {
             //add tests
             //verify a journal exists in directory by checking if journalrc and tracking index file exist - maybe make this a middleware
-            console.WriteLine(journalrc);
             if (!_fileSystem.FileExists(journalrc))
             {
                 throw new JournalrcNotFoundException(settings.FilePath);
@@ -105,7 +104,7 @@ public sealed class AddEntry(
                 fileNameFormatted,
                 _templateManager.GenerateFromTemplate("journal-entry", entryParams)
             );
-            //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
+            //update journalrc 
             string[] headings = (settings.Heading != null 
                     ? [entryFormatter.RemoveSpaceSeperators(settings.Heading)] 
                     : Array.Empty<string>())

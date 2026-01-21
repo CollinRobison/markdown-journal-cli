@@ -38,6 +38,19 @@ public class TableOfContentsGenerator(
         var config = _journalConfiguration.Read(journalDirectory) ?? throw new InvalidOperationException(
                 $"Could not read journal configuration from {journalDirectory}"
             );
+
+        // If dates aren't provided, try to preserve existing dates from the current TOC
+        var tocFilePath = Path.Combine(journalDirectory, $"{_journalSettings.TableOfContentsFileName}.md");
+        if (_fileSystem.FileExists(tocFilePath))
+        {
+            var existingContent = _fileSystem.GetFileContent(tocFilePath);
+            var (existingCreated, existingEdited) = MarkdownMetadataParser.ParseDates(existingContent);
+            
+            // Use existing dates if new ones aren't provided
+            createdDate ??= existingCreated;
+            lastEditedDate ??= existingEdited;
+        }
+
         var tocContent = GenerateTableOfContents(config, createdDate, lastEditedDate);
 
         _fileSystem.UpdateFile(journalDirectory, $"{_journalSettings.TableOfContentsFileName}.md", tocContent);

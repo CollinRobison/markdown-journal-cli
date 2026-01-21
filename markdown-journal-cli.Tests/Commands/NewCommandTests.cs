@@ -269,7 +269,6 @@ public class NewCommandTests
     }
 
     [Theory]
-    [InlineData("Journal With Spaces")]
     [InlineData("Journal-With-Dashes")]
     [InlineData("Journal_With_Underscores")]
     [InlineData("JournalWithNumbers123")]
@@ -307,6 +306,21 @@ public class NewCommandTests
         // Then
         result.ExitCode.ShouldNotBe(0);
         result.Output.ShouldContain("cannot be empty");
+    }
+
+    [Theory]
+    [InlineData("Journal With Spaces")]
+    [InlineData("My Journal")]
+    [InlineData("Test Journal Name")]
+    [InlineData("Journal Name With Multiple Spaces")]
+    public void Should_Reject_Journal_Names_With_Spaces(string nameWithSpaces)
+    {
+        // When
+        var result = _app.Run(["new", nameWithSpaces]);
+
+        // Then
+        result.ExitCode.ShouldNotBe(0);
+        result.Output.ShouldContain("cannot contain spaces");
     }
 
     [Fact]
@@ -532,19 +546,17 @@ public class NewCommandTests
     }
 
     [Fact]
-    public void Should_Handle_Journal_Name_With_Leading_And_Trailing_Spaces()
+    public void Should_Reject_Journal_Name_With_Leading_And_Trailing_Spaces()
     {
-        // Given - The command line parsing should handle this, but we test the validation
+        // Given - Names with leading/trailing spaces should be rejected due to space validation
         var journalName = " SpacedJournal ";
 
         // When
         var result = _app.Run(["new", journalName]);
 
         // Then
-        result.ExitCode.ShouldBe(0);
-        // The file system should create directory with the exact name provided
-        var expectedPath = Path.Combine(".", journalName);
-        _fileSystem.DirectoryExists(expectedPath).ShouldBeTrue();
+        result.ExitCode.ShouldNotBe(0);
+        result.Output.ShouldContain("cannot contain spaces");
     }
 
     [Fact]

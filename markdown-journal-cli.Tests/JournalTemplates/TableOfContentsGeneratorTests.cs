@@ -781,4 +781,132 @@ public class TableOfContentsGeneratorTests
         Assert.Contains("## Machine Learning", content);
         Assert.DoesNotContain("## machine learning", content);
     }
+
+    [Fact]
+    public void UpdateTableOfContents_PreservesExistingCreatedDate_WhenNotProvided()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                Structure = new Structure { Topics = [] },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        var originalCreated = new DateTime(2024, 1, 1);
+        
+        // Create TOC with original created date
+        _generator.UpdateTableOfContents(journalDir, createdDate: originalCreated);
+        
+        // Act - Update without providing created date
+        var newLastEdited = new DateTime(2024, 2, 15);
+        _generator.UpdateTableOfContents(journalDir, lastEditedDate: newLastEdited);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        Assert.Contains("Created: 1/1/2024", content);
+        Assert.Contains("Last Edited: 02/15/2024", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_PreservesExistingLastEditedDate_WhenNotProvided()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                Structure = new Structure { Topics = [] },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        var originalLastEdited = new DateTime(2024, 1, 15);
+        
+        // Create TOC with original last edited date
+        _generator.UpdateTableOfContents(journalDir, lastEditedDate: originalLastEdited);
+        
+        // Act - Update without providing last edited date (simulating read-only operations)
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        Assert.Contains("Last Edited: 01/15/2024", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_OverridesExistingDates_WhenNewDatesProvided()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                Structure = new Structure { Topics = [] },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        var originalCreated = new DateTime(2024, 1, 1);
+        var originalEdited = new DateTime(2024, 1, 15);
+        
+        // Create TOC with original dates
+        _generator.UpdateTableOfContents(journalDir, originalCreated, originalEdited);
+        
+        // Act - Update with new dates (both should be overridden)
+        var newCreated = new DateTime(2024, 3, 1);
+        var newEdited = new DateTime(2024, 3, 15);
+        _generator.UpdateTableOfContents(journalDir, newCreated, newEdited);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        Assert.Contains("Created: 3/1/2024", content);
+        Assert.Contains("Last Edited: 03/15/2024", content);
+        Assert.DoesNotContain("Created: 1/1/2024", content);
+        Assert.DoesNotContain("Last Edited: 01/15/2024", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_HandlesNoExistingDates_WhenNoneProvided()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                Structure = new Structure { Topics = [] },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act - Create TOC without any dates
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        Assert.DoesNotContain("Created:", content);
+        Assert.DoesNotContain("Last Edited:", content);
+    }
 }
