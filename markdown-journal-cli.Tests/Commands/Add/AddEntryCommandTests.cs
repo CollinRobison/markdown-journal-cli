@@ -145,6 +145,7 @@ body goes here.
             It.IsAny<string>(),
             It.IsAny<string[]>(),
             It.IsAny<int?>(),
+            It.IsAny<bool>(),
             It.IsAny<bool>()));
 
         // Default: File tracking succeeds
@@ -341,6 +342,7 @@ body goes here.
             It.IsAny<string>(),
             It.IsAny<string[]>(),
             It.IsAny<int?>(),
+            It.IsAny<bool>(),
             It.IsAny<bool>()))
             .Throws(new InvalidOperationException("Configuration error"));
 
@@ -487,6 +489,153 @@ body goes here.
         _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(
             It.IsAny<string>(),
             It.IsAny<string>()), Times.Never);
+    }
+
+    #endregion
+
+    #region Ignore File Tests
+
+    [Fact]
+    public void Should_Not_Update_TableOfContents_When_IgnoreFile_Is_True()
+    {
+        // Act
+        var result = _app.Run(["add", "entry", "MyEntry", "--ignore", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // File should still be created
+        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
+        // File should still be tracked
+        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
+        // But TOC should NOT be updated
+        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
+            It.IsAny<string>(),
+            It.IsAny<DateTime?>(),
+            It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
+    public void Should_Add_Entry_To_Configuration_With_IgnoreFile_Flag()
+    {
+        // Act
+        var result = _app.Run(["add", "entry", "MyEntry", "--ignore", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // Should call AddEntry with ignoreFile = true
+        _mockJournalConfiguration.Verify(jc => jc.AddEntry(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string[]>(),
+            It.IsAny<int?>(),
+            It.IsAny<bool>(),
+            true), Times.Once);
+    }
+
+    [Fact]
+    public void Should_Add_Entry_To_Configuration_Without_IgnoreFile_Flag()
+    {
+        // Act
+        var result = _app.Run(["add", "entry", "MyEntry", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // Should call AddEntry with ignoreFile = false (default)
+        _mockJournalConfiguration.Verify(jc => jc.AddEntry(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string[]>(),
+            It.IsAny<int?>(),
+            It.IsAny<bool>(),
+            false), Times.Once);
+    }
+
+    [Fact]
+    public void Should_Update_TableOfContents_When_IgnoreFile_Is_False()
+    {
+        // Act
+        var result = _app.Run(["add", "entry", "MyEntry", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // TOC should be updated when ignore flag is not set
+        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
+            It.IsAny<string>(),
+            It.IsAny<DateTime?>(),
+            It.IsAny<DateTime?>()), Times.Once);
+    }
+
+    [Fact]
+    public void Should_Handle_IgnoreFile_With_Heading_And_Subheading()
+    {
+        // Arrange
+        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString("AI-ML"))
+            .Returns(new[] { "AI", "ML" });
+
+        // Act
+        var result = _app.Run(["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "--ignore", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // File should be created
+        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
+        // Should be added to configuration with ignoreFile = true
+        _mockJournalConfiguration.Verify(jc => jc.AddEntry(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string[]>(),
+            It.IsAny<int?>(),
+            It.IsAny<bool>(),
+            true), Times.Once);
+        // TOC should NOT be updated
+        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
+            It.IsAny<string>(),
+            It.IsAny<DateTime?>(),
+            It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
+    public void Should_Handle_IgnoreFile_With_Custom_Title()
+    {
+        // Act
+        var result = _app.Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "--ignore", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // Should use custom title even with ignore flag
+        _mockTemplateManager.Verify(tm => tm.GenerateFromTemplate(
+            "journal-entry",
+            It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")), Times.Once);
+        // TOC should NOT be updated
+        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
+            It.IsAny<string>(),
+            It.IsAny<DateTime?>(),
+            It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
+    public void Should_Still_Track_File_When_IgnoreFile_Is_True()
+    {
+        // Act
+        var result = _app.Run(["add", "entry", "MyEntry", "--ignore", "-p", "."]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        // File tracking should still occur even when ignoring in TOC
+        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
     }
 
     #endregion

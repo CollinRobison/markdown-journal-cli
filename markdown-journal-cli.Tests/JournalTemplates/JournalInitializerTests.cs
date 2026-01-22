@@ -330,13 +330,19 @@ public class TestJournalConfiguration : IJournalConfiguration
         throw new NotImplementedException();
     }
 
+    public void AddIgnoreEntry(string directory, string file)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
+
     public void AddTopicEntry(string directory, string[] topicPath, string entryName, string file, int? maxDepth = null, bool sortAlphabetically = true)
     {
         // Not implemented for tests - can be added if needed
         throw new NotImplementedException();
     }
 
-    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true)
+    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true, bool ignoreFile = false)
     {
         // Not implemented for tests - can be added if needed
         throw new NotImplementedException();

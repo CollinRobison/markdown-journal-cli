@@ -43,6 +43,14 @@ public interface IJournalConfiguration
     JournalConfig? Read(string directory);
 
     /// <summary>
+    /// Adds a entry to the ignoreFiles list of journal configuration. ignored entries do not
+    /// appear in the table of contents (e.g., 1b-Introduction.md).
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="file">The filename of the root entry.</param>
+    void AddIgnoreEntry(string directory, string file);
+
+    /// <summary>
     /// Adds a root entry to the journal configuration. Root entries are top-level files
     /// that appear at the beginning of the table of contents (e.g., 1b-Introduction.md).
     /// </summary>
@@ -74,7 +82,7 @@ public interface IJournalConfiguration
     /// <param name="topicPath">Array of topic names forming the hierarchy. If null or empty, parses from filename (e.g., "Learning-Rust" becomes ["Learning", "Rust"]).</param>
     /// <param name="maxDepth">Maximum nesting depth allowed for topic entries. Use null for unlimited depth.</param>
     /// <param name="sortAlphabetically">Whether to sort topics alphabetically (true) or maintain insertion order (false).</param>
-    void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true);
+    void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true, bool ignoreFile = false);
 
     /// <summary>
     /// Updates the display name of an entry identified by its file name.

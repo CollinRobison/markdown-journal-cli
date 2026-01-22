@@ -114,11 +114,14 @@ public sealed class AddEntry(
                 .Where(h => !string.IsNullOrEmpty(h))
                 .ToArray();
             
-            _journalConfiguration.AddEntry(settings.FilePath, entryTitle, fileNameFormatted, headings.Length > 0 ? headings : null);
+            _journalConfiguration.AddEntry(settings.FilePath, entryTitle, fileNameFormatted, headings.Length > 0 ? headings : null, ignoreFile: settings.IgnoreFile);
             //add file to file tracking index
             _fileTracking.UpdateFileInIndex(settings.FilePath, fileNameFormatted);
             //update table of contents based on journalrc
-            _tableOfContentsGenerator.UpdateTableOfContents(settings.FilePath, lastEditedDate: DateTime.Now);
+            if (!settings.IgnoreFile)
+            {
+                _tableOfContentsGenerator.UpdateTableOfContents(settings.FilePath, lastEditedDate: DateTime.Now);
+            }
             return 0;
         }
         catch (JournalrcNotFoundException ex)

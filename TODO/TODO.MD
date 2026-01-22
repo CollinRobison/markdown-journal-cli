@@ -16,7 +16,8 @@
   - //with the title of the file entry always being listed last
   - // ex: heading 1 -> heading 2 -> this is the title = heading_1-heading_2-this_is_the_title
 
-- [ ] add an ignore clause to add entry that makes sure it gets ingored by the toc creation. needs to be set in jounralrc
+- [ ] add .journalrc to tracking so it can be regenerated if deleted or messed up
 
 - look into using the hash tracking to eventually make a command that regenerates a file or brings back the last version of it.
 - Also using hash tracking if noticed a file was deleted but actually was just manually renamed allows user to reassign it to the new file name.
+

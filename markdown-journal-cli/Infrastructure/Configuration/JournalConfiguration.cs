@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualBasic;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
 
@@ -107,6 +108,23 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
     }
 
+    public void AddIgnoreEntry(string directory, string file)
+    {
+        Update(directory, config =>
+        {
+            if(IgnoreFileEntryExists(config.TableOfContents.IgnoreFiles ?? [], file))
+            {
+                Console.WriteLine($"File '{file}' already exists in the Ignore File List.");
+                return;
+            }
+
+            var ignoreEntries = (config.TableOfContents.IgnoreFiles ?? []).ToList();
+            ignoreEntries.Add(file);
+            config.TableOfContents.IgnoreFiles = ignoreEntries.ToArray();
+        });
+    }
+
+
     public void AddRootEntry(string directory, string name, string file)
     {
         Update(directory, config =>
@@ -147,11 +165,14 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         });
     }
 
-    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true)
+    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true, bool ignoreFile = false)
     {
         // Extract filename without path and extension
         var fileName = Path.GetFileNameWithoutExtension(file);
-        
+        if (ignoreFile)
+        {
+            AddIgnoreEntry(directory, file);
+        }
         if (IsRootEntry(fileName))
         {
             // File matches root entry pattern (1a-9z), add as root entry
@@ -238,7 +259,10 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             
         return (filePath, directory);
     }
-
+    
+    /// <summary>
+    /// checks if root entry already exists in the .journalrc
+    /// </summary>
     private static bool RootEntryExists(Entries[] rootEntries, string file)
     {
         return rootEntries.Any(entry => 
@@ -263,6 +287,15 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
         var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
         return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// checks if entry already exists in the ignoreFiles of .journalrc
+    /// </summary>
+    private static bool IgnoreFileEntryExists(string[] ignoreEntries, string file)
+    {
+        return ignoreEntries.Any(entry => 
+            string.Equals(entry, file, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -385,6 +418,5 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             existingTopic.Subtopics = subtopics.ToArray();
         }
     }
-
     #endregion
 }

@@ -1394,4 +1394,293 @@ public class JournalConfigurationTests
     }
 
     #endregion
+
+    #region AddIgnoreEntry Tests
+
+    [Fact]
+    public void AddIgnoreEntry_ShouldAddFileToIgnoreList_WhenFileDoesNotExist()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.IgnoreFiles = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "ignored-file.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("ignored-file.md");
+    }
+
+    [Fact]
+    public void AddIgnoreEntry_ShouldNotAddDuplicate_WhenFileAlreadyExists()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.IgnoreFiles = ["existing-file.md"];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "existing-file.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("existing-file.md");
+    }
+
+    [Fact]
+    public void AddIgnoreEntry_ShouldHandleCaseInsensitiveDuplicates()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.IgnoreFiles = ["existing-file.md"];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "EXISTING-FILE.MD");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("existing-file.md");
+    }
+
+    [Fact]
+    public void AddIgnoreEntry_ShouldAddMultipleFiles()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.IgnoreFiles = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "file1.md");
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "file2.md");
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "file3.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(3);
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldContain("file1.md");
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldContain("file2.md");
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldContain("file3.md");
+    }
+
+    [Fact]
+    public void AddIgnoreEntry_ShouldInitializeIgnoreFilesArray_WhenNull()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.IgnoreFiles = null;
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddIgnoreEntry(_testDirectory, "new-ignored-file.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("new-ignored-file.md");
+    }
+
+    #endregion
+
+    #region AddEntry with ignoreFile Tests
+
+    [Fact]
+    public void AddEntry_ShouldAddToIgnoreList_WhenIgnoreFileIsTrue()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [];
+        config.TableOfContents.IgnoreFiles = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Root Entry", 
+            "1a-Introduction.md",
+            ignoreFile: true
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        // Should be added to root entries
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-Introduction.md");
+        // And to ignore files
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("1a-Introduction.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldNotAddToIgnoreList_WhenIgnoreFileIsFalse()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [];
+        config.TableOfContents.IgnoreFiles = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Root Entry", 
+            "1a-Introduction.md",
+            ignoreFile: false
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        // Should be added to root entries
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-Introduction.md");
+        // But NOT to ignore files
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(0);
+    }
+
+    [Fact]
+    public void AddEntry_ShouldAddTopicEntryToIgnoreList_WhenIgnoreFileIsTrue()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics = [];
+        config.TableOfContents.IgnoreFiles = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Topic Entry", 
+            "Learning-Rust.md",
+            topicPath: ["Learning"],
+            ignoreFile: true
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        // Should be added to topic structure
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Entries.Length.ShouldBe(1);
+        learningTopic.Entries[0].File.ShouldBe("Learning-Rust.md");
+        // And to ignore files
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("Learning-Rust.md");
+    }
+
+    [Fact]
+    public void AddEntry_ShouldNotDuplicateInIgnoreList_WhenAlreadyIgnored()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [];
+        config.TableOfContents.IgnoreFiles = ["1a-Introduction.md"];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act
+        _journalConfiguration.AddEntry(
+            _testDirectory, 
+            "Root Entry", 
+            "1a-Introduction.md",
+            ignoreFile: true
+        );
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        // Should be added to root entries
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-Introduction.md");
+        // But should NOT duplicate in ignore files
+        updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("1a-Introduction.md");
+    }
+
+    #endregion
 }
