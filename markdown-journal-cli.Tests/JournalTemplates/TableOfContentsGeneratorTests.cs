@@ -909,4 +909,592 @@ public class TableOfContentsGeneratorTests
         Assert.DoesNotContain("Created:", content);
         Assert.DoesNotContain("Last Edited:", content);
     }
+
+    #region Parent-Child Detection Tests
+
+    [Fact]
+    public void UpdateTableOfContents_DetectsParentChildRelationship_WhenEntryMatchesSubtopic()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "Test Topic",
+                            Entries =
+                            [
+                                new() { Name = "test file 5", File = "abc-test_2-test_file_5.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "test file 5",
+                                    Entries =
+                                    [
+                                        new() { Name = "test file 7", File = "abc-test_2-test_file_5-test_file_7.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Should have parent entry as a link
+        Assert.Contains("- [test file 5](abc-test_2-test_file_5.md)", content);
+        // Should have child nested under parent (with more indentation)
+        Assert.Contains("    - [test file 7](abc-test_2-test_file_5-test_file_7.md)", content);
+        // Should NOT render subtopic heading separately
+        var lines = (content ?? "").Split('\n');
+        var subtopicHeadingCount = lines.Count(l => l.Trim() == "- test file 5" || l.Trim() == "- Test File 5");
+        Assert.Equal(0, subtopicHeadingCount);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_IgnoresParentFile_ShowsOnlyChildren()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                IgnoreFiles = ["abc-test_2-test_file_5.md"],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "Test Topic",
+                            Entries =
+                            [
+                                new() { Name = "test file 5", File = "abc-test_2-test_file_5.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "test file 5",
+                                    Entries =
+                                    [
+                                        new() { Name = "test file 7", File = "abc-test_2-test_file_5-test_file_7.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Parent file should NOT appear
+        Assert.DoesNotContain("abc-test_2-test_file_5.md", content);
+        // Child should still appear (as a regular subtopic entry)
+        Assert.Contains("[test file 7](abc-test_2-test_file_5-test_file_7.md)", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_NameMismatch_RendersAsSeparateEntries()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "ABC",
+                            Entries =
+                            [
+                                new() { Name = "test file uno", File = "abc-test_file_1.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "test 2",
+                                    Entries =
+                                    [
+                                        new() { Name = "test 2 entry", File = "abc-test_file_1-test_2.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Both should appear - parent entry and subtopic
+        Assert.Contains("[test file uno](abc-test_file_1.md)", content);
+        Assert.Contains("test 2", content);
+        Assert.Contains("[test 2 entry](abc-test_file_1-test_2.md)", content);
+        
+        // Since names don't match, they should be separate (not nested as parent-child)
+        var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
+        var parentIndex = Array.FindIndex(lines, l => l.Contains("[test file uno](abc-test_file_1.md)"));
+        
+        Assert.True(parentIndex >= 0);
+        // Parent should not have the subtopic's entries as direct children
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_DeepNesting_DetectsParentChildAtAllLevels()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "Level 1",
+                            Entries =
+                            [
+                                new() { Name = "level 2", File = "level_1-level_2.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "level 2",
+                                    Entries =
+                                    [
+                                        new() { Name = "level 3", File = "level_1-level_2-level_3.md" },
+                                    ],
+                                    Subtopics =
+                                    [
+                                        new()
+                                        {
+                                            Name = "level 3",
+                                            Entries =
+                                            [
+                                                new() { Name = "final", File = "level_1-level_2-level_3-final.md" },
+                                            ],
+                                            Subtopics = null,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // All levels should be nested properly
+        Assert.Contains("[level 2](level_1-level_2.md)", content);
+        Assert.Contains("[level 3](level_1-level_2-level_3.md)", content);
+        Assert.Contains("[final](level_1-level_2-level_3-final.md)", content);
+        
+        // Verify nesting with indentation
+        var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
+        var level2Index = Array.FindIndex(lines, l => l.Contains("[level 2](level_1-level_2.md)"));
+        var level3Index = Array.FindIndex(lines, l => l.Contains("[level 3](level_1-level_2-level_3.md)"));
+        var finalIndex = Array.FindIndex(lines, l => l.Contains("[final](level_1-level_2-level_3-final.md)"));
+        
+        // Get indentation levels
+        var level2Indent = lines[level2Index].TakeWhile(c => c == ' ').Count();
+        var level3Indent = lines[level3Index].TakeWhile(c => c == ' ').Count();
+        var finalIndent = lines[finalIndex].TakeWhile(c => c == ' ').Count();
+        
+        // Each level should be more indented than the previous
+        Assert.True(level3Indent > level2Indent);
+        Assert.True(finalIndent > level3Indent);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_MultipleChildrenUnderParent_AllNested()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "Topic",
+                            Entries =
+                            [
+                                new() { Name = "parent", File = "topic-parent.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "parent",
+                                    Entries =
+                                    [
+                                        new() { Name = "child 1", File = "topic-parent-child_1.md" },
+                                        new() { Name = "child 2", File = "topic-parent-child_2.md" },
+                                        new() { Name = "child 3", File = "topic-parent-child_3.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Parent should be a link
+        Assert.Contains("[parent](topic-parent.md)", content);
+        // All children should be present and nested
+        Assert.Contains("[child 1](topic-parent-child_1.md)", content);
+        Assert.Contains("[child 2](topic-parent-child_2.md)", content);
+        Assert.Contains("[child 3](topic-parent-child_3.md)", content);
+        
+        // Verify children are more indented than parent
+        var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
+        var parentIndex = Array.FindIndex(lines, l => l.Contains("[parent](topic-parent.md)"));
+        var child1Index = Array.FindIndex(lines, l => l.Contains("[child 1](topic-parent-child_1.md)"));
+        
+        var parentIndent = lines[parentIndex].TakeWhile(c => c == ' ').Count();
+        var child1Indent = lines[child1Index].TakeWhile(c => c == ' ').Count();
+        
+        Assert.True(child1Indent > parentIndent);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_IgnoreFiles_FiltersFromRootEntries()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries =
+                [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Template", File = "1c-Template.md" },
+                    new() { Name = "Draft", File = "1d-Draft.md" },
+                ],
+                IgnoreFiles = ["1d-Draft.md"],
+                Structure = new Structure { Topics = [] },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Should show non-ignored entries
+        Assert.Contains("[Introduction](1b-Intro.md)", content);
+        Assert.Contains("[Template](1c-Template.md)", content);
+        // Should NOT show ignored entry
+        Assert.DoesNotContain("1d-Draft.md", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_MixedIgnoredAndNonIgnored_ShowsOnlyNonIgnored()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                IgnoreFiles = ["abc-test_2-test_file_5.md", "abc-test_2-test_file_6.md"],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "ABC",
+                            Entries = [],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "Test 2",
+                                    Entries =
+                                    [
+                                        new() { Name = "test file 5", File = "abc-test_2-test_file_5.md" },
+                                        new() { Name = "test file 6", File = "abc-test_2-test_file_6.md" },
+                                        new() { Name = "test file 7", File = "abc-test_2-test_file_7.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Should NOT show ignored files
+        Assert.DoesNotContain("abc-test_2-test_file_5.md", content);
+        Assert.DoesNotContain("abc-test_2-test_file_6.md", content);
+        // Should show non-ignored file
+        Assert.Contains("[test file 7](abc-test_2-test_file_7.md)", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_ParentChildWithSiblings_MaintainsCorrectOrder()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "Topic",
+                            Entries =
+                            [
+                                new() { Name = "entry 1", File = "topic-entry_1.md" },
+                                new() { Name = "parent", File = "topic-parent.md" },
+                                new() { Name = "entry 2", File = "topic-entry_2.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "parent",
+                                    Entries =
+                                    [
+                                        new() { Name = "child", File = "topic-parent-child.md" },
+                                    ],
+                                    Subtopics = null,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // All entries should be present
+        Assert.Contains("[entry 1](topic-entry_1.md)", content);
+        Assert.Contains("[parent](topic-parent.md)", content);
+        Assert.Contains("[entry 2](topic-entry_2.md)", content);
+        Assert.Contains("[child](topic-parent-child.md)", content);
+        
+        // Verify order: entry1, parent with child nested, entry2
+        var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
+        var entry1Index = Array.FindIndex(lines, l => l.Contains("[entry 1](topic-entry_1.md)"));
+        var parentIndex = Array.FindIndex(lines, l => l.Contains("[parent](topic-parent.md)"));
+        var childIndex = Array.FindIndex(lines, l => l.Contains("[child](topic-parent-child.md)"));
+        var entry2Index = Array.FindIndex(lines, l => l.Contains("[entry 2](topic-entry_2.md)"));
+        
+        Assert.True(entry1Index < parentIndex);
+        Assert.True(parentIndex < childIndex);
+        Assert.True(childIndex < entry2Index);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_TopicWithMatchingEntryAndSubtopics_RendersHeadingAndSubtopics()
+    {
+        // Arrange - topic "abc" has entry "abc.md" AND subtopics that should still be shown
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new()
+                        {
+                            Name = "abc",
+                            Entries =
+                            [
+                                new() { Name = "abc", File = "abc.md" },
+                            ],
+                            Subtopics =
+                            [
+                                new()
+                                {
+                                    Name = "test 2",
+                                    Entries =
+                                    [
+                                        new() { Name = "test file 1", File = "abc-test_2-test_file_1.md" },
+                                        new() { Name = "test file 10", File = "abc-test_2-test_file_10.md" },
+                                    ],
+                                    Subtopics =
+                                    [
+                                        new()
+                                        {
+                                            Name = "test file 1",
+                                            Entries =
+                                            [
+                                                new() { Name = "test file 1", File = "abc-test_2-test_file_1-test_file_1.md" },
+                                            ],
+                                            Subtopics = null,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        new()
+                        {
+                            Name = "test 2",
+                            Entries =
+                            [
+                                new() { Name = "test 2", File = "test_2.md" },
+                            ],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
+        
+        // Should have "abc" as a heading with link
+        Assert.Contains("## [Abc](abc.md)", content);
+        
+        // Should ALSO show the subtopics (capitalized due to CapitalizeTopicHeadings setting)
+        Assert.Contains("- Test 2", content);
+        Assert.Contains("[test file 1](abc-test_2-test_file_1.md)", content);
+        Assert.Contains("[test file 10](abc-test_2-test_file_10.md)", content);
+        Assert.Contains("[test file 1](abc-test_2-test_file_1-test_file_1.md)", content);
+        
+        // Verify structure
+        var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
+        
+        // Find the abc heading
+        var abcHeadingIndex = Array.FindIndex(lines, l => l.Contains("## [Abc](abc.md)"));
+        Assert.True(abcHeadingIndex >= 0, "Should have abc heading");
+        
+        // Find subtopic "Test 2" - should be after abc heading
+        var test2SubtopicIndex = Array.FindIndex(lines, l => l.Contains("- Test 2"));
+        Assert.True(test2SubtopicIndex > abcHeadingIndex, "Test 2 subtopic should appear after abc heading");
+        
+        // Find the separate "test 2" top-level topic
+        var test2TopicIndex = Array.FindIndex(lines, l => l.Contains("## [Test 2](test_2.md)"));
+        Assert.True(test2TopicIndex > test2SubtopicIndex, "Test 2 topic should appear after abc section");
+    }
+
+    #endregion
 }

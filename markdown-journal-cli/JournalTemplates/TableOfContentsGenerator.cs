@@ -84,12 +84,18 @@ public class TableOfContentsGenerator(
         // Add title
         sb.AppendLine($"# {_journalSettings.TableOfContentsTitle}");
 
-        // Add root entries
+        // Get ignore files list
+        var ignoreFiles = config.TableOfContents.IgnoreFiles ?? Array.Empty<string>();
+
+        // Add root entries (filter out ignored files)
         if (config.TableOfContents.RootEntries != null && config.TableOfContents.RootEntries.Length > 0)
         {
             foreach (var entry in config.TableOfContents.RootEntries)
             {
-                sb.AppendLine($"- [{entry.Name}]({entry.File})");
+                if (!IsFileIgnored(entry.File, ignoreFiles))
+                {
+                    sb.AppendLine($"- [{entry.Name}]({entry.File})");
+                }
             }
         }
 
@@ -98,15 +104,19 @@ public class TableOfContentsGenerator(
         {
             foreach (var topic in config.TableOfContents.Structure.Topics)
             {
-                GenerateTopicSection(sb, topic, 0); // Start with no indentation
+                GenerateTopicSection(sb, topic, 0, ignoreFiles); // Start with no indentation
             }
         }
 
         return sb.ToString();
     }
 
-    private void GenerateTopicSection(StringBuilder sb, Topic topic, int indentLevel)
+    private void GenerateTopicSection(StringBuilder sb, Topic topic, int indentLevel, string[] ignoreFiles)
     {
+        // Filter out ignored entries first
+        var visibleEntries = topic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray() 
+            ?? Array.Empty<Entries>();
+
         // Top-level topics (indentLevel == 0) get headings
         // Subtopics (indentLevel > 0) are rendered as indented list items
         
@@ -117,12 +127,12 @@ public class TableOfContentsGenerator(
                 ? ToTitleCase(topic.Name) 
                 : topic.Name;
             
-            // Edge case: if topic has exactly one entry and the entry name matches the topic name,
+            // Edge case: if topic has exactly one visible entry and the entry name matches the topic name,
             // make the topic heading a link
-            if (topic.Entries != null && topic.Entries.Length == 1 && 
-                string.Equals(topic.Name, topic.Entries[0].Name, StringComparison.OrdinalIgnoreCase))
+            if (visibleEntries.Length == 1 && 
+                string.Equals(topic.Name, visibleEntries[0].Name, StringComparison.OrdinalIgnoreCase))
             {
-                sb.AppendLine($"## [{displayName}]({topic.Entries[0].File})");
+                sb.AppendLine($"## [{displayName}]({visibleEntries[0].File})");
             }
             else
             {
@@ -140,29 +150,187 @@ public class TableOfContentsGenerator(
             sb.AppendLine($"{indent}- {displayName}");
         }
 
-        // Add entries (only if not the edge case with single matching entry at top level)
-        if (!(indentLevel == 0 && topic.Entries != null && topic.Entries.Length == 1 && 
-              string.Equals(topic.Name, topic.Entries[0].Name, StringComparison.OrdinalIgnoreCase)))
+        // Identify parent-child relationships between entries and subtopics
+        var parentMatches = new Dictionary<Entries, Topic>();
+        var processedSubtopics = new HashSet<Topic>();
+
+        if (visibleEntries.Length > 0 && topic.Subtopics != null && topic.Subtopics.Length > 0)
         {
-            if (topic.Entries != null && topic.Entries.Length > 0)
+            foreach (var entry in visibleEntries)
             {
-                // Entries are indented: 2 more spaces than the current level for subtopics, or 2 spaces for top-level
-                var entryIndent = new string(' ', (indentLevel + 1) * 2);
-                foreach (var entry in topic.Entries)
+                var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
+                
+                foreach (var subtopic in topic.Subtopics)
                 {
+                    // Check if entry name matches subtopic name AND entry path is prefix of subtopic files
+                    if (string.Equals(entry.Name, subtopic.Name, StringComparison.OrdinalIgnoreCase) &&
+                        IsSubtopicChildOfEntry(entryPathWithoutExt, subtopic, ignoreFiles))
+                    {
+                        parentMatches[entry] = subtopic;
+                        processedSubtopics.Add(subtopic);
+                        break; // Each entry can only match one subtopic
+                    }
+                }
+            }
+        }
+
+        // Check if this is the edge case: top-level topic with single matching entry
+        var isTopLevelMatchingEntry = indentLevel == 0 && 
+                                      visibleEntries.Length == 1 && 
+                                      string.Equals(topic.Name, visibleEntries[0].Name, StringComparison.OrdinalIgnoreCase);
+
+        var entryIndent = new string(' ', (indentLevel + 1) * 2);
+
+        // Render entries (skip if edge case since it's already in the heading)
+        if (!isTopLevelMatchingEntry)
+        {
+            foreach (var entry in visibleEntries)
+            {
+                if (parentMatches.TryGetValue(entry, out var childSubtopic))
+                {
+                    // This entry has matching child subtopic - render as parent with children
+                    sb.AppendLine($"{entryIndent}- [{entry.Name}]({entry.File})");
+                    // Render the subtopic's content nested under this entry
+                    RenderSubtopicContent(sb, childSubtopic, indentLevel + 2, ignoreFiles);
+                }
+                else
+                {
+                    // Regular entry without children
                     sb.AppendLine($"{entryIndent}- [{entry.Name}]({entry.File})");
                 }
             }
         }
 
-        // Add subtopics recursively with increased indentation
-        if (topic.Subtopics != null && topic.Subtopics.Length > 0)
+        // Always render subtopics that weren't merged with parent entries
+        if (topic.Subtopics != null)
         {
             foreach (var subtopic in topic.Subtopics)
             {
-                GenerateTopicSection(sb, subtopic, indentLevel + 1);
+                if (!processedSubtopics.Contains(subtopic))
+                {
+                    GenerateTopicSection(sb, subtopic, indentLevel + 1, ignoreFiles);
+                }
             }
         }
+    }
+
+    /// <summary>
+    /// Renders the content of a subtopic (entries and nested subtopics) without rendering the subtopic heading itself.
+    /// Used when a subtopic is merged with a parent entry.
+    /// </summary>
+    private void RenderSubtopicContent(StringBuilder sb, Topic subtopic, int indentLevel, string[] ignoreFiles)
+    {
+        // Filter out ignored entries
+        var visibleEntries = subtopic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray() 
+            ?? Array.Empty<Entries>();
+
+        // Identify parent-child relationships at this level too
+        var parentMatches = new Dictionary<Entries, Topic>();
+        var processedSubtopics = new HashSet<Topic>();
+
+        if (visibleEntries.Length > 0 && subtopic.Subtopics != null && subtopic.Subtopics.Length > 0)
+        {
+            foreach (var entry in visibleEntries)
+            {
+                var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
+                
+                foreach (var nestedSubtopic in subtopic.Subtopics)
+                {
+                    if (string.Equals(entry.Name, nestedSubtopic.Name, StringComparison.OrdinalIgnoreCase) &&
+                        IsSubtopicChildOfEntry(entryPathWithoutExt, nestedSubtopic, ignoreFiles))
+                    {
+                        parentMatches[entry] = nestedSubtopic;
+                        processedSubtopics.Add(nestedSubtopic);
+                        break;
+                    }
+                }
+            }
+        }
+
+        var entryIndent = new string(' ', indentLevel * 2);
+
+        // Render entries
+        foreach (var entry in visibleEntries)
+        {
+            if (parentMatches.TryGetValue(entry, out var childSubtopic))
+            {
+                // This entry has matching child subtopic
+                sb.AppendLine($"{entryIndent}- [{entry.Name}]({entry.File})");
+                RenderSubtopicContent(sb, childSubtopic, indentLevel + 1, ignoreFiles);
+            }
+            else
+            {
+                // Regular entry
+                sb.AppendLine($"{entryIndent}- [{entry.Name}]({entry.File})");
+            }
+        }
+
+        // Render unmatched subtopics
+        if (subtopic.Subtopics != null)
+        {
+            foreach (var nestedSubtopic in subtopic.Subtopics)
+            {
+                if (!processedSubtopics.Contains(nestedSubtopic))
+                {
+                    GenerateTopicSection(sb, nestedSubtopic, indentLevel, ignoreFiles);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Checks if a subtopic is a child of an entry based on file path prefix matching.
+    /// </summary>
+    private bool IsSubtopicChildOfEntry(string entryPathWithoutExt, Topic subtopic, string[] ignoreFiles)
+    {
+        // Check if all visible files in the subtopic (and nested subtopics) start with the entry path
+        return HasFilesWithPrefix(subtopic, entryPathWithoutExt, ignoreFiles);
+    }
+
+    /// <summary>
+    /// Recursively checks if a topic has any visible files that start with the given prefix.
+    /// </summary>
+    private static bool HasFilesWithPrefix(Topic topic, string prefix, string[] ignoreFiles)
+    {
+        // Check entries
+        if (topic.Entries != null)
+        {
+            foreach (var entry in topic.Entries)
+            {
+                if (!IsFileIgnored(entry.File, ignoreFiles))
+                {
+                    var filePath = Path.GetFileNameWithoutExtension(entry.File);
+                    // Check if file path starts with prefix followed by separator
+                    if (filePath.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Check subtopics recursively
+        if (topic.Subtopics != null)
+        {
+            foreach (var subtopic in topic.Subtopics)
+            {
+                if (HasFilesWithPrefix(subtopic, prefix, ignoreFiles))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a file is in the ignore list.
+    /// </summary>
+    private static bool IsFileIgnored(string file, string[] ignoreFiles)
+    {
+        return ignoreFiles.Any(ignored => 
+            string.Equals(file, ignored, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string ToTitleCase(string input)

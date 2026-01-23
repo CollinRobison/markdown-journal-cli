@@ -8,6 +8,59 @@ using Microsoft.VisualBasic;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
 
+/// <summary>
+/// Comparer for natural (alphanumeric) sorting of strings.
+/// Treats consecutive digits as numbers for proper numerical ordering.
+/// </summary>
+internal class NaturalStringComparer : IComparer<string>
+{
+    public int Compare(string? x, string? y)
+    {
+        if (x == y) return 0;
+        if (x == null) return -1;
+        if (y == null) return 1;
+
+        int ix = 0, iy = 0;
+
+        while (ix < x.Length && iy < y.Length)
+        {
+            // Check if both are digits
+            if (char.IsDigit(x[ix]) && char.IsDigit(y[iy]))
+            {
+                // Extract numbers
+                var numX = ExtractNumber(x, ref ix);
+                var numY = ExtractNumber(y, ref iy);
+
+                var numCompare = numX.CompareTo(numY);
+                if (numCompare != 0) return numCompare;
+            }
+            else
+            {
+                // Compare characters case-insensitively
+                var charCompare = char.ToLowerInvariant(x[ix]).CompareTo(char.ToLowerInvariant(y[iy]));
+                if (charCompare != 0) return charCompare;
+
+                ix++;
+                iy++;
+            }
+        }
+
+        // If one string is a prefix of the other, shorter comes first
+        return x.Length.CompareTo(y.Length);
+    }
+
+    private static long ExtractNumber(string str, ref int index)
+    {
+        int start = index;
+        while (index < str.Length && char.IsDigit(str[index]))
+        {
+            index++;
+        }
+
+        return long.Parse(str.Substring(start, index - start));
+    }
+}
+
 public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettings> journalSettings)
     : IJournalConfiguration
 {
@@ -373,10 +426,11 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
             topics.Add(newTopic);
 
-            // Sort if requested
+            // Sort if requested - use natural sort
             if (sortAlphabetically)
             {
-                topics.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+                var naturalComparer = new NaturalStringComparer();
+                topics.Sort((a, b) => naturalComparer.Compare(a.Name, b.Name));
             }
 
             existingTopic = newTopic;
@@ -391,10 +445,11 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
                 var entries = existingTopic.Entries.ToList();
                 entries.Add(new Entries { Name = entryName, File = file });
                 
-                // Sort entries alphabetically by file name
+                // Sort entries by file name using natural sort
                 if (sortAlphabetically)
                 {
-                    entries.Sort((a, b) => string.Compare(a.File, b.File, StringComparison.OrdinalIgnoreCase));
+                    var naturalComparer = new NaturalStringComparer();
+                    entries.Sort((a, b) => naturalComparer.Compare(a.File, b.File));
                 }
                 
                 existingTopic.Entries = entries.ToArray();

@@ -1683,4 +1683,184 @@ public class JournalConfigurationTests
     }
 
     #endregion
+
+    #region Natural Sort Tests
+
+    [Fact]
+    public void AddTopicEntry_ShouldUseNaturalSort_ForNumericFilenames()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - Add entries with numeric filenames in non-sorted order
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 10", "test_file_10.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 5", "test_file_5.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 100", "test_file_100.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 1", "test_file_1.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 20", "test_file_20.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var testTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Test");
+        testTopic.ShouldNotBeNull();
+        testTopic.Entries.Length.ShouldBe(5);
+        
+        // Should be sorted naturally: 1, 5, 10, 20, 100
+        testTopic.Entries[0].File.ShouldBe("test_file_1.md");
+        testTopic.Entries[1].File.ShouldBe("test_file_5.md");
+        testTopic.Entries[2].File.ShouldBe("test_file_10.md");
+        testTopic.Entries[3].File.ShouldBe("test_file_20.md");
+        testTopic.Entries[4].File.ShouldBe("test_file_100.md");
+    }
+
+    [Fact]
+    public void AddTopicEntry_ShouldUseNaturalSort_ForMixedAlphanumeric()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - Add entries with mixed alphanumeric patterns
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Code"], "Chapter 2", "chapter2.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Code"], "Chapter 10", "chapter10.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Code"], "Chapter 1", "chapter1.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Code"], "Chapter 20", "chapter20.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var codeTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Code");
+        codeTopic.ShouldNotBeNull();
+        codeTopic.Entries.Length.ShouldBe(4);
+        
+        // Should be sorted naturally: chapter1, chapter2, chapter10, chapter20
+        codeTopic.Entries[0].File.ShouldBe("chapter1.md");
+        codeTopic.Entries[1].File.ShouldBe("chapter2.md");
+        codeTopic.Entries[2].File.ShouldBe("chapter10.md");
+        codeTopic.Entries[3].File.ShouldBe("chapter20.md");
+    }
+
+    [Fact]
+    public void AddTopicEntry_ShouldUseNaturalSort_CaseInsensitive()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - Add entries with different cases
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Files"], "Entry Z", "File_10.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Files"], "Entry A", "file_2.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Files"], "Entry B", "FILE_1.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var filesTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Files");
+        filesTopic.ShouldNotBeNull();
+        filesTopic.Entries.Length.ShouldBe(3);
+        
+        // Should be sorted case-insensitively with natural numeric sorting
+        filesTopic.Entries[0].File.ShouldBe("FILE_1.md");
+        filesTopic.Entries[1].File.ShouldBe("file_2.md");
+        filesTopic.Entries[2].File.ShouldBe("File_10.md");
+    }
+
+    [Fact]
+    public void AddTopicEntry_ShouldUseNaturalSort_ForTopicNames()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - Add topics with numeric names
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 10"], "Entry", "topic10-entry.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 2"], "Entry", "topic2-entry.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 1"], "Entry", "topic1-entry.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 20"], "Entry", "topic20-entry.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var topics = updatedConfig.TableOfContents.Structure.Topics;
+        
+        // Find the "Topic X" entries (excluding "General")
+        var topicEntries = topics.Where(t => t.Name.StartsWith("Topic")).ToArray();
+        topicEntries.Length.ShouldBe(4);
+        
+        // Should be sorted naturally: Topic 1, Topic 2, Topic 10, Topic 20
+        topicEntries[0].Name.ShouldBe("Topic 1");
+        topicEntries[1].Name.ShouldBe("Topic 2");
+        topicEntries[2].Name.ShouldBe("Topic 10");
+        topicEntries[3].Name.ShouldBe("Topic 20");
+    }
+
+    [Fact]
+    public void AddTopicEntry_ShouldUseNaturalSort_WithLeadingZeros()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - Add entries with leading zeros
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Docs"], "Entry 10", "doc_010.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Docs"], "Entry 2", "doc_002.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Docs"], "Entry 100", "doc_100.md");
+        _journalConfiguration.AddTopicEntry(_testDirectory, ["Docs"], "Entry 1", "doc_001.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        var docsTopic = updatedConfig.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Docs");
+        docsTopic.ShouldNotBeNull();
+        docsTopic.Entries.Length.ShouldBe(4);
+        
+        // Should be sorted naturally by numeric value: 1, 2, 10, 100
+        docsTopic.Entries[0].File.ShouldBe("doc_001.md");
+        docsTopic.Entries[1].File.ShouldBe("doc_002.md");
+        docsTopic.Entries[2].File.ShouldBe("doc_010.md");
+        docsTopic.Entries[3].File.ShouldBe("doc_100.md");
+    }
+
+    #endregion
 }
