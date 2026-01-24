@@ -63,10 +63,10 @@ md-journal new "My Daily Journal"
 md-journal new ProjectNotes --path ~/Work/Projects
 
 # Add a new journal entry
-md-journal add entry "My First Entry" --path ~/Documents/MyJournal
+md-journal add --path ~/Documents/MyJournal entry "My First Entry"
 
 # Add an entry with heading and subheading
-md-journal add entry "Meeting Notes" --heading "Work" --subheading "Team-Meetings" --path ~/Documents/MyJournal
+md-journal add --path ~/Documents/MyJournal entry "Meeting Notes" --heading "Work" --subheading "Team-Meetings"
 ```
 
 ## Commands
@@ -118,7 +118,7 @@ md-journal add entry "Daily Standup"
 md-journal add entry "standup_notes" --title "Daily Standup" --heading "Work"
 
 # Add entry with nested topics
-md-journal add entry "api_design" --heading "Tech" --subheading "Backend-API"
+md-journal add --path ~/Documents/MyJournal entry "api_design" --heading "Tech" --subheading "Backend-API"
 
 # Add entry but don't include in TOC
 md-journal add entry "draft_thoughts" --ignore
