@@ -2,10 +2,13 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.JournalTemplates;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Shouldly;
@@ -32,22 +35,24 @@ public class NewCommandTests
     {
         _console = new TestConsole();
         _fileSystem = new TestFileSystem();
-        
+
         // Create test settings with explicit values for testing
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            DefaultJournalName = "MyJournal",
-            TableOfContentsFileName = "1a-TableOfContents",
-            TableOfContentsTitle = "Table of Contents",
-            IntroductionFileName = "1b-Intro",
-            IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
-            AllJournalsTitle = "All My Journals"
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                DefaultJournalName = "MyJournal",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                IntroductionFileName = "1b-Intro",
+                IntroductionTitle = "Introduction",
+                JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                AllJournalsFileName = "1h-All_My_Journals",
+                AllJournalsTitle = "All My Journals",
+            }
+        );
 
         _journalInitializer = new TestJournalInitializer(_fileSystem);
 
@@ -60,7 +65,7 @@ public class NewCommandTests
         // Use IHost constructor and manually register services
         var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().Build();
         var registrar = new TypeRegistrar(host);
-        
+
         foreach (var service in services)
         {
             if (service.ImplementationInstance != null)
@@ -104,7 +109,9 @@ public class NewCommandTests
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("CustomJournal");
         _fileSystem.DirectoryExists("./CustomJournal").ShouldBeTrue();
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalName == "CustomJournal");
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalName == "CustomJournal"
+        );
     }
 
     [Fact]
@@ -188,9 +195,9 @@ public class NewCommandTests
         _fileSystem.FileExists(Path.Combine(journalPath, "1a-TableOfContents.md")).ShouldBeTrue();
         _fileSystem.FileExists(Path.Combine(journalPath, "1b-Intro.md")).ShouldBeTrue();
         _fileSystem
-            .FileExists(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"))
+            .FileExists(Path.Combine(journalPath, "1c-Journal_Entry_Template.md"))
             .ShouldBeTrue();
-        _fileSystem.FileExists(Path.Combine(journalPath, "1h-All-My-Journals.md")).ShouldBeTrue();
+        _fileSystem.FileExists(Path.Combine(journalPath, "1h-All_My_Journals.md")).ShouldBeTrue();
     }
 
     [Fact]
@@ -218,12 +225,12 @@ public class NewCommandTests
         introContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
 
         var templateContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1c-Journal-Entry-Template.md")
+            Path.Combine(journalPath, "1c-Journal_Entry_Template.md")
         );
         templateContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
 
         var journalsContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1h-All-My-Journals.md")
+            Path.Combine(journalPath, "1h-All_My_Journals.md")
         );
         journalsContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
     }
@@ -262,7 +269,6 @@ public class NewCommandTests
     }
 
     [Theory]
-    [InlineData("Journal With Spaces")]
     [InlineData("Journal-With-Dashes")]
     [InlineData("Journal_With_Underscores")]
     [InlineData("JournalWithNumbers123")]
@@ -302,6 +308,21 @@ public class NewCommandTests
         result.Output.ShouldContain("cannot be empty");
     }
 
+    [Theory]
+    [InlineData("Journal With Spaces")]
+    [InlineData("My Journal")]
+    [InlineData("Test Journal Name")]
+    [InlineData("Journal Name With Multiple Spaces")]
+    public void Should_Reject_Journal_Names_With_Spaces(string nameWithSpaces)
+    {
+        // When
+        var result = _app.Run(["new", nameWithSpaces]);
+
+        // Then
+        result.ExitCode.ShouldNotBe(0);
+        result.Output.ShouldContain("cannot contain spaces");
+    }
+
     [Fact]
     public void Should_Handle_Exception_From_Template_Manager()
     {
@@ -315,6 +336,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(faultyTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
         services.AddSingleton<NewCommand>();
 
@@ -407,10 +433,10 @@ public class NewCommandTests
         // All these files should use the journal-entry template
         var introContent = _fileSystem.GetFileContent(Path.Combine(journalPath, "1b-Intro.md"));
         var templateContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1c-Journal-Entry-Template.md")
+            Path.Combine(journalPath, "1c-Journal_Entry_Template.md")
         );
         var journalsContent = _fileSystem.GetFileContent(
-            Path.Combine(journalPath, "1h-All-My-Journals.md")
+            Path.Combine(journalPath, "1h-All_My_Journals.md")
         );
 
         introContent.ShouldBe("# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
@@ -436,8 +462,8 @@ public class NewCommandTests
         journalFiles.Count.ShouldBe(4);
         journalFiles.ShouldContain(f => f.Key.EndsWith("1a-TableOfContents.md"));
         journalFiles.ShouldContain(f => f.Key.EndsWith("1b-Intro.md"));
-        journalFiles.ShouldContain(f => f.Key.EndsWith("1c-Journal-Entry-Template.md"));
-        journalFiles.ShouldContain(f => f.Key.EndsWith("1h-All-My-Journals.md"));
+        journalFiles.ShouldContain(f => f.Key.EndsWith("1c-Journal_Entry_Template.md"));
+        journalFiles.ShouldContain(f => f.Key.EndsWith("1h-All_My_Journals.md"));
     }
 
     [Fact]
@@ -520,19 +546,17 @@ public class NewCommandTests
     }
 
     [Fact]
-    public void Should_Handle_Journal_Name_With_Leading_And_Trailing_Spaces()
+    public void Should_Reject_Journal_Name_With_Leading_And_Trailing_Spaces()
     {
-        // Given - The command line parsing should handle this, but we test the validation
+        // Given - Names with leading/trailing spaces should be rejected due to space validation
         var journalName = " SpacedJournal ";
 
         // When
         var result = _app.Run(["new", journalName]);
 
         // Then
-        result.ExitCode.ShouldBe(0);
-        // The file system should create directory with the exact name provided
-        var expectedPath = Path.Combine(".", journalName);
-        _fileSystem.DirectoryExists(expectedPath).ShouldBeTrue();
+        result.ExitCode.ShouldNotBe(0);
+        result.Output.ShouldContain("cannot contain spaces");
     }
 
     [Fact]
@@ -569,8 +593,8 @@ public class NewCommandTests
         // Files should be created in alphabetical order by filename
         allFiles.ShouldContain(Path.Combine(journalPath, "1a-TableOfContents.md"));
         allFiles.ShouldContain(Path.Combine(journalPath, "1b-Intro.md"));
-        allFiles.ShouldContain(Path.Combine(journalPath, "1c-Journal-Entry-Template.md"));
-        allFiles.ShouldContain(Path.Combine(journalPath, "1h-All-My-Journals.md"));
+        allFiles.ShouldContain(Path.Combine(journalPath, "1c-Journal_Entry_Template.md"));
+        allFiles.ShouldContain(Path.Combine(journalPath, "1h-All_My_Journals.md"));
     }
 
     [Fact]
@@ -580,13 +604,18 @@ public class NewCommandTests
         var faultyFileSystem = new FaultyTestFileSystem();
         var testTemplateManager = new TemplateManager(_journalSettings);
         var testJournalConfiguration = new TestJournalConfiguration();
-        
+
         var services = new ServiceCollection();
         services.AddSingleton<IAnsiConsole>(_console);
         services.AddSingleton<IFileSystem>(faultyFileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -619,7 +648,7 @@ public class NewCommandTests
         Should.Throw<ArgumentNullException>(() =>
             new NewCommand(_console, null!, _journalInitializer, _journalSettings)
         );
-        Should.Throw<ArgumentNullException>(() => 
+        Should.Throw<ArgumentNullException>(() =>
             new NewCommand(_console, _fileSystem, null!, _journalSettings)
         );
     }
@@ -640,23 +669,25 @@ public class NewCommandTests
     public void Should_Use_DefaultJournalName_From_Settings_When_No_Name_Provided()
     {
         // Given - Create custom settings with a different default name
-        var customSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            DefaultJournalName = "CustomDefaultName",
-            JournalConfigFileName = ".journalrc",
-            TableOfContentsFileName = "1a-TableOfContents",
-            TableOfContentsTitle = "Table of Contents",
-            IntroductionFileName = "1b-Intro",
-            IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
-            AllJournalsTitle = "All My Journals"
-        });
+        var customSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                DefaultJournalName = "CustomDefaultName",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                IntroductionFileName = "1b-Intro",
+                IntroductionTitle = "Introduction",
+                JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                AllJournalsFileName = "1h-All_My_Journals",
+                AllJournalsTitle = "All My Journals",
+            }
+        );
 
         var testFileSystem = new TestFileSystem();
-        
+
         var services = new ServiceCollection();
         services.AddSingleton<IAnsiConsole>(_console);
         services.AddSingleton<IFileSystem>(testFileSystem);
@@ -681,27 +712,31 @@ public class NewCommandTests
         result.ExitCode.ShouldBe(0);
         testFileSystem.DirectoryExists("./CustomDefaultName").ShouldBeTrue();
         result.Output.ShouldContain("CustomDefaultName");
-        testInitializer.InitializedJournals.ShouldContain(x => x.journalName == "CustomDefaultName");
+        testInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalName == "CustomDefaultName"
+        );
     }
 
     [Fact]
     public void Should_Use_Custom_Settings_For_File_Names()
     {
         // Given - Create custom settings with different file names
-        var customSettings = Options.Create(new JournalSettings
-        {
-            AppName = "custom-journal",
-            JournalConfigFileName = ".customrc",
-            DefaultJournalName = "CustomDefault",
-            TableOfContentsFileName = "00-TOC",
-            TableOfContentsTitle = "Contents",
-            IntroductionFileName = "01-Welcome",
-            IntroductionTitle = "Welcome",
-            JournalEntryTemplateFileName = "02-Template",
-            JournalEntryTemplateTitle = "Entry Template",
-            AllJournalsFileName = "99-Journals",
-            AllJournalsTitle = "My Journals"
-        });
+        var customSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "custom-journal",
+                JournalConfigFileName = ".customrc",
+                DefaultJournalName = "CustomDefault",
+                TableOfContentsFileName = "00-TOC",
+                TableOfContentsTitle = "Contents",
+                IntroductionFileName = "01-Welcome",
+                IntroductionTitle = "Welcome",
+                JournalEntryTemplateFileName = "02-Template",
+                JournalEntryTemplateTitle = "Entry Template",
+                AllJournalsFileName = "99-Journals",
+                AllJournalsTitle = "My Journals",
+            }
+        );
 
         var services = new ServiceCollection();
         services.AddSingleton<IAnsiConsole>(_console);
@@ -725,7 +760,7 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         // Verify the initializer was called with correct parameters
         testInitializer.InitializedJournals.ShouldContain(x => x.journalName == "TestJournal");
     }
@@ -734,30 +769,38 @@ public class NewCommandTests
     public void Should_Create_Files_With_Custom_Settings_Names()
     {
         // Given - Create custom settings
-        var customSettings = Options.Create(new JournalSettings
-        {
-            AppName = "test-journal",
-            JournalConfigFileName = ".testrc",
-            DefaultJournalName = "DefaultTest",
-            TableOfContentsFileName = "0-Contents",
-            TableOfContentsTitle = "My Contents",
-            IntroductionFileName = "1-Intro",
-            IntroductionTitle = "My Intro",
-            JournalEntryTemplateFileName = "2-Template",
-            JournalEntryTemplateTitle = "My Template",
-            AllJournalsFileName = "9-AllJournals",
-            AllJournalsTitle = "All Journals"
-        });
+        var customSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "test-journal",
+                JournalConfigFileName = ".testrc",
+                DefaultJournalName = "DefaultTest",
+                TableOfContentsFileName = "0-Contents",
+                TableOfContentsTitle = "My Contents",
+                IntroductionFileName = "1-Intro",
+                IntroductionTitle = "My Intro",
+                JournalEntryTemplateFileName = "2-Template",
+                JournalEntryTemplateTitle = "My Template",
+                AllJournalsFileName = "9-AllJournals",
+                AllJournalsTitle = "All Journals",
+            }
+        );
 
         var testFileSystem = new TestFileSystem();
-        
+
         // Use real JournalInitializer with test template manager
         var testTemplateManager = new TestTemplateManager();
         var testJournalConfig = new TestJournalConfiguration();
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
         var realInitializer = new JournalInitializer(
             testFileSystem,
             testTemplateManager,
             testJournalConfig,
+            mockFileTracking.Object,
             customSettings
         );
 
@@ -782,9 +825,9 @@ public class NewCommandTests
 
         // Then
         result.ExitCode.ShouldBe(0);
-        
+
         var journalPath = Path.Combine(".", "MyJournal");
-        
+
         // Verify files were created with custom file names
         testFileSystem.FileExists(Path.Combine(journalPath, "0-Contents.md")).ShouldBeTrue();
         testFileSystem.FileExists(Path.Combine(journalPath, "1-Intro.md")).ShouldBeTrue();
@@ -859,6 +902,11 @@ public class NewCommandTests
         {
             throw new NotImplementedException();
         }
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            throw new IOException("Simulated I/O error");
+        }
     }
 
     [Fact]
@@ -876,6 +924,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -921,6 +974,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -967,6 +1025,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1007,6 +1070,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1039,13 +1107,18 @@ public class NewCommandTests
         var faultyFileSystem = new FileCreationFailureFileSystem();
         var testTemplateManager = new TemplateManager(_journalSettings);
         var testJournalConfiguration = new TestJournalConfiguration();
-        
+
         var services = new ServiceCollection();
         services.AddSingleton<IAnsiConsole>(_console);
         services.AddSingleton<IFileSystem>(faultyFileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1095,11 +1168,11 @@ public class NewCommandTests
     /// </summary>
     private class TestTemplateManagerWithParameterCapture : ITemplateManager
     {
-        private readonly Dictionary<string, ITemplateGenerator> _templates = new();
+        private readonly Dictionary<string, ITemplateGenerator> _templates = [];
         private readonly List<(
             string templateName,
             Dictionary<string, object>? parameters
-        )> _templateCalls = new();
+        )> _templateCalls = [];
 
         public void RegisterTemplate(ITemplateGenerator template)
         {
@@ -1147,7 +1220,7 @@ public class NewCommandTests
                 );
             }
 
-            return calls[callIndex].parameters ?? new Dictionary<string, object>();
+            return calls[callIndex].parameters ?? [];
         }
     }
 
@@ -1189,6 +1262,11 @@ public class NewCommandTests
         {
             throw new NotImplementedException();
         }
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            return Array.Empty<string>();
+        }
     }
 
     /// <summary>
@@ -1201,10 +1279,10 @@ public class NewCommandTests
         {
             services.AddSingleton<NewCommand>();
         }
-        
+
         var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().Build();
         var registrar = new TypeRegistrar(host);
-        
+
         foreach (var service in services)
         {
             if (service.ImplementationInstance != null)
@@ -1216,7 +1294,7 @@ public class NewCommandTests
                 registrar.Register(service.ServiceType, service.ImplementationType);
             }
         }
-        
+
         return registrar;
     }
 
@@ -1250,8 +1328,9 @@ public class NewCommandTests
     private class TestJournalInitializer : IJournalInitializer
     {
         private readonly IFileSystem? _fileSystem;
-        
-        public List<(string journalDirectory, string journalName)> InitializedJournals { get; } = new();
+
+        public List<(string journalDirectory, string journalName)> InitializedJournals { get; } =
+            [];
         public bool ShouldThrow { get; set; } = false;
         public Exception? ExceptionToThrow { get; set; }
 
@@ -1269,14 +1348,30 @@ public class NewCommandTests
 
             // Create directory to simulate real behavior
             _fileSystem?.CreateDirectory(journalDirectory);
-            
+
             // Create the expected files
             if (_fileSystem != null)
             {
-                _fileSystem.CreateMarkdownFile(journalDirectory, "1a-TableOfContents", "# Table of Contents\n\nTEST_TOC_CONTENT");
-                _fileSystem.CreateMarkdownFile(journalDirectory, "1b-Intro", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
-                _fileSystem.CreateMarkdownFile(journalDirectory, "1c-Journal-Entry-Template", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
-                _fileSystem.CreateMarkdownFile(journalDirectory, "1h-All-My-Journals", "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT");
+                _fileSystem.CreateMarkdownFile(
+                    journalDirectory,
+                    "1a-TableOfContents",
+                    "# Table of Contents\n\nTEST_TOC_CONTENT"
+                );
+                _fileSystem.CreateMarkdownFile(
+                    journalDirectory,
+                    "1b-Intro",
+                    "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT"
+                );
+                _fileSystem.CreateMarkdownFile(
+                    journalDirectory,
+                    "1c-Journal_Entry_Template",
+                    "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT"
+                );
+                _fileSystem.CreateMarkdownFile(
+                    journalDirectory,
+                    "1h-All_My_Journals",
+                    "# TEST_JOURNAL_ENTRY\n\nTEST_CONTENT"
+                );
             }
 
             InitializedJournals.Add((journalDirectory, journalName));

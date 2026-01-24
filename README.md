@@ -61,6 +61,12 @@ md-journal new "My Daily Journal"
 
 # Create a journal at specific location
 md-journal new ProjectNotes --path ~/Work/Projects
+
+# Add a new journal entry
+md-journal add entry "My First Entry" --path ~/Documents/MyJournal
+
+# Add an entry with heading and subheading
+md-journal add entry "Meeting Notes" --heading "Work" --subheading "Team-Meetings" --path ~/Documents/MyJournal
 ```
 
 ## Commands
@@ -85,12 +91,37 @@ md-journal new
 md-journal new "Travel Journal" --path ~/Documents
 ```
 
-### Planned Commands
+### `add entry` - Add New Journal Entry
+Adds a new markdown entry to an existing journal.
+
+**Syntax:**
 ```bash
-# TODO: Document these commands when implemented
-md-journal add entry [title]     # Add a new journal entry
-md-journal open [name]           # Open journal in default editor
-md-journal search <term>         # Search across journal entries
+md-journal add entry <name> [options]
+```
+
+**Arguments:**
+- `name` - Name of the journal entry (required)
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `-t|--title <title>` - Custom title for the entry (default: uses entry name)
+- `--he|--heading <heading>` - Top-level topic heading
+- `--sh|--subheading <subheading>` - Nested subheadings (use `-` as separator for multiple levels)
+- `--ignore` - Add entry file but exclude it from table of contents
+
+**Examples:**
+```bash
+# Add a simple entry
+md-journal add entry "Daily Standup"
+
+# Add entry with custom title and heading
+md-journal add entry "standup_notes" --title "Daily Standup" --heading "Work"
+
+# Add entry with nested topics
+md-journal add entry "api_design" --heading "Tech" --subheading "Backend-API"
+
+# Add entry but don't include in TOC
+md-journal add entry "draft_thoughts" --ignore
 ```
 
 ## Contributing
@@ -108,15 +139,41 @@ For technical details about the project architecture, see the **[Architecture Gu
 **Current Status:**
 - ✅ Basic project structure
 - ✅ `new` command implementation  
-- ✅ Exception handling
-- ✅ Unit tests for core functionality
+- ✅ `add entry` command for creating journal entries
+- ✅ Exception handling with custom exception hierarchy
+- ✅ **509 passing unit tests** covering core functionality
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
+- ✅ **Automatic table of contents generation** with smart parent-child detection
+- ✅ **File tracking and change detection** using SHA256 hashing
+- ✅ **Natural alphanumeric sorting** for entries (file_5 before file_10)
+- ✅ **Ignore files functionality** to exclude entries from TOC
+- ✅ Entry formatting with customizable separators
+- ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ Additional commands (add, open, search)
+- ⏳ Additional commands (update, rename, open, search)
 - ⏳ Global tool installation
 - ⏳ Advanced configuration options
+- ⏳ Automatic change detection and synchronization
+
+### Planned Commands
+```bash
+# TODO: Document these commands when implemented
+mdjournal add entry [title] [header] [template] [table of contents] [journalrc]   # Add a new journal entry or file
+
+mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates. have an option to check all files in directory and if any aren't in journalrc list them out so people can confirm whether they want to update everything --check to list changes before applying to journalrc --all to appky change without listing.
+
+md journal update file --ignore # updates a file with specific settings like moving to ignore may this and rename should be the same command. 
+
+mdjournal rename <file> --file-added # A command that renames a file and updates that change in the journalrc and table of contents. (maybe have it search and update in other places as well such a places where referenced) --file-added flag is saying someone renamed the file manually and it just needs to be reflected everywhere else. 
+
+mdjournal open [name]                   # Open journal in default editor (start with vscode and vim support)
+
+mdjournal search <term>                 # Search across journal entries
+
+
+```
 
 **Known Limitations:**
 - Global tool installation not yet configured

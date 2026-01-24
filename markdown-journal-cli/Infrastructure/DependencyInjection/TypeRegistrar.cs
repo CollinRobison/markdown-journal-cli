@@ -13,7 +13,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
     {
         _services = new ServiceCollection();
     }
-    
+
     // Constructor for using existing service provider
     public TypeRegistrar(IServiceProvider provider)
     {
@@ -45,7 +45,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
             var newProvider = _services.BuildServiceProvider();
             return new TypeResolver(newProvider, _provider);
         }
-        
+
         return new TypeResolver(_services.BuildServiceProvider());
     }
 }
@@ -63,15 +63,17 @@ public sealed class TypeResolver : ITypeResolver
 
     public object? Resolve(Type? type)
     {
-        if (type == null) return null;
-        
+        if (type == null)
+            return null;
+
         // Try fallback provider first (if it exists) since it has our pre-registered services
         if (_fallbackProvider != null)
         {
             var service = _fallbackProvider.GetService(type);
-            if (service != null) return service;
+            if (service != null)
+                return service;
         }
-        
+
         // Then try primary provider for anything registered by Spectre.Console
         return _provider.GetService(type);
     }

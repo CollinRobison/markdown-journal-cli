@@ -235,4 +235,133 @@ public class JournalExceptionsTests
         exception1.JournalName.ShouldNotBe(exception2.JournalName);
         exception1.Path.ShouldNotBe(exception2.Path);
     }
+
+    // JournalrcNotFoundException Tests
+
+    [Fact]
+    public void JournalrcNotFoundException_Should_Inherit_From_JournalException()
+    {
+        // Given
+        var exception = new JournalrcNotFoundException("/test/path");
+
+        // When & Then
+        exception.ShouldBeAssignableTo<JournalException>();
+        exception.ShouldBeAssignableTo<Exception>();
+    }
+
+    [Fact]
+    public void JournalrcNotFoundException_Constructor_Should_Set_Properties()
+    {
+        // Given
+        var path = "/path/to/journal";
+
+        // When
+        var exception = new JournalrcNotFoundException(path);
+
+        // Then
+        exception.Path.ShouldBe(path);
+    }
+
+    [Fact]
+    public void JournalrcNotFoundException_Should_Generate_Appropriate_Message()
+    {
+        // Given
+        var path = "/path/to/journal";
+
+        // When
+        var exception = new JournalrcNotFoundException(path);
+
+        // Then
+        exception.Message.ShouldBe(".journalrc not found at '/path/to/journal'");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("/path/with spaces/")]
+    [InlineData("/path/with/special!@#$%/chars/")]
+    public void JournalrcNotFoundException_Should_Handle_Various_Path_Values(string path)
+    {
+        // When
+        var exception = new JournalrcNotFoundException(path);
+
+        // Then
+        exception.Path.ShouldBe(path);
+        exception.Message.ShouldContain(path);
+    }
+
+    [Fact]
+    public void JournalrcNotFoundException_With_Null_Value_Should_Not_Throw()
+    {
+        // When & Then
+        Should.NotThrow(() => new JournalrcNotFoundException(null!));
+    }
+
+    [Fact]
+    public void JournalrcNotFoundException_With_Null_Value_Should_Set_Property()
+    {
+        // When
+        var exception = new JournalrcNotFoundException(null!);
+
+        // Then
+        exception.Path.ShouldBeNull();
+        exception.Message.ShouldContain("''"); // Null value appears as empty string in the message
+    }
+
+    [Fact]
+    public void JournalrcNotFoundException_Can_Be_Caught_As_JournalException()
+    {
+        // Given
+        JournalException caughtException = null!;
+
+        // When
+        try
+        {
+            throw new JournalrcNotFoundException("/test/path");
+        }
+        catch (JournalException ex)
+        {
+            caughtException = ex;
+        }
+
+        // Then
+        caughtException.ShouldNotBeNull();
+        caughtException.ShouldBeOfType<JournalrcNotFoundException>();
+        var specificException = (JournalrcNotFoundException)caughtException;
+        specificException.Path.ShouldBe("/test/path");
+    }
+
+    [Fact]
+    public void JournalrcNotFoundException_Can_Be_Caught_As_Base_Exception()
+    {
+        // Given
+        Exception caughtException = null!;
+
+        // When
+        try
+        {
+            throw new JournalrcNotFoundException("/test/path");
+        }
+        catch (Exception ex)
+        {
+            caughtException = ex;
+        }
+
+        // Then
+        caughtException.ShouldNotBeNull();
+        caughtException.ShouldBeOfType<JournalrcNotFoundException>();
+    }
+
+    [Fact]
+    public void Multiple_JournalrcNotFoundException_Should_Have_Independent_Properties()
+    {
+        // Given
+        var exception1 = new JournalrcNotFoundException("/path1");
+        var exception2 = new JournalrcNotFoundException("/path2");
+
+        // When & Then
+        exception1.Path.ShouldBe("/path1");
+        exception2.Path.ShouldBe("/path2");
+        exception1.Path.ShouldNotBe(exception2.Path);
+    }
 }

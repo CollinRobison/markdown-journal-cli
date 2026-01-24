@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.JournalTemplates;
@@ -13,8 +14,8 @@ public class JournalInitializer : IJournalInitializer
     private readonly IFileSystem _fileSystem;
     private readonly ITemplateManager _templateManager;
     private readonly IJournalConfiguration _journalConfiguration;
-
-    private readonly JournalSettings _journalSettings; 
+    private readonly IFileTracking _fileTracking;
+    private readonly JournalSettings _journalSettings;
 
     /// <summary>
     /// Initializes a new instance of the JournalInitializer class.
@@ -27,11 +28,16 @@ public class JournalInitializer : IJournalInitializer
         IFileSystem fileSystem,
         ITemplateManager templateManager,
         IJournalConfiguration journalConfiguration,
-        IOptions<JournalSettings> journalSettings)
+        IFileTracking fileTracking,
+        IOptions<JournalSettings> journalSettings
+    )
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
-        _journalConfiguration = journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        _templateManager =
+            templateManager ?? throw new ArgumentNullException(nameof(templateManager));
+        _journalConfiguration =
+            journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
         _journalSettings = journalSettings.Value;
     }
 
@@ -40,12 +46,18 @@ public class JournalInitializer : IJournalInitializer
     {
         if (string.IsNullOrWhiteSpace(journalDirectory))
         {
-            throw new ArgumentException("Journal directory cannot be null or whitespace.", nameof(journalDirectory));
+            throw new ArgumentException(
+                "Journal directory cannot be null or whitespace.",
+                nameof(journalDirectory)
+            );
         }
 
         if (string.IsNullOrWhiteSpace(journalName))
         {
-            throw new ArgumentException("Journal name cannot be null or whitespace.", nameof(journalName));
+            throw new ArgumentException(
+                "Journal name cannot be null or whitespace.",
+                nameof(journalName)
+            );
         }
 
         // Create the journal directory
@@ -59,6 +71,10 @@ public class JournalInitializer : IJournalInitializer
 
         // Create journal configuration
         CreateJournalConfiguration(journalDirectory, journalName);
+
+        // create file tracking 
+        CreateFileTrackingIndex(journalDirectory);
+
     }
 
     private void CreateTableOfContents(string journalDirectory)
@@ -100,7 +116,8 @@ public class JournalInitializer : IJournalInitializer
         var allMyJournalsParams = new Dictionary<string, object>
         {
             ["title"] = "Journals List",
-            ["body"] = @"- [example journal 1](link-to-journal)
+            ["body"] =
+                @"- [example journal 1](link-to-journal)
 - [example journal 2](link-to-journal)
 - [example journal 3](link-to-journal)",
             ["addSourceBlock"] = false,
@@ -115,11 +132,23 @@ public class JournalInitializer : IJournalInitializer
 
     private void CreateJournalConfiguration(string journalDirectory, string journalName)
     {
-        RootEntries[] rootConfig =
+        Entries[] rootConfig =
         [
-            new() { Name = _journalSettings.IntroductionTitle, File = $"{_journalSettings.IntroductionFileName}.md" },
-            new() { Name = _journalSettings.JournalEntryTemplateTitle, File = $"{_journalSettings.JournalEntryTemplateFileName}.md" },
-            new() { Name = _journalSettings.AllJournalsTitle, File = $"{_journalSettings.AllJournalsFileName}.md" }
+            new()
+            {
+                Name = _journalSettings.IntroductionTitle,
+                File = $"{_journalSettings.IntroductionFileName}.md",
+            },
+            new()
+            {
+                Name = _journalSettings.JournalEntryTemplateTitle,
+                File = $"{_journalSettings.JournalEntryTemplateFileName}.md",
+            },
+            new()
+            {
+                Name = _journalSettings.AllJournalsTitle,
+                File = $"{_journalSettings.AllJournalsFileName}.md",
+            },
         ];
 
         JournalConfig journalrc = new()
@@ -127,20 +156,17 @@ public class JournalInitializer : IJournalInitializer
             JournalName = journalName,
             TableOfContents = new()
             {
-                Structure = new()
-                {
-                    Topics = []
-                },
+                Structure = new() { Topics = [] },
                 RootEntries = rootConfig,
-                IndexCache = new()
-                {
-                    UpdatedAt = DateTime.Now,
-                    Topics = [],
-                    RootEntries = rootConfig
-                }
-            }
+            },
         };
 
         _journalConfiguration.Create(journalDirectory, journalrc);
+    }
+
+    private void CreateFileTrackingIndex(string journalDirectory)
+    {
+        _fileTracking.LoadIndex(journalDirectory);
+        _fileTracking.UpdateIndex(journalDirectory);
     }
 }

@@ -16,20 +16,22 @@ public class TemplateManagerTests
 
     public TemplateManagerTests()
     {
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            DefaultJournalName = "MyJournal",
-            TableOfContentsFileName = "1a-TableOfContents",
-            TableOfContentsTitle = "Table of Contents",
-            IntroductionFileName = "1b-Intro",
-            IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
-            AllJournalsTitle = "All My Journals"
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                DefaultJournalName = "MyJournal",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                IntroductionFileName = "1b-Intro",
+                IntroductionTitle = "Introduction",
+                JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                AllJournalsFileName = "1h-All-My-Journals",
+                AllJournalsTitle = "All My Journals",
+            }
+        );
     }
 
     [Fact]

@@ -25,27 +25,75 @@ public class JournalException : Exception
 /// <summary>
 /// Exception thrown when attempting to create a journal that already exists at the specified location.
 /// </summary>
-public class JournalAlreadyExistsException : JournalException
+/// <remarks>
+/// Initializes a new instance of the <see cref="JournalAlreadyExistsException"/> class.
+/// </remarks>
+/// <param name="journalName">The name of the journal that already exists.</param>
+/// <param name="path">The path where the journal already exists.</param>
+public class JournalAlreadyExistsException(string journalName, string path)
+    : JournalException($"Journal '{journalName}' already exists at '{path}'")
 {
     /// <summary>
     /// Gets the name of the journal that already exists.
     /// </summary>
-    public string JournalName { get; }
+    public string JournalName { get; } = journalName;
 
     /// <summary>
     /// Gets the path where the journal already exists.
     /// </summary>
-    public string Path { get; }
+    public string Path { get; } = path;
+}
+
+/// <summary>
+/// Exception thrown when attempting to find a .journalrc.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="JournalrcNotFoundException"/> class.
+/// </remarks>
+/// <param name="path">The path expecting .journalrc file.</param>
+public class JournalrcNotFoundException(string path)
+    : JournalException($".journalrc not found at '{path}'")
+{
+    /// <summary>
+    /// Gets the path expecting .journalrc.
+    /// </summary>
+    public string Path { get; } = path;
+}
+
+/// <summary>
+/// Exception thrown when attempting to find a tracking index file.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="TrackingIndexNotFoundException"/> class.
+/// </remarks>
+/// <param name="path">The path expecting tracking index file.</param>
+public class TrackingIndexNotFoundException(string path, string trackingFileName)
+    : JournalException($"tracking file '{trackingFileName}' not found at '{path}'")
+{
+    /// <summary>
+    /// Gets the path expecting tracking index file.
+    /// </summary>
+    public string Path { get; } = path;
+}
+
+/// <summary>
+/// Exception thrown when attempting to create a journal entry that already exists.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="JournalEntryAlreadyExistsException"/> class.
+/// </remarks>
+/// <param name="entryName">The name of the entry that already exists.</param>
+/// <param name="filePath">The file path where the entry already exists.</param>
+public class JournalEntryAlreadyExistsException(string entryName, string filePath)
+    : JournalException($"Journal entry '{entryName}' already exists at '{filePath}'")
+{
+    /// <summary>
+    /// Gets the name of the entry that already exists.
+    /// </summary>
+    public string EntryName { get; } = entryName;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JournalAlreadyExistsException"/> class.
+    /// Gets the file path where the entry already exists.
     /// </summary>
-    /// <param name="journalName">The name of the journal that already exists.</param>
-    /// <param name="path">The path where the journal already exists.</param>
-    public JournalAlreadyExistsException(string journalName, string path)
-        : base($"Journal '{journalName}' already exists at '{path}'")
-    {
-        JournalName = journalName;
-        Path = path;
-    }
+    public string FilePath { get; } = filePath;
 }

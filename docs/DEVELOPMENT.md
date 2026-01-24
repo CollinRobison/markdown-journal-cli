@@ -31,21 +31,68 @@ dotnet run --project markdown-journal-cli -- new TestJournal
 ```
 markdown-journal-cli/
 ├── markdown-journal-cli/           # Main application
-│   ├── Commands/New/              # Command implementations
+│   ├── Commands/                  # Command implementations
+│   │   ├── Add/                   # Add commands (entry, config, toc)
+│   │   │   ├── AddEntryCommand.cs
+│   │   │   ├── AddJournalrcCommand.cs
+│   │   │   ├── AddTableOfContentsCommand.cs
+│   │   │   └── AddSettings.cs
+│   │   └── New/                 # New journal command
+│   │       └── NewCommand.cs
 │   ├── Exceptions/                # Custom exceptions
+│   │   └── JournalExceptions.cs
 │   ├── Infrastructure/            # Core services
 │   │   ├── Configuration/         # Journal configuration management
+│   │   │   ├── IJournalConfiguration.cs
+│   │   │   ├── JournalConfiguration.cs
+│   │   │   └── Models/            # Configuration data models
 │   │   ├── DependencyInjection/   # DI container setup
-│   │   └── FileSystem/           # File system abstraction
+│   │   │   └── TypeRegistrar.cs
+│   │   ├── FileSystem/           # File system abstraction
+│   │   │   ├── IFileSystem.cs
+│   │   │   ├── FileSystem.cs
+│   │   │   └── MarkdownMetadataParser.cs
+│   │   └── Tracking/             # File change detection
+│   │       ├── IFileTracking.cs
+│   │       ├── FileTracking.cs
+│   │       ├── IHashService.cs
+│   │       ├── HashService.cs
+│   │       └── Models/
 │   ├── JournalTemplates/          # Template and initialization services
 │   │   ├── Templates/            # Template implementations
 │   │   ├── IJournalInitializer.cs # Journal creation orchestration
-│   │   └── ITemplateManager.cs   # Template processing
+│   │   ├── JournalInitializer.cs
+│   │   ├── ITemplateManager.cs   # Template processing
+│   │   ├── TemplateManager.cs
+│   │   ├── ITableOfContentsGenerator.cs
+│   │   └── TableOfContentsGenerator.cs
+│   ├── Services/                  # Business logic services
+│   │   ├── IEntryFormatterService.cs
+│   │   └── EntryFormatterService.cs
+│   ├── appsettings.json          # Application configuration
+│   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests
+├── markdown-journal-cli.Tests/    # Unit tests (509 tests)
 │   ├── Commands/                 # Command tests
+│   │   ├── NewCommandTests.cs
+│   │   └── Add/
+│   │       ├── AddEntryCommandTests.cs
+│   │       ├── AddJournalrcCommandTests.cs
+│   │       └── AddTableOfContentsCommandTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
-│   └── JournalTemplates/         # Template and initialization tests
+│   │   ├── FileSystemTests.cs
+│   │   ├── FileTrackingTests.cs
+│   │   ├── HashServiceTests.cs
+│   │   ├── JournalConfigurationTests.cs
+│   │   ├── MarkdownMetadataParserTests.cs
+│   │   ├── TestFileSystem.cs
+│   │   └── TypeRegistrarTests.cs
+│   ├── JournalTemplates/         # Template and initialization tests
+│   │   ├── JournalInitializerTests.cs
+│   │   ├── TableOfContentsGeneratorTests.cs
+│   │   └── TemplateManagerTests.cs
+│   └── Services/
+│       └── EntryFormatterServiceTests.cs
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
 ```
@@ -430,6 +477,74 @@ The following areas need detailed documentation (you should write these based on
 - [ ] **Error Reporting** - How do we handle crash reports?
 - [ ] **Telemetry** - What usage data (if any) should we collect?
 - [ ] **Backup Strategy** - How do we help users backup journals?
+
+**IJournalConfiguration Pattern**
+- **Purpose**: Manages journal configuration CRUD operations and topic hierarchy
+- **Benefits**: Centralized configuration management, supports complex nested structures
+- **Features**: Natural sorting, ignore files, parent-child topic detection
+- **Example**: `AddEntry` uses this to update `.journalrc` with new entry metadata
+
+**ITableOfContentsGenerator Pattern**
+- **Purpose**: Generates markdown table of contents from journal configuration
+- **Benefits**: Automated TOC updates, smart parent-child detection, ignore file support
+- **Features**: Natural alphanumeric sorting, nested topic rendering, date preservation
+- **Example**: Automatically updates TOC when new entries are added
+
+**IFileTracking Pattern**
+- **Purpose**: Tracks file changes using SHA256 hashing for change detection
+- **Benefits**: Detects added, modified, and deleted files without manual intervention
+- **Features**: Index persistence (`.md-journal` file), hash-based comparison
+- **Example**: Used to sync journal state and detect external file modifications
+
+**IHashService Pattern**
+- **Purpose**: Computes SHA256 hashes for file content comparison
+- **Benefits**: Reliable change detection, cryptographically secure
+- **Example**: Used by `IFileTracking` to determine if file content has changed
+
+**IEntryFormatterService Pattern**
+- **Purpose**: Formats entry names with configurable separators
+- **Benefits**: Consistent file naming, handles heading/subheading hierarchy
+- **Features**: Space separator conversion, heading separator management
+- **Example**: Converts "My Entry" to "My_Entry" or parses "Tech-Backend-API"
+
+### Service Registration (Program.cs)
+```csharp
+// Core services
+host.Services.AddSingleton<IFileSystem, FileSystem>();
+host.Services.AddSingleton<ITemplateManager, TemplateManager>();
+host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
+host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
+host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
+host.Services.AddSingleton<IHashService, HashService>(); 
+host.Services.AddSingleton<IFileTracking, FileTracking>();
+host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
+
+// Commands
+host.Services.AddSingleton<NewCommand>();
+host.Services.AddSingleton<AddEntry>();
+host.Services.AddSingleton<AddJournalrc>();
+host.Services.AddSingleton<AddTableOfContents>();
+```
+
+### Key Architectural Patterns
+
+**Natural Sorting Algorithm**
+Implemented in `JournalConfiguration.cs` via `NaturalStringComparer`:
+- Treats consecutive digits as numbers for proper ordering
+- Example: `file_1, file_5, file_10, file_100` (not `file_1, file_10, file_100, file_5`)
+- Used for both topic names and entry filenames
+
+**Parent-Child Detection**
+Implemented in `TableOfContentsGenerator.cs`:
+- Detects when a topic has an entry with matching name AND subtopics
+- Merges entry link into topic heading: `## [Topic](topic.md)` with subtopics listed below
+- Uses file path prefix matching to determine parent-child relationships
+- Example: `abc.md` is parent of `abc-test_2-test_file_1.md`
+
+**Ignore Files Pattern**
+- Files in `.journalrc` `ignoreFiles` array are excluded from TOC
+- Still tracked in file system and configuration
+- Useful for draft entries or non-public content
 
 ## 🏗️ Service Architecture Patterns
 
