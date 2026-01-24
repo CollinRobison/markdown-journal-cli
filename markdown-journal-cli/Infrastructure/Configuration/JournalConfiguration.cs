@@ -192,6 +192,8 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             // Add to root entries array
             var existingEntries = config.TableOfContents.RootEntries.ToList();
             existingEntries.Add(new Entries { Name = name, File = file });
+            var naturalComparer = new NaturalStringComparer();
+            existingEntries.Sort((a, b) => naturalComparer.Compare(a.File, b.File));
             config.TableOfContents.RootEntries = existingEntries.ToArray();
         });
     }
@@ -339,7 +341,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         // Followed by either end of string or the heading separator from settings
         var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
         var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
-        return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase);
+        return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase) || fileName.ToLower().Equals("readme");
     }
 
     /// <summary>

@@ -39,8 +39,9 @@ public class TableOfContentsGenerator(
                 $"Could not read journal configuration from {journalDirectory}"
             );
 
+        var tocFile = config.TableOfContents.File;
         // If dates aren't provided, try to preserve existing dates from the current TOC
-        var tocFilePath = Path.Combine(journalDirectory, $"{_journalSettings.TableOfContentsFileName}.md");
+        var tocFilePath = Path.Combine(journalDirectory, tocFile);
         if (_fileSystem.FileExists(tocFilePath))
         {
             var existingContent = _fileSystem.GetFileContent(tocFilePath);
@@ -53,7 +54,7 @@ public class TableOfContentsGenerator(
 
         var tocContent = GenerateTableOfContents(config, createdDate, lastEditedDate);
 
-        _fileSystem.UpdateFile(journalDirectory, $"{_journalSettings.TableOfContentsFileName}.md", tocContent);
+        _fileSystem.UpdateFile(journalDirectory, tocFilePath, tocContent);
     }
 
     private string GenerateTableOfContents(

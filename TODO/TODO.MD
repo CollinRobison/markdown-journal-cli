@@ -16,5 +16,6 @@
   - //with the title of the file entry always being listed last
   - // ex: heading 1 -> heading 2 -> this is the title = heading_1-heading_2-this_is_the_title
 
-
+- [ ] TOC update make sure when regenerating table of content or journalrc file it respects which file is toc. have a way of detecting.
+- [ ] have a way for updating the toc file in journalrc add it to update and maybe new toc commands.
 

@@ -41,7 +41,7 @@ public class JournalConfigurationTests
                 {
                     Topics = [new Topic { Name = "General", Entries = [], Subtopics = null }],
                 },
-                RootEntries = [new Entries { Name = "Home", File = "home.md" }],
+                RootEntries = [new Entries { Name = "Home", File = "1a-home.md" }],
             },
         };
     }
@@ -316,7 +316,7 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        _journalConfiguration.AddRootEntry(_testDirectory, "Home Again", "home.md");
+        _journalConfiguration.AddRootEntry(_testDirectory, "Home Again", "1a-home.md");
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -340,7 +340,7 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        _journalConfiguration.AddRootEntry(_testDirectory, "Home Again", "HOME.MD");
+        _journalConfiguration.AddRootEntry(_testDirectory, "Home Again", "1A-HOME.MD");
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -833,7 +833,7 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "home.md", "Updated Home");
+        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "1a-home.md", "Updated Home");
 
         // Assert
         result.ShouldBeTrue();
@@ -843,7 +843,7 @@ public class JournalConfigurationTests
         updatedConfig.ShouldNotBeNull();
         updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
         updatedConfig.TableOfContents.RootEntries[0].Name.ShouldBe("Updated Home");
-        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("home.md");
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-home.md");
     }
 
     [Fact]
@@ -1076,6 +1076,9 @@ public class JournalConfigurationTests
     [InlineData("9Z")]
     [InlineData("3z-test_file")]
     [InlineData("1a-Introduction")]
+    [InlineData("readme")]
+    [InlineData("README")]
+    [InlineData("ReadMe")]
     public void AddEntry_ShouldAddAsRootEntry_WhenFileNameMatchesRootPattern(string fileName)
     {
         // Arrange
