@@ -19,3 +19,5 @@
 - [ ] TOC update make sure when regenerating table of content or journalrc file it respects which file is toc. have a way of detecting.
 - [ ] have a way for updating the toc file in journalrc add it to update and maybe new toc commands.
 
+- [ ] create flow chart from written notes on the flow between toc - journalrc - tracking file
+

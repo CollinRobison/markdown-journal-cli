@@ -68,6 +68,7 @@ public static class Program
             config.SetApplicationName(settings.AppName);
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
+            config.AddExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
 
             // New
             config.AddCommand<NewCommand>("new");
@@ -77,7 +78,8 @@ public static class Program
                 add =>
                 {
                     add.SetDescription("Creates a new specified file to an existing journal.");
-                    add.AddCommand<AddEntry>("entry");
+                    add.AddCommand<AddEntry>("entry")
+                    .WithExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
                 }
