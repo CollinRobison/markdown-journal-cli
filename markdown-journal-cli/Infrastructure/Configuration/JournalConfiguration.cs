@@ -1,10 +1,65 @@
 using System;
 using System.Text.Json;
-using markdown_journal_cli.Infrastructure.Configuration.Objects;
+using System.Text.RegularExpressions;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualBasic;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
+
+/// <summary>
+/// Comparer for natural (alphanumeric) sorting of strings.
+/// Treats consecutive digits as numbers for proper numerical ordering.
+/// </summary>
+internal class NaturalStringComparer : IComparer<string>
+{
+    public int Compare(string? x, string? y)
+    {
+        if (x == y) return 0;
+        if (x == null) return -1;
+        if (y == null) return 1;
+
+        int ix = 0, iy = 0;
+
+        while (ix < x.Length && iy < y.Length)
+        {
+            // Check if both are digits
+            if (char.IsDigit(x[ix]) && char.IsDigit(y[iy]))
+            {
+                // Extract numbers
+                var numX = ExtractNumber(x, ref ix);
+                var numY = ExtractNumber(y, ref iy);
+
+                var numCompare = numX.CompareTo(numY);
+                if (numCompare != 0) return numCompare;
+            }
+            else
+            {
+                // Compare characters case-insensitively
+                var charCompare = char.ToLowerInvariant(x[ix]).CompareTo(char.ToLowerInvariant(y[iy]));
+                if (charCompare != 0) return charCompare;
+
+                ix++;
+                iy++;
+            }
+        }
+
+        // If one string is a prefix of the other, shorter comes first
+        return x.Length.CompareTo(y.Length);
+    }
+
+    private static long ExtractNumber(string str, ref int index)
+    {
+        int start = index;
+        while (index < str.Length && char.IsDigit(str[index]))
+        {
+            index++;
+        }
+
+        return long.Parse(str.Substring(start, index - start));
+    }
+}
 
 public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettings> journalSettings)
     : IJournalConfiguration
@@ -15,18 +70,12 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
     public void Create(string directory, JournalConfig config)
     {
+        var (journalrcPath, actualDirectory) = GetJournalrcPaths(directory);
         var journalConfName = _journalSettings.JournalConfigFileName;
-        var journalrcPath = directory.Contains(journalConfName)
-            ? directory
-            : Path.Combine(directory, journalConfName);
-        var actualDirectory = directory.Contains(journalConfName)
-            ? Path.GetDirectoryName(directory) ?? directory
-            : directory;
 
         if (!_fileSystem.FileExists(journalrcPath))
         {
-            var journalrc = config;
-            string jsonString = JsonSerializer.Serialize(journalrc, opts);
+            string jsonString = JsonSerializer.Serialize(config, opts);
             _fileSystem.CreateFile(actualDirectory, journalConfName, jsonString);
         }
         else
@@ -37,10 +86,9 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
     public void Delete(string directory)
     {
+        var (journalrcPath, _) = GetJournalrcPaths(directory);
         var journalConfName = _journalSettings.JournalConfigFileName;
-        var journalrcPath = directory.Contains(journalConfName)
-            ? directory
-            : Path.Combine(directory, journalConfName);
+        
         if (_fileSystem.FileExists(journalrcPath))
         {
             _fileSystem.DeleteFile(journalrcPath);
@@ -53,10 +101,9 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
     public void Update(string directory, Action<JournalConfig> config)
     {
+        var (journalrcPath, actualDirectory) = GetJournalrcPaths(directory);
         var journalConfName = _journalSettings.JournalConfigFileName;
-        var journalrcPath = directory.Contains(journalConfName)
-            ? directory
-            : Path.Combine(directory, journalConfName);
+        
         if (!_fileSystem.FileExists(journalrcPath))
         {
             Console.WriteLine($"{journalConfName} doesn't exist at {journalrcPath}");
@@ -88,9 +135,345 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
         // Save with all values (existing + updated)
         string updatedJsonString = JsonSerializer.Serialize(existingConfig, opts);
-        var actualDirectory = directory.Contains(journalConfName)
-            ? Path.GetDirectoryName(directory) ?? directory
-            : directory;
         _fileSystem.UpdateFile(actualDirectory, journalConfName, updatedJsonString);
     }
+
+    public JournalConfig? Read(string directory)
+    {
+        var (journalrcPath, _) = GetJournalrcPaths(directory);
+        var journalConfName = _journalSettings.JournalConfigFileName;
+
+        if (!_fileSystem.FileExists(journalrcPath))
+        {
+            Console.WriteLine($"{journalConfName} doesn't exist at {journalrcPath}");
+            return null;
+        }
+
+        var json = _fileSystem.GetFileContent(journalrcPath);
+        try
+        {
+            return JsonSerializer.Deserialize<JournalConfig>(json);
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine($"Failed to parse {journalConfName} at {journalrcPath}");
+            return null;
+        }
+    }
+
+    public void AddIgnoreEntry(string directory, string file)
+    {
+        Update(directory, config =>
+        {
+            if(IgnoreFileEntryExists(config.TableOfContents.IgnoreFiles ?? [], file))
+            {
+                Console.WriteLine($"File '{file}' already exists in the Ignore File List.");
+                return;
+            }
+
+            var ignoreEntries = (config.TableOfContents.IgnoreFiles ?? []).ToList();
+            ignoreEntries.Add(file);
+            config.TableOfContents.IgnoreFiles = ignoreEntries.ToArray();
+        });
+    }
+
+
+    public void AddRootEntry(string directory, string name, string file)
+    {
+        Update(directory, config =>
+        {
+            // Check if entry already exists
+            if (RootEntryExists(config.TableOfContents.RootEntries, file))
+            {
+                Console.WriteLine($"Root entry '{file}' already exists in journal configuration.");
+                return;
+            }
+
+            // Add to root entries array
+            var existingEntries = config.TableOfContents.RootEntries.ToList();
+            existingEntries.Add(new Entries { Name = name, File = file });
+            var naturalComparer = new NaturalStringComparer();
+            existingEntries.Sort((a, b) => naturalComparer.Compare(a.File, b.File));
+            config.TableOfContents.RootEntries = existingEntries.ToArray();
+        });
+    }
+
+    public void AddTopicEntry(string directory, string[] topicPath, string entryName, string file, int? maxDepth = null, bool sortAlphabetically = true)
+    {
+        if (topicPath == null || topicPath.Length == 0)
+        {
+            Console.WriteLine("Topic path cannot be empty.");
+            return;
+        }
+
+        if (maxDepth.HasValue && topicPath.Length > maxDepth.Value)
+        {
+            Console.WriteLine($"Topic path depth ({topicPath.Length}) exceeds maximum allowed depth ({maxDepth.Value}).");
+            return;
+        }
+
+        Update(directory, config =>
+        {
+            var topics = config.TableOfContents.Structure.Topics.ToList();
+            AddOrUpdateTopicHierarchy(topics, topicPath, entryName, file, 0, sortAlphabetically);
+            config.TableOfContents.Structure.Topics = topics.ToArray();
+        });
+    }
+
+    public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true, bool ignoreFile = false)
+    {
+        // Extract filename without path and extension
+        var fileName = Path.GetFileNameWithoutExtension(file);
+        if (ignoreFile)
+        {
+            AddIgnoreEntry(directory, file);
+        }
+        if (IsRootEntry(fileName))
+        {
+            // File matches root entry pattern (1a-9z), add as root entry
+            AddRootEntry(directory, name, file);
+        }
+        else
+        {
+            // File doesn't match root entry pattern, add as topic entry
+            // If no topic path provided, parse it from the filename
+            var effectiveTopicPath = topicPath;
+            if (effectiveTopicPath == null || effectiveTopicPath.Length == 0)
+            {
+                effectiveTopicPath = ParseTopicPathFromFilename(fileName);
+            }
+            
+            AddTopicEntry(directory, effectiveTopicPath, name, file, maxDepth, sortAlphabetically);
+        }
+    }
+
+    public bool UpdateEntryName(string directory, string file, string newEntryName)
+    {
+        var config = Read(directory);
+        if (config == null)
+        {
+            return false;
+        }
+
+        bool updated = false;
+
+        // Search in root entries
+        foreach (var entry in config.TableOfContents.RootEntries)
+        {
+            if (string.Equals(entry.File, file, StringComparison.OrdinalIgnoreCase))
+            {
+                entry.Name = newEntryName;
+                updated = true;
+                break;
+            }
+        }
+
+        // If not found in root entries, search in topics
+        if (!updated)
+        {
+            updated = UpdateEntryNameInTopics(config.TableOfContents.Structure.Topics, file, newEntryName);
+        }
+
+        // Save the config if an update was made
+        if (updated)
+        {
+            var actualDirectory = GetJournalrcPaths(directory).directory;
+            var journalConfName = _journalSettings.JournalConfigFileName;
+            
+            string updatedJsonString = JsonSerializer.Serialize(config, opts);
+            _fileSystem.UpdateFile(actualDirectory, journalConfName, updatedJsonString);
+        }
+        else
+        {
+            Console.WriteLine($"Entry with file '{file}' not found in journal configuration.");
+        }
+
+        return updated;
+    }
+
+    #region Private Helper Methods
+
+    /// <summary>
+    /// Resolves the full path to the journalrc file and its containing directory.
+    /// Handles both directory paths and full file paths as input.
+    /// </summary>
+    private (string filePath, string directory) GetJournalrcPaths(string directoryOrFilePath)
+    {
+        var journalConfName = _journalSettings.JournalConfigFileName;
+        
+        // Check if input already ends with the config filename
+        var isFilePath = Path.GetFileName(directoryOrFilePath).Equals(journalConfName, StringComparison.OrdinalIgnoreCase);
+        
+        var filePath = isFilePath 
+            ? directoryOrFilePath 
+            : Path.Combine(directoryOrFilePath, journalConfName);
+            
+        var directory = isFilePath 
+            ? Path.GetDirectoryName(directoryOrFilePath) ?? directoryOrFilePath 
+            : directoryOrFilePath;
+            
+        return (filePath, directory);
+    }
+    
+    /// <summary>
+    /// checks if root entry already exists in the .journalrc
+    /// </summary>
+    private static bool RootEntryExists(Entries[] rootEntries, string file)
+    {
+        return rootEntries.Any(entry => 
+            string.Equals(entry.File, file, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Determines if a filename matches the root entry pattern (1a-9z).
+    /// Checks if the filename starts with the pattern followed by the heading separator or end of string.
+    /// Examples: 1a, 2b, 5h, 9z, 3z-test_file, 1a-Introduction
+    /// NOT valid: 3zebra, 3z_ebra (underscore is title separator, not heading separator)
+    /// </summary>
+    private bool IsRootEntry(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return false;
+        }
+
+        // Pattern matches: starts with single digit 1-9 followed by single lowercase letter a-z
+        // Followed by either end of string or the heading separator from settings
+        var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
+        var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
+        return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase) || fileName.ToLower().Equals("readme");
+    }
+
+    /// <summary>
+    /// checks if entry already exists in the ignoreFiles of .journalrc
+    /// </summary>
+    private static bool IgnoreFileEntryExists(string[] ignoreEntries, string file)
+    {
+        return ignoreEntries.Any(entry => 
+            string.Equals(entry, file, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Parses a topic path from a filename by splitting on the heading separator
+    /// and converting title separators to spaces for display.
+    /// Examples: 
+    /// - "new_entry" → ["New Entry"]
+    /// - "Learning-Rust_Programming" → ["Learning", "Rust Programming"]
+    /// </summary>
+    private string[] ParseTopicPathFromFilename(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return new[] { "General" };
+        }
+
+        // Split by heading separator to get topic hierarchy
+        var parts = fileName.Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Convert each part: replace title separators with spaces for display
+        return parts
+            .Select(part => part.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim())
+            .Where(part => !string.IsNullOrEmpty(part))
+            .ToArray();
+    }
+
+    private static bool UpdateEntryNameInTopics(Topic[] topics, string file, string newEntryName)
+    {
+        foreach (var topic in topics)
+        {
+            // Search in this topic's entries
+            foreach (var entry in topic.Entries)
+            {
+                if (string.Equals(entry.File, file, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.Name = newEntryName;
+                    return true;
+                }
+            }
+
+            // Recursively search in subtopics
+            if (topic.Subtopics != null)
+            {
+                if (UpdateEntryNameInTopics(topic.Subtopics, file, newEntryName))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static void AddOrUpdateTopicHierarchy(List<Topic> topics, string[] topicPath, string entryName, string file, int currentDepth, bool sortAlphabetically)
+    {
+        if (currentDepth >= topicPath.Length)
+            return;
+
+        var currentTopicName = topicPath[currentDepth];
+        var isLastLevel = currentDepth == topicPath.Length - 1;
+        
+        // Find existing topic (case-insensitive)
+        var existingTopic = topics.FirstOrDefault(t => 
+            string.Equals(t.Name, currentTopicName, StringComparison.OrdinalIgnoreCase));
+
+        if (existingTopic == null)
+        {
+            // Create new topic
+            var newTopic = new Topic 
+            { 
+                Name = currentTopicName,
+                Entries = Array.Empty<Entries>(),
+                Subtopics = currentDepth < topicPath.Length - 1 ? Array.Empty<Topic>() : null
+            };
+
+            topics.Add(newTopic);
+
+            // Sort if requested - use natural sort
+            if (sortAlphabetically)
+            {
+                var naturalComparer = new NaturalStringComparer();
+                topics.Sort((a, b) => naturalComparer.Compare(a.Name, b.Name));
+            }
+
+            existingTopic = newTopic;
+        }
+
+        // If we're at the last level of the path, add the file entry to this topic
+        if (isLastLevel)
+        {
+            // Check if file entry already exists
+            if (!existingTopic.Entries.Any(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase)))
+            {
+                var entries = existingTopic.Entries.ToList();
+                entries.Add(new Entries { Name = entryName, File = file });
+                
+                // Sort entries by file name using natural sort
+                if (sortAlphabetically)
+                {
+                    var naturalComparer = new NaturalStringComparer();
+                    entries.Sort((a, b) => naturalComparer.Compare(a.File, b.File));
+                }
+                
+                existingTopic.Entries = entries.ToArray();
+            }
+            else
+            {
+                Console.WriteLine($"Entry '{file}' already exists in topic '{currentTopicName}'.");
+            }
+        }
+        // Otherwise, process subtopics
+        else
+        {
+            // Ensure subtopics array exists
+            if (existingTopic.Subtopics == null)
+            {
+                existingTopic.Subtopics = Array.Empty<Topic>();
+            }
+
+            var subtopics = existingTopic.Subtopics.ToList();
+            AddOrUpdateTopicHierarchy(subtopics, topicPath, entryName, file, currentDepth + 1, sortAlphabetically);
+            existingTopic.Subtopics = subtopics.ToArray();
+        }
+    }
+    #endregion
 }

@@ -1,7 +1,9 @@
 using System;
 using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
@@ -16,6 +18,9 @@ public sealed class AddEntry(
     IFileSystem fileSystem,
     ITemplateManager templateManager,
     IEntryFormatterService entryFormatter,
+    IJournalConfiguration journalConfiguration,
+    IFileTracking fileTracking,
+    ITableOfContentsGenerator tableOfContentsGenerator,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
 {
@@ -30,19 +35,33 @@ public sealed class AddEntry(
     private readonly IEntryFormatterService _entryFormatter =
         entryFormatter ?? throw new ArgumentNullException(nameof(entryFormatter));
 
+    private readonly IJournalConfiguration _journalConfiguration = 
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+
+    private readonly IFileTracking _fileTracking =
+        fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+
+    private readonly ITableOfContentsGenerator _tableOfContentsGenerator = 
+        tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
+
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, AddEntrySettings settings)
     {
         var journalrc = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
+        var trackingFileName = $".{_journalSettings.AppName}";
+        var trackingFilePath = $"{settings.FilePath}/{trackingFileName}";
         try
         {
             //add tests
-            //verify a journal exists in directory by checking if journalrc exist - maybe make this a middleware
-            console.WriteLine(journalrc);
+            //verify a journal exists in directory by checking if journalrc and tracking index file exist - maybe make this a middleware
             if (!_fileSystem.FileExists(journalrc))
             {
                 throw new JournalrcNotFoundException(settings.FilePath);
+            }
+            if (!_fileSystem.FileExists(trackingFilePath))
+            {
+                throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
             }
             //format entry name and subheading with - in place of spaces. - (make this into helper function)
 
@@ -85,8 +104,24 @@ public sealed class AddEntry(
                 fileNameFormatted,
                 _templateManager.GenerateFromTemplate("journal-entry", entryParams)
             );
-            //update journalrc - (make this a helper function make sure the helper function has an exception for 1a - 1z to not create heading and to put in right spot at top)
-            //update table of contents based on journalrc - (make this a helper function)
+            //update journalrc 
+            string[] headings = (settings.Heading != null 
+                    ? [entryFormatter.RemoveSpaceSeperators(settings.Heading)] 
+                    : Array.Empty<string>())
+                .Concat(settings.Subheading != null 
+                    ? entryFormatter.SeperateSubheadingString(settings.Subheading) 
+                    : [])
+                .Where(h => !string.IsNullOrEmpty(h))
+                .ToArray();
+            
+            _journalConfiguration.AddEntry(settings.FilePath, entryTitle, fileNameFormatted, headings.Length > 0 ? headings : null, ignoreFile: settings.IgnoreFile);
+            //add file to file tracking index
+            _fileTracking.UpdateFileInIndex(settings.FilePath, fileNameFormatted);
+            //update table of contents based on journalrc
+            if (!settings.IgnoreFile)
+            {
+                _tableOfContentsGenerator.UpdateTableOfContents(settings.FilePath, lastEditedDate: DateTime.Now);
+            }
             return 0;
         }
         catch (JournalrcNotFoundException ex)

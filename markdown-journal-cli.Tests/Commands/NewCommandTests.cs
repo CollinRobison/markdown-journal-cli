@@ -2,10 +2,13 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.JournalTemplates;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Shouldly;
@@ -266,7 +269,6 @@ public class NewCommandTests
     }
 
     [Theory]
-    [InlineData("Journal With Spaces")]
     [InlineData("Journal-With-Dashes")]
     [InlineData("Journal_With_Underscores")]
     [InlineData("JournalWithNumbers123")]
@@ -306,6 +308,21 @@ public class NewCommandTests
         result.Output.ShouldContain("cannot be empty");
     }
 
+    [Theory]
+    [InlineData("Journal With Spaces")]
+    [InlineData("My Journal")]
+    [InlineData("Test Journal Name")]
+    [InlineData("Journal Name With Multiple Spaces")]
+    public void Should_Reject_Journal_Names_With_Spaces(string nameWithSpaces)
+    {
+        // When
+        var result = _app.Run(["new", nameWithSpaces]);
+
+        // Then
+        result.ExitCode.ShouldNotBe(0);
+        result.Output.ShouldContain("cannot contain spaces");
+    }
+
     [Fact]
     public void Should_Handle_Exception_From_Template_Manager()
     {
@@ -319,6 +336,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(faultyTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
         services.AddSingleton<NewCommand>();
 
@@ -524,19 +546,17 @@ public class NewCommandTests
     }
 
     [Fact]
-    public void Should_Handle_Journal_Name_With_Leading_And_Trailing_Spaces()
+    public void Should_Reject_Journal_Name_With_Leading_And_Trailing_Spaces()
     {
-        // Given - The command line parsing should handle this, but we test the validation
+        // Given - Names with leading/trailing spaces should be rejected due to space validation
         var journalName = " SpacedJournal ";
 
         // When
         var result = _app.Run(["new", journalName]);
 
         // Then
-        result.ExitCode.ShouldBe(0);
-        // The file system should create directory with the exact name provided
-        var expectedPath = Path.Combine(".", journalName);
-        _fileSystem.DirectoryExists(expectedPath).ShouldBeTrue();
+        result.ExitCode.ShouldNotBe(0);
+        result.Output.ShouldContain("cannot contain spaces");
     }
 
     [Fact]
@@ -591,6 +611,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -766,10 +791,16 @@ public class NewCommandTests
         // Use real JournalInitializer with test template manager
         var testTemplateManager = new TestTemplateManager();
         var testJournalConfig = new TestJournalConfiguration();
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
         var realInitializer = new JournalInitializer(
             testFileSystem,
             testTemplateManager,
             testJournalConfig,
+            mockFileTracking.Object,
             customSettings
         );
 
@@ -871,6 +902,11 @@ public class NewCommandTests
         {
             throw new NotImplementedException();
         }
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            throw new IOException("Simulated I/O error");
+        }
     }
 
     [Fact]
@@ -888,6 +924,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -933,6 +974,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -979,6 +1025,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1019,6 +1070,11 @@ public class NewCommandTests
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1057,7 +1113,12 @@ public class NewCommandTests
         services.AddSingleton<IFileSystem>(faultyFileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
+        var mockTableOfContentsGenerator = new Mock<ITableOfContentsGenerator>();
+        services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton(_journalSettings);
+        var mockFileTracking = new Mock<IFileTracking>();
+        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<IJournalInitializer, JournalInitializer>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1107,11 +1168,11 @@ public class NewCommandTests
     /// </summary>
     private class TestTemplateManagerWithParameterCapture : ITemplateManager
     {
-        private readonly Dictionary<string, ITemplateGenerator> _templates = new();
+        private readonly Dictionary<string, ITemplateGenerator> _templates = [];
         private readonly List<(
             string templateName,
             Dictionary<string, object>? parameters
-        )> _templateCalls = new();
+        )> _templateCalls = [];
 
         public void RegisterTemplate(ITemplateGenerator template)
         {
@@ -1159,7 +1220,7 @@ public class NewCommandTests
                 );
             }
 
-            return calls[callIndex].parameters ?? new Dictionary<string, object>();
+            return calls[callIndex].parameters ?? [];
         }
     }
 
@@ -1200,6 +1261,11 @@ public class NewCommandTests
         public string GetFileContent(string filePath)
         {
             throw new NotImplementedException();
+        }
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            return Array.Empty<string>();
         }
     }
 
@@ -1264,7 +1330,7 @@ public class NewCommandTests
         private readonly IFileSystem? _fileSystem;
 
         public List<(string journalDirectory, string journalName)> InitializedJournals { get; } =
-            new();
+            [];
         public bool ShouldThrow { get; set; } = false;
         public Exception? ExceptionToThrow { get; set; }
 

@@ -12,6 +12,16 @@ This document provides detailed technical information about the Markdown Journal
 │   CLI Interface │    │   Command Layer │    │ Infrastructure  │
 │  (Spectre.CLI)  │───▶│   (Commands/)   │───▶│   (Services)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                               │
+                    ┌─────────────────────────────────────────┐
+                    │  Core Services Layer                    │
+                    │  • IJournalConfiguration               │
+                    │  • ITableOfContentsGenerator          │
+                    │  • IFileTracking / IHashService       │
+                    │  • IEntryFormatterService             │
+                    │  • IFileSystem                        │
+                    │  • ITemplateManager                   │
+                    └─────────────────────────────────────────┘
 ```
 
 ### Dependency Flow
@@ -74,8 +84,10 @@ public sealed class TypeRegistrar : ITypeRegistrar
    - `IFileSystem` → `FileSystem` (File operations)
    - `ITemplateManager` → `TemplateManager` (Template processing)
    - `IJournalConfiguration` → `JournalConfiguration` (Config management)
-   - `IJournalInitializer` → `JournalInitializer` (Journal creation orchestration)
-3. **Building** - `registrar.Build()` creates `IServiceProvider`
+   - `IJournalInitializer` → `JournalInitializer` (Journal creation orchestration)   - `ITableOfContentsGenerator` → `TableOfContentsGenerator` (TOC generation)
+   - `IFileTracking` → `FileTracking` (Change detection)
+   - `IHashService` → `HashService` (SHA256 hashing)
+   - `IEntryFormatterService` → `EntryFormatterService` (Entry name formatting)3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
 ### Benefits of This Approach
@@ -254,7 +266,17 @@ NewCommand
     └── IJournalInitializer.Initialize()
             ├── IFileSystem.CreateDirectory()
             ├── ITemplateManager.GenerateFromTemplate() (4x)
-            └── IJournalConfiguration.Create()
+            ├── IJournalConfiguration.Create()
+            ├── ITableOfContentsGenerator.UpdateTableOfContents()
+            └── IFileTracking.UpdateIndex()
+
+AddEntry
+    ├── IEntryFormatterService.FormatEntryName()
+    ├── IFileSystem.CreateMarkdownFile()
+    ├── ITemplateManager.GenerateFromTemplate()
+    ├── IJournalConfiguration.AddEntry()
+    ├── IFileTracking.UpdateFileInIndex()
+    └── ITableOfContentsGenerator.UpdateTableOfContents()
 ```
 
 ### Benefits of Service Architecture
@@ -264,16 +286,159 @@ NewCommand
 - ✅ **Extensibility** - Easy to add new services or modify existing ones
 - ✅ **Reusability** - Services can be used by multiple commands
 
-## 🧪 Testing Architecture
+## � Key Architectural Patterns
+
+### Natural Sorting Algorithm
+
+Implemented in `JournalConfiguration.cs` via the `NaturalStringComparer` class:
+
+**Problem:** Lexicographic string sorting places "file_10" before "file_5" because it compares character-by-character ('1' < '5').
+
+**Solution:** Custom `IComparer<string>` that treats consecutive digits as complete numbers:
+
+```csharp
+internal class NaturalStringComparer : IComparer<string>
+{
+    public int Compare(string? x, string? y)
+    {
+        // Parse and compare numeric segments as integers
+        // Example: "file_5" < "file_10" < "file_100"
+    }
+    
+    private static long ExtractNumber(string str, ref int index)
+    {
+        // Extracts consecutive digits as a long integer
+    }
+}
+```
+
+**Benefits:**
+- Natural ordering matches file system behavior
+- Works with any numeric values (handles leading zeros)
+- Case-insensitive alphabetic comparison
+- Used for both topic names and entry filenames
+
+**Example Output:**
+- Input: `["file_10", "file_5", "file_100", "file_1"]`
+- Sorted: `["file_1", "file_5", "file_10", "file_100"]`
+
+### Parent-Child Topic Detection
+
+Implemented in `TableOfContentsGenerator.cs` for smart TOC rendering:
+
+**Problem:** When a topic has an entry with matching name AND subtopics, should we render both or merge them?
+
+**Solution:** Three-part detection algorithm:
+
+1. **Name Matching**: Check if topic name equals entry name (case-insensitive)
+2. **File Prefix Matching**: Verify all subtopic files start with entry file path
+3. **Edge Case Handling**: Merge entry link into topic heading, render subtopics below
+
+```csharp
+// Edge case detection
+if (visibleEntries.Length == 1 && 
+    string.Equals(topic.Name, visibleEntries[0].Name, StringComparison.OrdinalIgnoreCase))
+{
+    // Render as: ## [Topic](topic.md)
+    //            - Subtopic 1
+    //            - Subtopic 2
+}
+```
+
+**Example:**
+```
+Config:
+  Topic: "abc"
+  Entry: "abc.md"
+  Subtopics: ["test 2"]
+
+TOC Output:
+  ## [Abc](abc.md)
+    - Test 2
+      - [test file 1](abc-test_2-test_file_1.md)
+```
+
+### Ignore Files Pattern
+
+**Purpose:** Allow entries to exist in configuration but be excluded from TOC.
+
+**Implementation:**
+- `.journalrc` contains `ignoreFiles` array
+- Files added with `--ignore-file` flag
+- Filtered at TOC generation time
+- Still tracked in file system and configuration
+
+**Use Cases:**
+- Draft entries not ready for publication
+- Private notes
+- Template files
+- Work-in-progress documentation
+
+**Example:**
+```json
+{
+  "tableOfContents": {
+    "ignoreFiles": ["draft.md", "private-notes.md"]
+  }
+}
+```
+
+### File Change Detection
+
+**Architecture:**
+```
+IFileTracking
+    └── IHashService (SHA256)
+            └── .md-journal index file
+```
+
+**Process:**
+1. **Index Creation**: Hash all markdown files on journal initialization
+2. **Storage**: Save index to `.md-journal` JSON file
+3. **Detection**: Compare current file hashes with stored hashes
+4. **Results**: Return added/modified/deleted file lists
+
+**Index Structure:**
+```json
+{
+  "files": {
+    "intro.md": "a3f2b8c...",
+    "topic-entry.md": "d4e9c1a..."
+  }
+}
+```
+
+**Benefits:**
+- Detects external file modifications
+- No need for file system watchers
+- Works across sessions
+- Cryptographically secure (SHA256)
+
+## �🧪 Testing Architecture
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/
+markdown-journal-cli.Tests/ (509 tests)
 ├── Commands/
-│   └── NewCommandTests.cs      # Command behavior tests
-└── Infrastructure/
-    ├── TestFileSystem.cs       # Mock file system
-    └── TypeRegistrar.cs        # Test DI container
+│   ├── NewCommandTests.cs          # New journal command tests
+│   └── Add/
+│       ├── AddEntryCommandTests.cs     # Entry creation tests
+│       ├── AddJournalrcCommandTests.cs # Config creation tests
+│       └── AddTableOfContentsCommandTests.cs
+├── Infrastructure/
+│   ├── FileSystemTests.cs          # File operations
+│   ├── FileTrackingTests.cs        # Change detection
+│   ├── HashServiceTests.cs         # SHA256 hashing
+│   ├── JournalConfigurationTests.cs # Config CRUD, natural sort
+│   ├── MarkdownMetadataParserTests.cs
+│   ├── TestFileSystem.cs           # Mock file system
+│   └── TypeRegistrarTests.cs       # DI container
+├── JournalTemplates/
+│   ├── JournalInitializerTests.cs  # Journal creation
+│   ├── TableOfContentsGeneratorTests.cs # TOC generation, parent-child
+│   └── TemplateManagerTests.cs     # Template processing
+└── Services/
+    └── EntryFormatterServiceTests.cs # Entry name formatting
 ```
 
 ### Testing Strategy
@@ -306,6 +471,9 @@ public class NewCommandTests
 2. **Error Handling Tests** - Invalid inputs produce proper error messages
 3. **Integration Tests** - Full command execution with mocked dependencies
 4. **Validation Tests** - Command argument validation
+5. **Edge Case Tests** - Parent-child detection, natural sorting, ignore files
+6. **Change Detection Tests** - File tracking with hash comparison
+7. **Format Tests** - Entry name formatting with various separators
 
 ## 🔮 Future Architecture Considerations
 
@@ -369,6 +537,26 @@ public interface IFileSystemAsync
 **Rationale:** Clear error categorization, better error handling
 **Alternatives:** Using generic exceptions with error codes
 **Trade-offs:** More classes to maintain, but much clearer error handling
+
+### Decision: Natural Sorting for Entries
+**Rationale:** Matches file system behavior, user expectations
+**Alternatives:** Lexicographic sorting (default string comparison)
+**Trade-offs:** Custom comparer implementation (~50 lines), but much better UX
+
+### Decision: Parent-Child Topic Detection
+**Rationale:** Cleaner TOC when topic name matches single entry
+**Alternatives:** Always render entries separately from topic headings
+**Trade-offs:** More complex rendering logic, but eliminates redundant entries
+
+### Decision: SHA256 for File Hashing
+**Rationale:** Cryptographically secure, collision-resistant, standard library support
+**Alternatives:** MD5 (faster but deprecated), CRC32 (not secure)
+**Trade-offs:** Slightly slower than MD5, but appropriate for file integrity
+
+### Decision: Ignore Files in Configuration
+**Rationale:** Flexible control over TOC without deleting files
+**Alternatives:** Separate ignore file like .gitignore, file naming conventions
+**Trade-offs:** Centralized in .journalrc, easier to manage but less discoverable
 
 ### Decision: Constructor Injection over Property Injection
 **Rationale:** Explicit dependencies, immutable after construction

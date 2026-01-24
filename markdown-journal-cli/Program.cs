@@ -3,6 +3,7 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +43,9 @@ public static class Program
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
         host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
+        host.Services.AddSingleton<IHashService, HashService>(); 
+        host.Services.AddSingleton<IFileTracking, FileTracking>();
+        host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
@@ -64,6 +68,7 @@ public static class Program
             config.SetApplicationName(settings.AppName);
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
+            config.AddExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
 
             // New
             config.AddCommand<NewCommand>("new");
@@ -73,7 +78,8 @@ public static class Program
                 add =>
                 {
                     add.SetDescription("Creates a new specified file to an existing journal.");
-                    add.AddCommand<AddEntry>("entry");
+                    add.AddCommand<AddEntry>("entry")
+                    .WithExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
                 }

@@ -143,4 +143,23 @@ public class TestFileSystem : IFileSystem
         }
         return _files[filePath];
     }
+
+    public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+    {
+        var pattern = searchPattern.Replace("*", "").Replace("?", "");
+        var files = _files.Keys
+            .Where(f => f.StartsWith(path) && f.EndsWith(pattern))
+            .ToArray();
+
+        if (searchOption == SearchOption.TopDirectoryOnly)
+        {
+            // Only include files directly in the path, not in subdirectories
+            var pathWithSeparator = path.EndsWith(Path.DirectorySeparatorChar.ToString()) 
+                ? path 
+                : path + Path.DirectorySeparatorChar;
+            files = files.Where(f => !f.Substring(pathWithSeparator.Length).Contains(Path.DirectorySeparatorChar)).ToArray();
+        }
+
+        return files;
+    }
 }

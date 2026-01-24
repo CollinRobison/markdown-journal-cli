@@ -61,6 +61,22 @@ public class JournalrcNotFoundException(string path)
 }
 
 /// <summary>
+/// Exception thrown when attempting to find a tracking index file.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="TrackingIndexNotFoundException"/> class.
+/// </remarks>
+/// <param name="path">The path expecting tracking index file.</param>
+public class TrackingIndexNotFoundException(string path, string trackingFileName)
+    : JournalException($"tracking file '{trackingFileName}' not found at '{path}'")
+{
+    /// <summary>
+    /// Gets the path expecting tracking index file.
+    /// </summary>
+    public string Path { get; } = path;
+}
+
+/// <summary>
 /// Exception thrown when attempting to create a journal entry that already exists.
 /// </summary>
 /// <remarks>

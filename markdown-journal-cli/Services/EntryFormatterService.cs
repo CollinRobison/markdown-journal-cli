@@ -30,7 +30,7 @@ public partial class EntryFormatterService(IOptions<JournalSettings> journalSett
         return MatchHeadingSeparatorRegex()
             .Replace(subheadings.Trim(), _journalSettings.HeadingSeperator)
             .Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries) // Exclude empty entries
-            .Select(s => s.Trim())
+            .Select(s => RemoveSpaceSeperators(s.Trim()))
             .ToArray();
     }
 

@@ -49,6 +49,13 @@ public class AddEntrySettings : AddSettings
     )]
     public string? Subheading { get; set; }
 
+    //ignoreFiles - add this file to the ignoreFiles list in the .journalrc
+    [CommandOption("--ignore")]
+    [Description(
+        "This flag makes it so the new entry won't appear in the table of contents."
+    )]
+    public bool IgnoreFile {get; set;}
+
     //template - Add this option later. For right now just use the basic template.
 
     public override ValidationResult Validate()

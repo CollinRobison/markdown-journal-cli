@@ -44,4 +44,6 @@ public class JournalSettings
 
     [Required]
     public string HeadingSeperator { get; set; } = "-";
+
+    public bool CapitalizeTopicHeadings { get; set; } = true;
 }
