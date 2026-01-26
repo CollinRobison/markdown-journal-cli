@@ -162,6 +162,8 @@ For technical details about the project architecture, see the **[Architecture Gu
 # TODO: Document these commands when implemented
 mdjournal add entry [title] [header] [template] [table of contents] [journalrc]   # Add a new journal entry or file
 
+mdjournal <path> init [name] # adds a the needed items (journalrc, file tracking, and toc) to an existing md file directory and updates all to include directories md files.
+
 mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates. have an option to check all files in directory and if any aren't in journalrc list them out so people can confirm whether they want to update everything --check to list changes before applying to journalrc --all to appky change without listing.
 
 md journal update file --ignore # updates a file with specific settings like moving to ignore may this and rename should be the same command. 

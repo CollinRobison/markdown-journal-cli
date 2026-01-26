@@ -23,6 +23,10 @@ public class AddTableOfContents(
 
     public override int Execute(CommandContext context, AddTableOfContentsSettings settings)
     {
+        // decide whether a custom name is going to be created for the table of contents. (needs setting flag)
+            // check for a journalrc and either ask to add one or error without. (add setting flag to autoapprove)
+                // have a flag that allows for adding files and parsing file names for each entry name or asking to prompt for each file and ask. (needs settings flag)
+        // create file tracking if doesn't exist (flag for turning this setting off.)
         throw new NotImplementedException();
     }
 }

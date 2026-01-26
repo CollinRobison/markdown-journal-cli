@@ -23,6 +23,10 @@ public class AddJournalrc(
 
     public override int Execute(CommandContext context, AddJournalrcSettings settings)
     {
+        // have a flag that allows for adding files and parsing file names for each entry name or asking to prompt for each file and ask. (needs settings flag)
+            // also look for a table of contents and allow it to parse file names from that. 
+        // make a table of contents automatically if one doesn't exist. (make flag for turning off)
+        // create journal tracking file if doesn't exist. (flag for turning off)
         throw new NotImplementedException();
     }
 }

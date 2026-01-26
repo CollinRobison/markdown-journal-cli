@@ -52,6 +52,7 @@ public static class Program
         host.Services.AddSingleton<AddEntry>();
         host.Services.AddSingleton<AddJournalrc>();
         host.Services.AddSingleton<AddTableOfContents>();
+        host.Services.AddSingleton<AddFileTracking>();
 
         // Build the host and get the service provider
         var builtHost = host.Build();
@@ -82,6 +83,7 @@ public static class Program
                     .WithExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
+                    add.AddCommand<AddFileTracking>("fileTracking");
                 }
             );
         });

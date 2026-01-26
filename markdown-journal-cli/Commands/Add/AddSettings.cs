@@ -89,6 +89,8 @@ public class AddEntrySettings : AddSettings
     }
 }
 
+public class AddFileTrackingSettings : AddSettings { }
+
 public class AddTableOfContentsSettings : AddSettings { }
 
 public class AddJournalrcSettings : AddSettings { }
