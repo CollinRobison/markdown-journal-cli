@@ -7,7 +7,7 @@ using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Add;
 
-[Description("Creates a new journal config file if one does not already exist")]
+[Description("Creates a new journal configuration file if one does not already exist")]
 public class AddJournalrc(
     IAnsiConsole console,
     IFileSystem fileSystem,

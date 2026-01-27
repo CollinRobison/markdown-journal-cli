@@ -83,7 +83,7 @@ public static class Program
                     .WithExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
-                    add.AddCommand<AddFileTracking>("fileTracking");
+                    add.AddCommand<AddFileTracking>("tracking");
                 }
             );
         });

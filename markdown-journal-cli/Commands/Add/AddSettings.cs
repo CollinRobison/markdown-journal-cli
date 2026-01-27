@@ -89,8 +89,18 @@ public class AddEntrySettings : AddSettings
     }
 }
 
-public class AddFileTrackingSettings : AddSettings { }
+public class AddFileTrackingSettings : AddSettings
+{
+    [CommandOption("--ignoreconfig || --ic")]
+    [Description(
+        "This flag removes the check for the journal configuration file."
+    )]
+    public bool IgnoreJournalConfig {get; set;}
+}
 
 public class AddTableOfContentsSettings : AddSettings { }
 
-public class AddJournalrcSettings : AddSettings { }
+public class AddJournalrcSettings : AddSettings
+{   
+    
+}
