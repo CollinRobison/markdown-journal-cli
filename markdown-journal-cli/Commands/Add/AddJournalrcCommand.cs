@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel;
+using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
@@ -11,6 +13,8 @@ namespace markdown_journal_cli.Commands.Add;
 public class AddJournalrc(
     IAnsiConsole console,
     IFileSystem fileSystem,
+    IJournalConfiguration journalConfiguration,
+    IJournalConfigGenerator configGenerator,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddJournalrcSettings>
 {
@@ -18,15 +22,78 @@ public class AddJournalrc(
         console ?? throw new ArgumentNullException(nameof(console));
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-
+    private readonly IJournalConfiguration _journalConfiguration =
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    private readonly IJournalConfigGenerator _configGenerator =
+        configGenerator ?? throw new ArgumentNullException(nameof(configGenerator));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, AddJournalrcSettings settings)
     {
-        // have a flag that allows for adding files and parsing file names for each entry name or asking to prompt for each file and ask. (needs settings flag)
-            // also look for a table of contents and allow it to parse file names from that. 
-        // make a table of contents automatically if one doesn't exist. (make flag for turning off)
-        // create journal tracking file if doesn't exist. (flag for turning off)
-        throw new NotImplementedException();
+        try
+        {
+            var directory = settings.FilePath;
+            var journalrcPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);
+
+            // Check if .journalrc already exists
+            if (_fileSystem.FileExists(journalrcPath))
+            {
+                _console.MarkupLine($"[yellow]Journal configuration already exists at {journalrcPath}[/]");
+                return 1;
+            }
+
+            // Determine TOC filename (from flag or default)
+            var tocFileName = settings.TableOfContentsFile ?? _journalSettings.TableOfContentsFileName;
+
+            // Determine journal name (from flag or directory name)
+            var journalName = settings.JournalName ?? GetJournalName(directory);
+
+            // Try to generate config from TOC file
+            var result = _configGenerator.GenerateFromTableOfContents(directory, tocFileName, journalName);
+            
+            if (result != null)
+            {
+                _console.MarkupLine($"[green]✓[/] Created journal configuration with {result.FileCount} entries from table of contents");
+                return 0;
+            }
+
+            // Try to generate config from tracking index
+            result = _configGenerator.GenerateFromTrackingIndex(directory, tocFileName, journalName);
+            
+            if (result != null)
+            {
+                _console.MarkupLine($"[green]✓[/] Created journal configuration with {result.FileCount} entries from tracking index");
+                return 0;
+            }
+
+            // Fallback: generate config from directory scan
+            _console.MarkupLine($"[yellow]No table of contents or tracking index found. Scanning directory...[/]");
+            result = _configGenerator.GenerateFromDirectory(directory, tocFileName, journalName);
+            _console.MarkupLine($"[green]✓[/] Created journal configuration with {result.FileCount} entries from directory scan");
+            return 0;
+        }
+        catch (ArgumentException ex)
+        {
+            _console.MarkupLine($"[red]Error: {ex.Message}[/]");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            _console.MarkupLine($"[red]An unexpected error occurred: {ex.Message}[/]");
+            return 1;
+        }
+    }
+
+    private string GetJournalName(string directory)
+    {
+        // Convert to absolute path if relative
+        var absolutePath = Path.IsPathRooted(directory) 
+            ? directory 
+            : Path.GetFullPath(directory);
+        
+        // Get the directory name from the absolute path
+        var dirName = Path.GetFileName(absolutePath);
+        
+        return string.IsNullOrEmpty(dirName) ? "MyJournal" : dirName;
     }
 }

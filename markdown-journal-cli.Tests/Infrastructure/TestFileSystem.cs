@@ -18,7 +18,7 @@ public class TestFileSystem : IFileSystem
     /// Tracks created files in-memory. The dictionary keys are the full file paths and the
     /// values are the file contents.
     /// </summary>
-    private readonly Dictionary<string, string> _files = new();
+    public readonly Dictionary<string, string> _files = new();
 
     /// <summary>
     /// Determines whether the specified directory exists in the in-memory file system.
@@ -147,17 +147,23 @@ public class TestFileSystem : IFileSystem
     public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {
         var pattern = searchPattern.Replace("*", "").Replace("?", "");
+        
+        // Normalize the path (remove trailing separator)
+        var normalizedPath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        
         var files = _files.Keys
-            .Where(f => f.StartsWith(path) && f.EndsWith(pattern))
+            .Where(f => f.StartsWith(normalizedPath + Path.DirectorySeparatorChar) && f.EndsWith(pattern))
             .ToArray();
 
         if (searchOption == SearchOption.TopDirectoryOnly)
         {
             // Only include files directly in the path, not in subdirectories
-            var pathWithSeparator = path.EndsWith(Path.DirectorySeparatorChar.ToString()) 
-                ? path 
-                : path + Path.DirectorySeparatorChar;
-            files = files.Where(f => !f.Substring(pathWithSeparator.Length).Contains(Path.DirectorySeparatorChar)).ToArray();
+            var pathPrefix = normalizedPath + Path.DirectorySeparatorChar;
+            files = files.Where(f =>
+            {
+                var relativePath = f.Substring(pathPrefix.Length);
+                return !relativePath.Contains(Path.DirectorySeparatorChar) && !relativePath.Contains(Path.AltDirectorySeparatorChar);
+            }).ToArray();
         }
 
         return files;

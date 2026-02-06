@@ -9,6 +9,7 @@ using markdown_journal_cli.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -28,6 +29,11 @@ public static class Program
             }
         );
 
+        // Configure logging
+        host.Logging.ClearProviders();
+        host.Logging.AddConsole();
+        host.Logging.SetMinimumLevel(LogLevel.Information);
+
         // Configure options
         host.Services.AddOptions<JournalSettings>()
             .BindConfiguration(JournalSettings.SectionName)
@@ -46,6 +52,8 @@ public static class Program
         host.Services.AddSingleton<IHashService, HashService>(); 
         host.Services.AddSingleton<IFileTracking, FileTracking>();
         host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
+        host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
+        host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();

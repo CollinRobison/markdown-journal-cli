@@ -1,7 +1,16 @@
 namespace markdown_journal_cli.Infrastructure.FileSystem;
 
+using Microsoft.Extensions.Logging;
+
 public class FileSystem : IFileSystem
 {
+    private readonly ILogger<FileSystem> _logger;
+
+    public FileSystem(ILogger<FileSystem> logger)
+    {
+        _logger = logger;
+    }
+
     public bool DirectoryExists(string path) => Directory.Exists(path);
 
     public bool FileExists(string path) => File.Exists(path);
@@ -19,7 +28,7 @@ public class FileSystem : IFileSystem
             throw new InvalidOperationException($"File already exists: {filePath}");
         }
         File.WriteAllText(filePath, body);
-        Console.WriteLine($"Markdown file {fullFileName} created at: {filePath}");
+        _logger.LogDebug("Markdown file {FileName} created at: {FilePath}", fullFileName, filePath);
     }
 
     public void CreateFile(string path, string fileName, string body)
@@ -30,14 +39,14 @@ public class FileSystem : IFileSystem
             throw new InvalidOperationException($"File already exists: {filePath}");
         }
         File.WriteAllText(filePath, body);
-        Console.WriteLine($"file {fileName} created at: {filePath}");
+        _logger.LogDebug("File {FileName} created at: {FilePath}", fileName, filePath);
     }
 
     public void UpdateFile(string path, string fileName, string body)
     {
         string filePath = Path.Combine(path, fileName);
         File.WriteAllText(filePath, body);
-        Console.WriteLine($"file {fileName} updated at: {filePath}");
+        _logger.LogDebug("File {FileName} updated at: {FilePath}", fileName, filePath);
     }
 
     public void DeleteFile(string filePath)
@@ -45,11 +54,11 @@ public class FileSystem : IFileSystem
         if (FileExists(filePath))
         {
             File.Delete(filePath);
-            Console.WriteLine($"file deleted at {filePath}");
+            _logger.LogDebug("File deleted at {FilePath}", filePath);
         }
         else
         {
-            Console.WriteLine($"file doesn't exist at {filePath}");
+            _logger.LogDebug("File doesn't exist at {FilePath}", filePath);
         }
     }
 

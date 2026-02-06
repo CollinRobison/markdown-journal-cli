@@ -1,6 +1,7 @@
 using System.Text.Json;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
@@ -24,7 +25,7 @@ public class JournalConfigurationTests
         _journalSettings = Options.Create(
             new JournalSettings { JournalConfigFileName = ".journalrc" }
         );
-        _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings);
+        _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings, NullLogger<JournalConfiguration>.Instance);
         _testDirectory = "/test/directory";
     }
 
@@ -1307,13 +1308,9 @@ public class JournalConfigurationTests
         
         var rustTopic = learningTopic.Subtopics.FirstOrDefault(t => t.Name == "Rust");
         rustTopic.ShouldNotBeNull();
-        rustTopic.Subtopics.ShouldNotBeNull();
-        
-        var tutorialTopic = rustTopic.Subtopics.FirstOrDefault(t => t.Name == "Tutorial");
-        tutorialTopic.ShouldNotBeNull();
-        tutorialTopic.Entries.Length.ShouldBe(1);
-        tutorialTopic.Entries[0].Name.ShouldBe("Tutorial");
-        tutorialTopic.Entries[0].File.ShouldBe("Learning-Rust-Tutorial.md");
+        rustTopic.Entries.Length.ShouldBe(1);
+        rustTopic.Entries[0].Name.ShouldBe("Tutorial");
+        rustTopic.Entries[0].File.ShouldBe("Learning-Rust-Tutorial.md");
     }
 
     [Fact]
@@ -1344,13 +1341,9 @@ public class JournalConfigurationTests
         var learningTopic = updatedConfig.TableOfContents.Structure.Topics
             .FirstOrDefault(t => t.Name == "Learning");
         learningTopic.ShouldNotBeNull();
-        learningTopic.Subtopics.ShouldNotBeNull();
-        
-        var rustTopic = learningTopic.Subtopics.FirstOrDefault(t => t.Name == "Rust Programming");
-        rustTopic.ShouldNotBeNull();
-        rustTopic.Entries.Length.ShouldBe(1);
-        rustTopic.Entries[0].Name.ShouldBe("Rust Programming");
-        rustTopic.Entries[0].File.ShouldBe("Learning-Rust_Programming.md");
+        learningTopic.Entries.Length.ShouldBe(1);
+        learningTopic.Entries[0].Name.ShouldBe("Rust Programming");
+        learningTopic.Entries[0].File.ShouldBe("Learning-Rust_Programming.md");
     }
 
     [Fact]
@@ -1532,6 +1525,144 @@ public class JournalConfigurationTests
         updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
         updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
         updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("new-ignored-file.md");
+    }
+
+    #endregion
+
+    #region AddEntry TOC File Exclusion Tests
+
+    [Fact]
+    public void AddEntry_ShouldSkipTocFile_WhenAddingRootEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.RootEntries = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - try to add TOC file as root entry
+        _journalConfiguration.AddEntry(_testDirectory, "Table of Contents", "toc.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(0);
+    }
+
+    [Fact]
+    public void AddEntry_ShouldSkipTocFile_WhenAddingTopicEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.Structure.Topics = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - try to add TOC file as topic entry
+        _journalConfiguration.AddEntry(_testDirectory, "Table of Contents", "toc.md", topicPath: ["General"]);
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.Structure.Topics.Length.ShouldBe(0);
+    }
+
+    [Fact]
+    public void AddEntry_ShouldSkipTocFile_CaseInsensitive()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.RootEntries = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - try to add TOC file with different casing
+        _journalConfiguration.AddEntry(_testDirectory, "Table of Contents", "TOC.md");
+        _journalConfiguration.AddEntry(_testDirectory, "Table of Contents", "Toc.MD");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(0);
+    }
+
+    [Fact]
+    public void AddEntry_ShouldSkipDefaultTocFile_WhenConfigFileNotSpecified()
+    {
+        // Arrange
+        var settings = new JournalSettings 
+        { 
+            JournalConfigFileName = ".journalrc",
+            TableOfContentsFileName = "toc"  // Default TOC filename without extension
+        };
+        var journalConfig = new JournalConfiguration(_fileSystem, Options.Create(settings), NullLogger<JournalConfiguration>.Instance);
+        
+        var config = CreateTestConfig();
+        config.TableOfContents.File = null!; // Config doesn't specify TOC file
+        config.TableOfContents.RootEntries = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - try to add default TOC file
+        journalConfig.AddEntry(_testDirectory, "Table of Contents", "toc.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(0);
+    }
+
+    [Fact]
+    public void AddEntry_ShouldAddFile_WhenNotTocFile()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.RootEntries = [];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var originalJson = JsonSerializer.Serialize(
+            config,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
+
+        // Act - add a different file that's not the TOC
+        _journalConfiguration.AddEntry(_testDirectory, "Intro", "1a-intro.md");
+
+        // Assert
+        var updatedContent = _fileSystem.GetFileContent(journalrcPath);
+        var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
+
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-intro.md");
     }
 
     #endregion
