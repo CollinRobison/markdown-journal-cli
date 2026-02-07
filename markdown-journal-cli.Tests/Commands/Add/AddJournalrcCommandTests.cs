@@ -27,13 +27,17 @@ public class AddJournalrcCommandTests
         _fileSystem = new TestFileSystem();
         _console = new TestConsole();
         _journalSettings = new JournalSettings();
+        _journalConfiguration = new JournalConfiguration(
+            _fileSystem,
+            Options.Create(_journalSettings),
+            NullLogger<JournalConfiguration>.Instance
+        );
         
         var tocParser = new TableOfContentsMarkdownParser();
         var hashService = new HashService();
         var fileTracking = new FileTracking(_fileSystem, Options.Create(_journalSettings), hashService);
         var entryFormatter = new EntryFormatterService(Options.Create(_journalSettings));
         
-        _journalConfiguration = new JournalConfiguration(_fileSystem, Options.Create(_journalSettings), NullLogger<JournalConfiguration>.Instance);
         _configGenerator = new JournalConfigGenerator(
             _fileSystem,
             tocParser,
@@ -46,7 +50,6 @@ public class AddJournalrcCommandTests
         _command = new AddJournalrc(
             _console,
             _fileSystem,
-            _journalConfiguration,
             _configGenerator,
             Options.Create(_journalSettings)
         );

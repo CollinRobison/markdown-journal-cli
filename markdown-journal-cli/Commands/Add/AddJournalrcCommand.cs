@@ -13,7 +13,6 @@ namespace markdown_journal_cli.Commands.Add;
 public class AddJournalrc(
     IAnsiConsole console,
     IFileSystem fileSystem,
-    IJournalConfiguration journalConfiguration,
     IJournalConfigGenerator configGenerator,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddJournalrcSettings>
@@ -22,8 +21,6 @@ public class AddJournalrc(
         console ?? throw new ArgumentNullException(nameof(console));
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-    private readonly IJournalConfiguration _journalConfiguration =
-        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly IJournalConfigGenerator _configGenerator =
         configGenerator ?? throw new ArgumentNullException(nameof(configGenerator));
     private readonly JournalSettings _journalSettings = journalSettings.Value;

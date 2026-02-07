@@ -98,7 +98,14 @@ public class AddFileTrackingSettings : AddSettings
     public bool IgnoreJournalConfig {get; set;}
 }
 
-public class AddTableOfContentsSettings : AddSettings { }
+public class AddTableOfContentsSettings : AddSettings
+{
+    [CommandOption("-n|--name|--toc|--tableofcontents")]
+    [Description(
+        "The name of the table of contents file (without .md extension). If not specified, uses the default name."
+    )]
+    public string? TableOfContentsName { get; set; }
+}
 
 public class AddJournalrcSettings : AddSettings
 {   
