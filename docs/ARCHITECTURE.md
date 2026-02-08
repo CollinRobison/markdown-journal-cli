@@ -16,7 +16,9 @@ This document provides detailed technical information about the Markdown Journal
                     ┌─────────────────────────────────────────┐
                     │  Core Services Layer                    │
                     │  • IJournalConfiguration               │
+                    │  • IJournalConfigGenerator            │
                     │  • ITableOfContentsGenerator          │
+                    │  • ITableOfContentsMarkdownParser     │
                     │  • IFileTracking / IHashService       │
                     │  • IEntryFormatterService             │
                     │  • IFileSystem                        │
@@ -277,7 +279,31 @@ AddEntry
     ├── IJournalConfiguration.AddEntry()
     ├── IFileTracking.UpdateFileInIndex()
     └── ITableOfContentsGenerator.UpdateTableOfContents()
+
+AddJournalrc
+    └── IJournalConfigGenerator.GenerateFromTableOfContents()
+            └── ITableOfContentsMarkdownParser.ParseTableOfContents()
+    └── IJournalConfigGenerator.GenerateFromTrackingIndex()
+    └── IJournalConfigGenerator.GenerateFromDirectory()
+
+AddTableOfContents
+    ├── IJournalConfiguration.Read()
+    ├── IJournalConfiguration.Update() (when TOC name differs)
+    └── ITableOfContentsGenerator.UpdateTableOfContents()
+
+AddFileTracking
+    └── IFileTracking.UpdateIndex()
 ```
+
+### Configuration Generation Strategy
+
+When creating a `.journalrc` for an existing journal, the system attempts three sources in order, stopping at the first successful result:
+
+1. **Table of contents file** - Uses `ITableOfContentsMarkdownParser` to extract entries and build config.
+2. **Tracking index** - Uses the `.md-journal` index to infer known files.
+3. **Directory scan** - Falls back to scanning the journal directory for markdown files.
+
+This approach prioritizes the most user-curated source first (TOC), then known tracking data, and only scans the directory as a last resort.
 
 ### Benefits of Service Architecture
 - ✅ **Single Responsibility** - Each service has one clear purpose
@@ -418,7 +444,7 @@ IFileTracking
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (509 tests)
+markdown-journal-cli.Tests/ (578 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs          # New journal command tests
 │   └── Add/

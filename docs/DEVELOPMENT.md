@@ -34,6 +34,7 @@ markdown-journal-cli/
 │   ├── Commands/                  # Command implementations
 │   │   ├── Add/                   # Add commands (entry, config, toc)
 │   │   │   ├── AddEntryCommand.cs
+│   │   │   ├── AddFileTrackingCommand.cs
 │   │   │   ├── AddJournalrcCommand.cs
 │   │   │   ├── AddTableOfContentsCommand.cs
 │   │   │   └── AddSettings.cs
@@ -45,6 +46,10 @@ markdown-journal-cli/
 │   │   ├── Configuration/         # Journal configuration management
 │   │   │   ├── IJournalConfiguration.cs
 │   │   │   ├── JournalConfiguration.cs
+│   │   │   ├── IJournalConfigGenerator.cs
+│   │   │   ├── JournalConfigGenerator.cs
+│   │   │   ├── ITableOfContentsMarkdownParser.cs
+│   │   │   ├── TableOfContentsMarkdownParser.cs
 │   │   │   └── Models/            # Configuration data models
 │   │   ├── DependencyInjection/   # DI container setup
 │   │   │   └── TypeRegistrar.cs
@@ -72,19 +77,23 @@ markdown-journal-cli/
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (509 tests)
+├── markdown-journal-cli.Tests/    # Unit tests (500+ tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
 │   │   └── Add/
 │   │       ├── AddEntryCommandTests.cs
+│   │       ├── AddFileTrackingCommandTests.cs
 │   │       ├── AddJournalrcCommandTests.cs
-│   │       └── AddTableOfContentsCommandTests.cs
+│   │       ├── AddTableOfContentsCommandTests.cs
+│   │       └── AddTableOfContentsIntegrationTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
 │   │   ├── FileSystemTests.cs
 │   │   ├── FileTrackingTests.cs
 │   │   ├── HashServiceTests.cs
 │   │   ├── JournalConfigurationTests.cs
+│   │   ├── JournalConfigGeneratorTests.cs
 │   │   ├── MarkdownMetadataParserTests.cs
+│   │   ├── TableOfContentsMarkdownParserTests.cs
 │   │   ├── TestFileSystem.cs
 │   │   └── TypeRegistrarTests.cs
 │   ├── JournalTemplates/         # Template and initialization tests
@@ -513,6 +522,8 @@ The following areas need detailed documentation (you should write these based on
 host.Services.AddSingleton<IFileSystem, FileSystem>();
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
+host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
+host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
 host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
 host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
 host.Services.AddSingleton<IHashService, HashService>(); 
@@ -524,6 +535,7 @@ host.Services.AddSingleton<NewCommand>();
 host.Services.AddSingleton<AddEntry>();
 host.Services.AddSingleton<AddJournalrc>();
 host.Services.AddSingleton<AddTableOfContents>();
+host.Services.AddSingleton<AddFileTracking>();
 ```
 
 ### Key Architectural Patterns
@@ -564,6 +576,18 @@ Implemented in `TableOfContentsGenerator.cs`:
 - **Purpose**: Manages `.journalrc` configuration files
 - **Benefits**: Centralized config management, supports complex configuration objects
 - **Example**: Creates and manages journal metadata and settings
+
+**IJournalConfigGenerator Pattern**
+- **Purpose**: Generates `.journalrc` configuration from existing journal sources
+- **Benefits**: Enables retroactive config creation, supports multiple generation strategies
+- **Features**: TOC parsing, tracking index parsing, directory scanning fallback
+- **Example**: `AddJournalrc` uses priority-based generation (TOC → tracking → directory)
+
+**ITableOfContentsMarkdownParser Pattern**
+- **Purpose**: Parses markdown TOC files to extract entry structure
+- **Benefits**: Converts human-readable TOC into structured configuration data
+- **Features**: Handles nested topics, preserves hierarchy, extracts file links
+- **Example**: Used by `IJournalConfigGenerator` to build config from existing TOC
 
 ### Testing Service Dependencies
 
@@ -625,8 +649,10 @@ public void NewCommand_Should_Handle_InitializationFailure()
 ### Current Status
 - ✅ Basic project structure established
 - ✅ Core `new` command implemented
+- ✅ `add` command branch with entry, config, toc, and tracking subcommands
 - ✅ Exception handling architecture
-- ✅ Testing framework setup
-- ⏳ Additional commands (add, list, open, search)
-- ⏳ Configuration system
+- ✅ Testing framework setup (500+ tests)
+- ✅ Configuration system with generation from multiple sources
+- ✅ TOC markdown parser for config generation
+- ⏳ Additional commands (list, open, search, update, rename)
 - ⏳ Documentation completion

@@ -6,10 +6,10 @@ A CLI tool to create and manage markdown journals with a clean, user-friendly in
 
 ```bash
 # Create a new journal in the current directory
-md-journal new MyJournal
+mdjournal new MyJournal
 
 # Create a journal at a specific path
-md-journal new WorkJournal --path ~/Documents/Journals
+mdjournal new WorkJournal --path ~/Documents/Journals
 ```
 
 ## 📋 Table of Contents
@@ -48,25 +48,34 @@ dotnet run --project markdown-journal-cli -- --help
 
 ### Basic Usage
 ```bash
-md-journal <command> [options]
+mdjournal <command> [options]
 ```
 
 ### Examples
 ```bash
 # Create a new journal with default settings
-md-journal new
+mdjournal new
 
 # Create a journal with custom name
-md-journal new "My Daily Journal"
+mdjournal new "My Daily Journal"
 
 # Create a journal at specific location
-md-journal new ProjectNotes --path ~/Work/Projects
+mdjournal new ProjectNotes --path ~/Work/Projects
 
 # Add a new journal entry
-md-journal add --path ~/Documents/MyJournal entry "My First Entry"
+mdjournal add --path ~/Documents/MyJournal entry "My First Entry"
 
 # Add an entry with heading and subheading
-md-journal add --path ~/Documents/MyJournal entry "Meeting Notes" --heading "Work" --subheading "Team-Meetings"
+mdjournal add --path ~/Documents/MyJournal entry "Meeting Notes" --heading "Work" --subheading "Team-Meetings"
+
+# Create a .journalrc config for an existing journal
+mdjournal add --path ~/Documents/MyJournal config
+
+# Create a Table of Contents file for an existing journal
+mdjournal add --path ~/Documents/MyJournal toc
+
+# Create or refresh the tracking index for a journal
+mdjournal add --path ~/Documents/MyJournal tracking
 ```
 
 ## Commands
@@ -76,7 +85,7 @@ Creates a new markdown journal directory structure.
 
 **Syntax:**
 ```bash
-md-journal new [name] [options]
+mdjournal new [name] [options]
 ```
 
 **Arguments:**
@@ -87,8 +96,8 @@ md-journal new [name] [options]
 
 **Examples:**
 ```bash
-md-journal new
-md-journal new "Travel Journal" --path ~/Documents
+mdjournal new
+mdjournal new "Travel Journal" --path ~/Documents
 ```
 
 ### `add entry` - Add New Journal Entry
@@ -96,7 +105,7 @@ Adds a new markdown entry to an existing journal.
 
 **Syntax:**
 ```bash
-md-journal add entry <name> [options]
+mdjournal add entry <name> [options]
 ```
 
 **Arguments:**
@@ -112,16 +121,71 @@ md-journal add entry <name> [options]
 **Examples:**
 ```bash
 # Add a simple entry
-md-journal add entry "Daily Standup"
+mdjournal add entry "Daily Standup"
 
 # Add entry with custom title and heading
-md-journal add entry "standup_notes" --title "Daily Standup" --heading "Work"
+mdjournal add entry "standup_notes" --title "Daily Standup" --heading "Work"
 
 # Add entry with nested topics
-md-journal add --path ~/Documents/MyJournal entry "api_design" --heading "Tech" --subheading "Backend-API"
+mdjournal add --path ~/Documents/MyJournal entry "api_design" --heading "Tech" --subheading "Backend-API"
 
 # Add entry but don't include in TOC
-md-journal add entry "draft_thoughts" --ignore
+mdjournal add entry "draft_thoughts" --ignore
+```
+
+### `add config` - Create Journal Configuration
+Creates a new `.journalrc` configuration file for an existing journal when one does not already exist.
+
+**Syntax:**
+```bash
+mdjournal add config [options]
+```
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `--toc|--tableofcontents <name>` - TOC file name to parse (without `.md`)
+- `-n|--name|--journalname <name>` - Journal name (default: directory name)
+
+**Examples:**
+```bash
+mdjournal add config --path ~/Documents/MyJournal
+mdjournal add config --path ~/Documents/MyJournal --toc TableOfContents --name "My Journal"
+```
+
+### `add toc` - Create Table of Contents
+Creates a Table of Contents file for an existing journal if it does not already exist.
+
+**Syntax:**
+```bash
+mdjournal add toc [options]
+```
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `-n|--name|--toc|--tableofcontents <name>` - TOC file name (without `.md`)
+
+**Examples:**
+```bash
+mdjournal add toc --path ~/Documents/MyJournal
+mdjournal add toc --path ~/Documents/MyJournal --name TableOfContents
+```
+
+### `add tracking` - Create File Tracking Index
+Creates or updates the tracking index for an existing journal.
+
+**Syntax:**
+```bash
+mdjournal add tracking [options]
+```
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `--ignoreconfig|--ic` - Skip the `.journalrc` existence check
+
+**Examples:**
+```bash
+mdjournal add tracking --path ~/Documents/MyJournal
+mdjournal add tracking --path ~/Documents/MyJournal --ignoreconfig
 ```
 
 ## Contributing
@@ -140,8 +204,9 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Basic project structure
 - ✅ `new` command implementation  
 - ✅ `add entry` command for creating journal entries
+- ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **509 passing unit tests** covering core functionality
+- ✅ **500+ passing unit tests** covering core functionality
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
@@ -160,7 +225,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 ### Planned Commands
 ```bash
 # TODO: Document these commands when implemented
-mdjournal add entry [title] [header] [template] [table of contents] [journalrc]   # Add a new journal entry or file
 
 mdjournal <path> init [name] # adds a the needed items (journalrc, file tracking, and toc) to an existing md file directory and updates all to include directories md files.
 
