@@ -11,7 +11,7 @@ using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Add;
 
-[Description("Creates or updates a Table of Contents for a journal")]
+[Description("Creates a Table of Contents for a journal if one does not already exist")]
 public class AddTableOfContents(
     IAnsiConsole console,
     IFileSystem fileSystem,
