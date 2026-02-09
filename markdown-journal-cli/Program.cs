@@ -29,11 +29,6 @@ public static class Program
             }
         );
 
-        // Configure logging
-        host.Logging.ClearProviders();
-        host.Logging.AddConsole();
-        host.Logging.SetMinimumLevel(LogLevel.Information);
-
         // Configure options
         host.Services.AddOptions<JournalSettings>()
             .BindConfiguration(JournalSettings.SectionName)
