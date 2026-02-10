@@ -226,13 +226,12 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
     {
         // Check if file is TOC file - skip it to avoid circular references
         var config = Read(directory);
-        if (config != null && !string.IsNullOrEmpty(config.TableOfContents.File))
+        if (config != null
+            && !string.IsNullOrEmpty(config.TableOfContents.File)
+            && string.Equals(file, config.TableOfContents.File, StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(file, config.TableOfContents.File, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogDebug("Skipping TOC file '{File}' from being added as entry", file);
-                return;
-            }
+            _logger.LogDebug("Skipping TOC file '{File}' from being added as entry", file);
+            return;
         }
 
         // Extract filename without path and extension
