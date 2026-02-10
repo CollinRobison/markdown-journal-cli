@@ -159,8 +159,8 @@ public class JournalConfigGenerator(
         foreach (var file in markdownFiles)
         {
             // AddEntry automatically skips TOC files, so no need to check here
-            // Pass null for both name and topicPath - AddEntry will extract everything from the filename
-            _journalConfiguration.AddEntry(directory, null!, file, topicPath: null);
+            // Pass an empty string for name and null for topicPath - AddEntry will extract everything from the filename
+            _journalConfiguration.AddEntry(directory, string.Empty, file, topicPath: null);
         }
 
         // Read back the populated config
