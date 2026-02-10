@@ -82,7 +82,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
         else
         {
-            _logger.LogError("{JournalConfName} already exists at {JournalrcPath}", journalConfName, journalrcPath);
+            _logger.LogWarning("{JournalConfName} already exists at {JournalrcPath}", journalConfName, journalrcPath);
         }
     }
 
