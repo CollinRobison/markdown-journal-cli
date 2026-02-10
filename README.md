@@ -171,8 +171,8 @@ mdjournal add toc --path ~/Documents/MyJournal --name TableOfContents
 ```
 
 ### `add tracking` - Create File Tracking Index
-Creates or updates the tracking index for an existing journal.
-
+Creates the tracking index for an existing journal if one does not already exist.
+If a tracking index file is already present, this command leaves it unchanged.
 **Syntax:**
 ```bash
 mdjournal add tracking [options]
