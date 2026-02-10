@@ -1,5 +1,6 @@
 ﻿using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -87,6 +88,14 @@ public static class Program
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
                     add.AddCommand<AddFileTracking>("tracking");
+                }
+            );
+
+            config.AddBranch<UpdateSettings>(
+                "update",
+                update =>
+                {
+                    update.SetDescription("Updates various aspects of an existing journal.");
                 }
             );
         });
