@@ -52,12 +52,9 @@ public class AddFileTrackingCommandTests
         var host = Host.CreateDefaultBuilder().Build();
         var registrar = new TypeRegistrar(host);
 
-        foreach (var service in services)
+        foreach (var service in services.Where(s => s.ImplementationInstance != null))
         {
-            if (service.ImplementationInstance != null)
-            {
-                registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
-            }
+            registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
         }
 
         _app = new CommandAppTester(registrar);
