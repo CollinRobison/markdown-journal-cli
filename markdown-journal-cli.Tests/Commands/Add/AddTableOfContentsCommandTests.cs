@@ -85,7 +85,6 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal";
         var oldTocFile = "old-toc.md";
-        var newTocFile = $"{_journalSettings.TableOfContentsFileName}.md";
         
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
