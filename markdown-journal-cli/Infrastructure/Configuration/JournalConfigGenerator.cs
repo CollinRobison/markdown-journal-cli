@@ -184,7 +184,7 @@ public class JournalConfigGenerator(
 
         if (string.IsNullOrWhiteSpace(tocFileName))
         {
-            throw new ArgumentException("TOC file name cannot be null o r whitespace.", nameof(tocFileName));
+            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
         }
 
         // Get all markdown files in directory
