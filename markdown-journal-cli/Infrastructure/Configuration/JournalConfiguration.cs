@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualBasic;
 
@@ -61,10 +62,11 @@ internal class NaturalStringComparer : IComparer<string>
     }
 }
 
-public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettings> journalSettings)
+public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettings> journalSettings, ILogger<JournalConfiguration> logger)
     : IJournalConfiguration
 {
     private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly ILogger<JournalConfiguration> _logger = logger;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
@@ -80,7 +82,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
         else
         {
-            Console.WriteLine($"{journalConfName} already exists at {journalrcPath}");
+            _logger.LogWarning("{JournalConfName} already exists at {JournalrcPath}", journalConfName, journalrcPath);
         }
     }
 
@@ -95,7 +97,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
         else
         {
-            Console.WriteLine($"{journalConfName} doesn't exist at {journalrcPath}");
+            _logger.LogDebug("{JournalConfName} doesn't exist at {JournalrcPath}", journalConfName, journalrcPath);
         }
     }
 
@@ -106,7 +108,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         
         if (!_fileSystem.FileExists(journalrcPath))
         {
-            Console.WriteLine($"{journalConfName} doesn't exist at {journalrcPath}");
+            _logger.LogDebug("{JournalConfName} doesn't exist at {JournalrcPath}", journalConfName, journalrcPath);
             return;
         }
 
@@ -120,13 +122,13 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
         catch (JsonException)
         {
-            Console.WriteLine($"Failed to parse {journalConfName} at {journalrcPath}");
+            _logger.LogWarning("Failed to parse {JournalConfName} at {JournalrcPath}", journalConfName, journalrcPath);
             return;
         }
 
         if (existingConfig == null)
         {
-            Console.WriteLine($"Failed to parse {journalConfName} at {journalrcPath}");
+            _logger.LogWarning("Failed to parse {JournalConfName} at {JournalrcPath}", journalConfName, journalrcPath);
             return;
         }
 
@@ -145,7 +147,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
         if (!_fileSystem.FileExists(journalrcPath))
         {
-            Console.WriteLine($"{journalConfName} doesn't exist at {journalrcPath}");
+            _logger.LogDebug("{JournalConfName} doesn't exist at {JournalrcPath}", journalConfName, journalrcPath);
             return null;
         }
 
@@ -156,7 +158,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
         catch (JsonException)
         {
-            Console.WriteLine($"Failed to parse {journalConfName} at {journalrcPath}");
+            _logger.LogWarning("Failed to parse {JournalConfName} at {JournalrcPath}", journalConfName, journalrcPath);
             return null;
         }
     }
@@ -167,7 +169,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         {
             if(IgnoreFileEntryExists(config.TableOfContents.IgnoreFiles ?? [], file))
             {
-                Console.WriteLine($"File '{file}' already exists in the Ignore File List.");
+                _logger.LogDebug("File '{File}' already exists in the Ignore File List", file);
                 return;
             }
 
@@ -185,7 +187,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             // Check if entry already exists
             if (RootEntryExists(config.TableOfContents.RootEntries, file))
             {
-                Console.WriteLine($"Root entry '{file}' already exists in journal configuration.");
+                _logger.LogDebug("Root entry '{File}' already exists in journal configuration", file);
                 return;
             }
 
@@ -202,13 +204,13 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
     {
         if (topicPath == null || topicPath.Length == 0)
         {
-            Console.WriteLine("Topic path cannot be empty.");
+            _logger.LogWarning("Topic path cannot be empty");
             return;
         }
 
         if (maxDepth.HasValue && topicPath.Length > maxDepth.Value)
         {
-            Console.WriteLine($"Topic path depth ({topicPath.Length}) exceeds maximum allowed depth ({maxDepth.Value}).");
+            _logger.LogWarning("Topic path depth ({TopicPathLength}) exceeds maximum allowed depth ({MaxDepth})", topicPath.Length, maxDepth.Value);
             return;
         }
 
@@ -222,6 +224,16 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
     public void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true, bool ignoreFile = false)
     {
+        // Check if file is TOC file - skip it to avoid circular references
+        var config = Read(directory);
+        if (config != null
+            && !string.IsNullOrEmpty(config.TableOfContents.File)
+            && string.Equals(file, config.TableOfContents.File, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogDebug("Skipping TOC file '{File}' from being added as entry", file);
+            return;
+        }
+
         // Extract filename without path and extension
         var fileName = Path.GetFileNameWithoutExtension(file);
         if (ignoreFile)
@@ -231,7 +243,11 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         if (IsRootEntry(fileName))
         {
             // File matches root entry pattern (1a-9z), add as root entry
-            AddRootEntry(directory, name, file);
+            // Extract name from filename if not provided
+            var effectiveName = string.IsNullOrEmpty(name) 
+                ? ExtractEntryNameFromFilename(fileName, isRootEntry: true)
+                : name;
+            AddRootEntry(directory, effectiveName, file);
         }
         else
         {
@@ -243,7 +259,12 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
                 effectiveTopicPath = ParseTopicPathFromFilename(fileName);
             }
             
-            AddTopicEntry(directory, effectiveTopicPath, name, file, maxDepth, sortAlphabetically);
+            // Extract name from filename if not provided
+            var effectiveName = string.IsNullOrEmpty(name)
+                ? ExtractEntryNameFromFilename(fileName, isRootEntry: false)
+                : name;
+            
+            AddTopicEntry(directory, effectiveTopicPath, effectiveName, file, maxDepth, sortAlphabetically);
         }
     }
 
@@ -285,7 +306,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
         else
         {
-            Console.WriteLine($"Entry with file '{file}' not found in journal configuration.");
+            _logger.LogDebug("Entry with file '{File}' not found in journal configuration", file);
         }
 
         return updated;
@@ -360,6 +381,50 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
     /// - "new_entry" → ["New Entry"]
     /// - "Learning-Rust_Programming" → ["Learning", "Rust Programming"]
     /// </summary>
+    /// <summary>
+    /// Extracts entry name from filename. For root entries (1a-9z pattern), extracts the part after the pattern.
+    /// For topic entries, extracts the last part after splitting by heading separator.
+    /// </summary>
+    private string ExtractEntryNameFromFilename(string fileName, bool isRootEntry)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return "Untitled";
+        }
+
+        if (isRootEntry)
+        {
+            // For root entries like "1b-Intro", extract "Intro" after the pattern
+            // Pattern is: digit + letter + separator (e.g., "1b-")
+            var match = Regex.Match(fileName, @"^[0-9][a-zA-Z]" + Regex.Escape(_journalSettings.HeadingSeperator) + "(.+)$");
+            if (match.Success && match.Groups.Count > 1)
+            {
+                var name = match.Groups[1].Value;
+                // Replace both separators with spaces
+                return name
+                    .Replace(_journalSettings.TitleSpaceSeperator, " ")
+                    .Replace(_journalSettings.HeadingSeperator, " ")
+                    .Trim();
+            }
+            // Fallback if pattern doesn't match
+            return fileName
+                .Replace(_journalSettings.TitleSpaceSeperator, " ")
+                .Replace(_journalSettings.HeadingSeperator, " ")
+                .Trim();
+        }
+        else
+        {
+            // For topic entries, get the last part after splitting by heading separator
+            var parts = fileName.Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0)
+            {
+                var lastName = parts[^1];
+                return lastName.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim();
+            }
+            return fileName.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim();
+        }
+    }
+
     private string[] ParseTopicPathFromFilename(string fileName)
     {
         if (string.IsNullOrEmpty(fileName))
@@ -370,8 +435,22 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         // Split by heading separator to get topic hierarchy
         var parts = fileName.Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries);
         
-        // Convert each part: replace title separators with spaces for display
+        if (parts.Length == 0)
+        {
+            return new[] { "General" };
+        }
+        
+        // If only one part, treat it as a single topic
+        if (parts.Length == 1)
+        {
+            var singleTopic = parts[0].Replace(_journalSettings.TitleSpaceSeperator, " ").Trim();
+            return string.IsNullOrEmpty(singleTopic) ? new[] { "General" } : new[] { singleTopic };
+        }
+        
+        // Multiple parts: all except the last are topics, last is entry name
+        // Convert each topic part: replace title separators with spaces for display
         return parts
+            .Take(parts.Length - 1)  // Exclude the last part (entry name)
             .Select(part => part.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim())
             .Where(part => !string.IsNullOrEmpty(part))
             .ToArray();
@@ -458,7 +537,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             }
             else
             {
-                Console.WriteLine($"Entry '{file}' already exists in topic '{currentTopicName}'.");
+                // Entry already exists - static method cannot log
             }
         }
         // Otherwise, process subtopics

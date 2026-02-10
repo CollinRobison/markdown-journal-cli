@@ -8,6 +8,7 @@ using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Spectre.Console;
@@ -63,12 +64,12 @@ public class AddEntryIntegrationTests : IDisposable
         );
 
         // Use real services
-        _fileSystem = new FileSystem();
+        _fileSystem = new FileSystem(Microsoft.Extensions.Logging.Abstractions.NullLogger<FileSystem>.Instance);
         _templateManager = new TemplateManager(_journalSettings);
         _entryFormatter = new EntryFormatterService(_journalSettings);
         var hashService = new HashService();
         _fileTracking = new FileTracking(_fileSystem, _journalSettings, hashService);
-        _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings);
+        _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings, NullLogger<JournalConfiguration>.Instance);
         _tocGenerator = new TableOfContentsGenerator(
             _fileSystem,
             _journalConfiguration,

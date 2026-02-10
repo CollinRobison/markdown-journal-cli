@@ -89,6 +89,35 @@ public class AddEntrySettings : AddSettings
     }
 }
 
-public class AddTableOfContentsSettings : AddSettings { }
+public class AddFileTrackingSettings : AddSettings
+{
+    [CommandOption("--ignoreconfig || --ic")]
+    [Description(
+        "This flag removes the check for the journal configuration file."
+    )]
+    public bool IgnoreJournalConfig {get; set;}
+}
 
-public class AddJournalrcSettings : AddSettings { }
+public class AddTableOfContentsSettings : AddSettings
+{
+    [CommandOption("-n|--name|--toc|--tableofcontents")]
+    [Description(
+        "The name of the table of contents file (without .md extension). If not specified, uses the default name."
+    )]
+    public string? TableOfContentsName { get; set; }
+}
+
+public class AddJournalrcSettings : AddSettings
+{   
+    [CommandOption("--toc|--tableofcontents")]
+    [Description(
+        "The name of the table of contents file to parse (without .md extension). If not specified, uses the default name."
+    )]
+    public string? TableOfContentsFile { get; set; }
+
+    [CommandOption("-n|--name|--journalname")]
+    [Description(
+        "The name of the journal. If not specified, uses the directory name."
+    )]
+    public string? JournalName { get; set; }
+}

@@ -1,4 +1,5 @@
 using markdown_journal_cli.Infrastructure.FileSystem;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;
 
@@ -15,7 +16,7 @@ public class FileSystemTests : IDisposable
 
     public FileSystemTests()
     {
-        _fileSystem = new FileSystem();
+        _fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
         _tempDirectory = Path.Combine(Path.GetTempPath(), $"FileSystemTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempDirectory);
     }
