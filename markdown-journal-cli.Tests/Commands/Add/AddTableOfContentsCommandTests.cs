@@ -76,7 +76,7 @@ public class AddTableOfContentsCommandTests
         _console.Output.ShouldContain("Success");
         _console.Output.ShouldContain("Created");
         _console.Output.ShouldContain(tocFile);
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, null, null), Times.Once);
+        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class AddTableOfContentsCommandTests
             Times.Once
         );
         
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, null, null), Times.Once);
+        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class AddTableOfContentsCommandTests
             Times.Once
         );
         
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, null, null), Times.Once);
+        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class AddTableOfContentsCommandTests
             Times.Never
         );
         
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, null, null), Times.Once);
+        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
     }
 
     #endregion
@@ -301,7 +301,7 @@ public class AddTableOfContentsCommandTests
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
         _mockTocGenerator
-            .Setup(x => x.UpdateTableOfContents(directory, null, null))
+            .Setup(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Throws(new InvalidOperationException("TOC generation failed"));
 
         var settings = new AddTableOfContentsSettings { FilePath = directory };

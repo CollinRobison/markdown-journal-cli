@@ -67,7 +67,11 @@ public class AddTableOfContents(
                 });
             }
 
-            _tableOfContentsGenerator.UpdateTableOfContents(settings.FilePath);
+            _tableOfContentsGenerator.UpdateTableOfContents(
+                settings.FilePath, 
+                createdDate: DateTime.Now, 
+                lastEditedDate: DateTime.Now
+            );
 
             _console.MarkupLine($"[green]Success:[/] Created Table of Contents file '{tocFile}' at '{settings.FilePath}'");
             return 0;

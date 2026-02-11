@@ -57,6 +57,7 @@ public static class Program
         host.Services.AddSingleton<AddJournalrc>();
         host.Services.AddSingleton<AddTableOfContents>();
         host.Services.AddSingleton<AddFileTracking>();
+        host.Services.AddSingleton<UpdateCommand>();
 
         // Build the host and get the service provider
         var builtHost = host.Build();
