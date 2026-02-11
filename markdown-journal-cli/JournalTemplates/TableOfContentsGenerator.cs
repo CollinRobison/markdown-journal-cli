@@ -68,7 +68,7 @@ public class TableOfContentsGenerator(
         // Add dates if provided
         if (createdDate.HasValue)
         {
-            sb.AppendLine($"Created: {createdDate.Value:M/d/yyyy}");
+            sb.AppendLine($"Created: {createdDate.Value:MM/dd/yyyy}");
         }
 
         if (lastEditedDate.HasValue)

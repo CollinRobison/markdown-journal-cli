@@ -245,4 +245,184 @@ Last Edited: 01/01/2024
         Assert.Equal(new DateTime(2023, 12, 25), created.Value);
         Assert.Equal(new DateTime(2024, 1, 1), edited.Value);
     }
+
+    #region UpdateLastEditedDate Tests
+
+    [Fact]
+    public void UpdateLastEditedDate_ReturnsDateLine_WhenContentIsEmpty()
+    {
+        // Arrange
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate("", date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_ReplacesExistingLastEditedLine()
+    {
+        // Arrange
+        var content = @"Created: 01/15/2024
+Last Edited: 01/20/2024
+
+# Title
+
+Some content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        Assert.DoesNotContain("01/20/2024", result);
+        Assert.Contains("Created: 01/15/2024", result);
+        Assert.Contains("# Title", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_InsertsAfterCreatedLine_WhenNoLastEditedExists()
+    {
+        // Arrange
+        var content = @"Created: 01/15/2024
+
+# Title
+
+Some content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        Assert.Contains("Created: 01/15/2024", result);
+        // Last Edited should come after Created
+        var lines = result.Split('\n');
+        var createdIndex = Array.FindIndex(lines, l => l.Trim().StartsWith("Created:"));
+        var editedIndex = Array.FindIndex(lines, l => l.Trim().StartsWith("Last Edited:"));
+        Assert.True(editedIndex > createdIndex, "Last Edited should be after Created");
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_InsertsAtTop_WhenNoMetadataExists()
+    {
+        // Arrange
+        var content = @"# Title
+
+Some content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.StartsWith("Last Edited: 02/10/2026", result);
+        Assert.Contains("# Title", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_PreservesRestOfContent()
+    {
+        // Arrange
+        var content = @"Created: 01/15/2024
+Last Edited: 01/20/2024
+
+# Title
+
+- List item 1
+- List item 2
+
+## Section
+Some paragraph";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("- List item 1", result);
+        Assert.Contains("- List item 2", result);
+        Assert.Contains("## Section", result);
+        Assert.Contains("Some paragraph", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_UsesCustomDateFormat()
+    {
+        // Arrange
+        var content = @"Created: 01/15/2024
+Last Edited: 01/20/2024
+
+# Title";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date, "yyyy-MM-dd");
+
+        // Assert
+        Assert.Contains("Last Edited: 2026-02-10", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_UsesDefaultFormat_WhenNoFormatSpecified()
+    {
+        // Arrange
+        var content = @"Created: 01/15/2024
+Last Edited: 01/20/2024
+
+# Title";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_IsCaseInsensitive_WhenReplacingExistingLine()
+    {
+        // Arrange
+        var content = @"Created: 01/15/2024
+last edited: 01/20/2024
+
+# Title";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        Assert.DoesNotContain("01/20/2024", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_DoesNotModifyLastEditedAfterHeading()
+    {
+        // Arrange — "Last Edited:" after heading should not be touched
+        var content = @"Created: 01/15/2024
+
+# Title
+
+Last Edited: 01/20/2024";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert — the one after the heading should be untouched
+        Assert.Contains("Last Edited: 01/20/2024", result);
+        // A new Last Edited should have been inserted in the header
+        var lines = result.Split('\n');
+        var headerEdited = lines.Take(3).Any(l => l.Contains("02/10/2026"));
+        Assert.True(headerEdited, "New Last Edited date should be in the header");
+    }
+
+    #endregion
 }

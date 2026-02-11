@@ -94,7 +94,7 @@ public class TableOfContentsGeneratorTests
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
 
-        Assert.Contains("Created: 3/23/2025", content);
+        Assert.Contains("Created: 03/23/2025", content);
         Assert.Contains("Last Edited: 01/04/2026", content);
     }
 
@@ -811,7 +811,7 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        Assert.Contains("Created: 1/1/2024", content);
+        Assert.Contains("Created: 01/01/2024", content);
         Assert.Contains("Last Edited: 02/15/2024", content);
     }
 
@@ -877,9 +877,9 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        Assert.Contains("Created: 3/1/2024", content);
+        Assert.Contains("Created: 03/01/2024", content);
         Assert.Contains("Last Edited: 03/15/2024", content);
-        Assert.DoesNotContain("Created: 1/1/2024", content);
+        Assert.DoesNotContain("Created: 01/01/2024", content);
         Assert.DoesNotContain("Last Edited: 01/15/2024", content);
     }
 

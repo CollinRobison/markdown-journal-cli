@@ -1,15 +1,188 @@
 using System;
 using System.ComponentModel;
+using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Infrastructure.Configuration;
+using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.JournalTemplates;
+using Microsoft.Extensions.Options;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Update;
 
 [Description("Updates configuration, table of contents, and file created dates. All items are updated by default unless specific flags are provided")]
-public sealed class UpdateCommand
-() : Command<UpdateJournalSettings>
+public sealed class UpdateCommand(
+    IAnsiConsole console,
+    IFileSystem fileSystem,
+    IFileTracking fileTracking,
+    IJournalConfiguration journalConfiguration,
+    ITableOfContentsGenerator tableOfContentsGenerator,
+    IOptions<JournalSettings> journalSettings
+) : Command<UpdateJournalSettings>
 {
+    private readonly IAnsiConsole _console =
+        console ?? throw new ArgumentNullException(nameof(console));
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+
+    private readonly IFileTracking _fileTracking = 
+        fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+
+    private readonly IJournalConfiguration _journalConfiguration =
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+
+    private readonly ITableOfContentsGenerator _tableOfContentsGenerator =
+        tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
+
+    private readonly JournalSettings _journalSettings = journalSettings.Value;
+
     public override int Execute(CommandContext context, UpdateJournalSettings settings)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var trackingFileName = $".{_journalSettings.AppName}";
+            var trackingFilePath = $"{settings.FilePath}/{trackingFileName}";
+            var journalrcPath = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
+
+            if (!_fileSystem.FileExists(trackingFilePath))
+            {
+                throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
+            }
+
+            bool all = !settings.DateFlag && !settings.ConfigFlag && !settings.TocFlag; 
+
+            if (all || settings.ConfigFlag || settings.TocFlag)
+            {
+                if (!_fileSystem.FileExists(journalrcPath))
+                {
+                    throw new JournalrcNotFoundException(settings.FilePath);
+                }
+            }
+
+            var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
+
+            if (!fileResults.HasChanges)
+            {
+                _console.MarkupLine("[green]Everything is up to date.[/]");
+                return 0;
+            }
+
+            if (all || settings.DateFlag)
+            {
+                UpdateLastEditedDates(settings.FilePath, fileResults);
+            }
+
+            if (all || settings.ConfigFlag)
+            {
+                UpdateJournalConfig(settings.FilePath, fileResults);
+            }
+
+            if (all || settings.TocFlag)
+            {
+                UpdateTableOfContents(settings.FilePath);
+            }
+
+            return 0;
+        }
+        catch (JournalrcNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            return 1;
+        }
+        catch (TrackingIndexNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Updates the "Last Edited:" date for modified files, adds new files to the tracking index,
+    /// and removes deleted files from the tracking index.
+    /// </summary>
+    private void UpdateLastEditedDates(string journalPath, ChangeDetectionResult fileResults)
+    {
+        // Update "Last Edited:" for modified files and re-hash
+        foreach (var relativePath in fileResults.ModifiedFiles)
+        {
+            var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
+            var content = _fileSystem.GetFileContent(absolutePath);
+
+            var updatedContent = MarkdownMetadataParser.UpdateLastEditedDate(
+                content, DateTime.Now, _journalSettings.DateFormat);
+
+            var directory = Path.GetDirectoryName(absolutePath) ?? journalPath;
+            var fileName = Path.GetFileName(absolutePath);
+            _fileSystem.UpdateFile(directory, fileName, updatedContent);
+
+            _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+
+            _console.MarkupLine($"[green]Updated:[/] {relativePath}");
+        }
+
+        // Track newly added files
+        foreach (var relativePath in fileResults.AddedFiles)
+        {
+            _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+            _console.MarkupLine($"[green]Tracked:[/] {relativePath}");
+        }
+
+        // Remove deleted files from tracking
+        foreach (var relativePath in fileResults.DeletedFiles)
+        {
+            _fileTracking.RemoveFileFromIndex(journalPath, relativePath);
+            _console.MarkupLine($"[yellow]Removed:[/] {relativePath}");
+        }
+
+        if (fileResults.ModifiedFiles.Count > 0)
+            _console.MarkupLine($"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]");
+        if (fileResults.AddedFiles.Count > 0)
+            _console.MarkupLine($"[green]Tracked {fileResults.AddedFiles.Count} new file(s).[/]");
+        if (fileResults.DeletedFiles.Count > 0)
+            _console.MarkupLine($"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]");
+    }
+
+    /// <summary>
+    /// Incrementally updates the .journalrc configuration: adds new entries, removes deleted entries.
+    /// </summary>
+    private void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults)
+    {
+        foreach (var relativePath in fileResults.AddedFiles)
+        {
+            _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
+            _console.MarkupLine($"[green]Config added:[/] {relativePath}");
+        }
+
+        foreach (var relativePath in fileResults.DeletedFiles)
+        {
+            _journalConfiguration.RemoveEntry(journalPath, relativePath);
+            _console.MarkupLine($"[yellow]Config removed:[/] {relativePath}");
+        }
+
+        if (fileResults.AddedFiles.Count > 0 || fileResults.DeletedFiles.Count > 0)
+            _console.MarkupLine($"[green]Journal configuration updated.[/]");
+        else
+            _console.MarkupLine("[dim]No configuration changes needed.[/]");
+    }
+
+    /// <summary>
+    /// Regenerates the table of contents markdown file from the current journal configuration.
+    /// </summary>
+    private void UpdateTableOfContents(string journalPath)
+    {
+        _tableOfContentsGenerator.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+
+        // Track the TOC file in the index so it doesn't show as "added" on next run
+        var tocFileName = $"{_journalSettings.TableOfContentsFileName}.md";
+        _fileTracking.UpdateFileInIndex(journalPath, tocFileName);
+
+        _console.MarkupLine($"[green]Table of contents updated.[/]");
     }
 }

@@ -46,4 +46,7 @@ public class JournalSettings
     public string HeadingSeperator { get; set; } = "-";
 
     public bool CapitalizeTopicHeadings { get; set; } = true;
+
+    [Required]
+    public string DateFormat { get; set; } = "MM/dd/yyyy";
 }

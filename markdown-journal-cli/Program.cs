@@ -96,6 +96,7 @@ public static class Program
                 update =>
                 {
                     update.SetDescription("Updates various aspects of an existing journal.");
+                    update.AddCommand<UpdateCommand>("journal");
                 }
             );
         });
