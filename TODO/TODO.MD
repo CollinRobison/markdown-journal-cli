@@ -21,3 +21,5 @@
 
 - [ ] create flow chart from written notes on the flow between toc - journalrc - tracking file
 
+- [ ] add a tag to the update journal that allows for updating tracking without updating dats of entries
+
