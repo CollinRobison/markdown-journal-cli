@@ -154,8 +154,19 @@ public sealed class UpdateCommand(
     /// </summary>
     private void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults)
     {
+        // Get the TOC filename to exclude it from being added as an entry
+        var config = _journalConfiguration.Read(journalPath);
+        var tocFile = config?.TableOfContents.File;
+        
         foreach (var relativePath in fileResults.AddedFiles)
         {
+            // Skip the TOC file - it should never be an entry
+            if (!string.IsNullOrEmpty(tocFile) && 
+                string.Equals(relativePath, tocFile, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            
             _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
             _console.MarkupLine($"[green]Config added:[/] {relativePath}");
         }

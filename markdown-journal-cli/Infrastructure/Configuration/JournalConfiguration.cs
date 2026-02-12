@@ -132,8 +132,19 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             return;
         }
 
+        // Capture old TOC file before applying changes
+        var oldTocFile = existingConfig.TableOfContents?.File;
+
         // Only modify the properties specified by the user
         config(existingConfig);
+
+        // If TOC file changed, remove the new TOC file from entries (in case it was already there)
+        var newTocFile = existingConfig.TableOfContents?.File;
+        if (!string.IsNullOrEmpty(newTocFile) && 
+            !string.Equals(oldTocFile, newTocFile, StringComparison.OrdinalIgnoreCase))
+        {
+            RemoveEntryFromConfig(existingConfig, newTocFile);
+        }
 
         // Save with all values (existing + updated)
         string updatedJsonString = JsonSerializer.Serialize(existingConfig, opts);
@@ -425,6 +436,25 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
         var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
         return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase) || fileName.ToLower().Equals("readme");
+    }
+
+    /// <summary>
+    /// Removes an entry from the config object directly (used internally, doesn't persist).
+    /// </summary>
+    private static void RemoveEntryFromConfig(JournalConfig config, string file)
+    {
+        // Check root entries
+        var rootEntries = config.TableOfContents.RootEntries?.ToList() ?? new List<Entries>();
+        rootEntries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
+        config.TableOfContents.RootEntries = rootEntries.ToArray();
+
+        // Check topics (RemoveEntryFromTopics already handles cleanup of empty topics)
+        if (config.TableOfContents.Structure?.Topics != null)
+        {
+            var topics = config.TableOfContents.Structure.Topics.ToList();
+            RemoveEntryFromTopics(topics, file);
+            config.TableOfContents.Structure.Topics = topics.ToArray();
+        }
     }
 
     /// <summary>

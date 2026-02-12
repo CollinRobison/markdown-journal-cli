@@ -75,6 +75,7 @@ public static class Program
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
             config.AddExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
+            config.AddExample("update", "--path", "Source/Repos/TestJournal", "journal");
 
             // New
             config.AddCommand<NewCommand>("new");
@@ -97,7 +98,8 @@ public static class Program
                 update =>
                 {
                     update.SetDescription("Updates various aspects of an existing journal.");
-                    update.AddCommand<UpdateCommand>("journal");
+                    update.AddCommand<UpdateCommand>("journal")
+                    .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");;
                 }
             );
         });

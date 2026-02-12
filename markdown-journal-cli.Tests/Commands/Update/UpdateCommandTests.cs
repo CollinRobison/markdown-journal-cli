@@ -870,4 +870,91 @@ public class UpdateCommandTests
     }
 
     #endregion
+
+    #region TOC File Exclusion Tests
+
+    [Fact]
+    public void Execute_ShouldNotAddTocFileAsEntry_WhenConfigFlagSet()
+    {
+        // Arrange — create config with TOC file setting
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath);
+
+        // Add the TOC file as if it was just created
+        var tocFilePath = Path.Combine(_testPath, "1a-TableOfContents.md");
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# Table of Contents");
+        _hashService.SetHash(tocFilePath, "hash-toc");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, ConfigFlag = true };
+
+        // Act
+        command.Execute(CreateCommandContext(), settings);
+
+        // Assert — TOC file should NOT be added to config
+        var config = _journalConfiguration.Read(_testPath);
+        config.ShouldNotBeNull();
+        config.TableOfContents.RootEntries.ShouldBeEmpty();
+        config.TableOfContents.Structure.Topics.ShouldBeEmpty();
+        
+        // Output should not show TOC file being added
+        _console.Output.ShouldNotContain("Config added: 1a-TableOfContents.md");
+    }
+
+    [Fact]
+    public void Execute_ShouldNotAddTocFileAsEntry_WhenAllFlagsDefault()
+    {
+        // Arrange
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath);
+
+        var tocFilePath = Path.Combine(_testPath, "1a-TableOfContents.md");
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# Table of Contents");
+        _hashService.SetHash(tocFilePath, "hash-toc");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath }; // all flags
+
+        // Act
+        command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        var config = _journalConfiguration.Read(_testPath);
+        config.ShouldNotBeNull();
+        config.TableOfContents.RootEntries.ShouldBeEmpty();
+        config.TableOfContents.Structure.Topics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Execute_ShouldNotAddCustomTocFileAsEntry()
+    {
+        // Arrange — Use default TOC filename to test the exclusion logic
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath);
+
+        // Manually change the TOC file in the config after creation to simulate a custom name
+        _journalConfiguration.Update(_testPath, c =>
+        {
+            c.TableOfContents.File = "custom-toc.md";
+        });
+
+        // Create the custom TOC file
+        var tocFilePath = Path.Combine(_testPath, "custom-toc.md");
+        _fileSystem.CreateFile(_testPath, "custom-toc.md", "# Table of Contents");
+        _hashService.SetHash(tocFilePath, "hash-custom-toc");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath };
+
+        // Act
+        command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        var updatedConfig = _journalConfiguration.Read(_testPath);
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.ShouldBeEmpty();
+        _console.Output.ShouldNotContain("Config added: custom-toc.md");
+    }
+
+    #endregion
 }
