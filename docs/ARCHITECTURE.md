@@ -280,6 +280,12 @@ AddEntry
     ├── IFileTracking.UpdateFileInIndex()
     └── ITableOfContentsGenerator.UpdateTableOfContents()
 
+UpdateCommand
+    ├── IFileTracking.DetectChangesWithoutUpdate()
+    ├── MarkdownMetadataParser.UpdateLastEditedDate()
+    ├── IJournalConfiguration.AddEntry() / RemoveEntry()
+    └── ITableOfContentsGenerator.UpdateTableOfContents()
+
 AddJournalrc
     └── IJournalConfigGenerator.GenerateFromTableOfContents()
             └── ITableOfContentsMarkdownParser.ParseTableOfContents()
@@ -440,17 +446,130 @@ IFileTracking
 - Works across sessions
 - Cryptographically secure (SHA256)
 
+### Metadata Update Pattern
+
+**Purpose:** Automatically maintain "Last Edited:" dates in markdown files when content changes.
+
+**Implementation:**
+- Located in `MarkdownMetadataParser.UpdateLastEditedDate()`
+- Searches metadata header (first 6 non-empty lines before heading)
+- Replaces existing "Last Edited:" line or inserts after "Created:" line
+- Preserves file structure and existing metadata
+
+**Metadata Header Format:**
+```markdown
+Created: 01/15/2025
+Last Edited: 02/11/2026
+
+# Entry Title
+Content here...
+```
+
+**Update Algorithm:**
+1. Split content into lines
+2. Search metadata header (stops at first heading with `#`)
+3. If "Last Edited:" line exists, replace it
+4. If not found, insert after "Created:" line (or at top if no "Created:" line)
+5. Format date according to journal settings
+
+**Benefits:**
+- Automatic change tracking
+- Preserves existing metadata
+- Configurable date format
+- Works with manual file edits (detected via hash changes)
+
+### TOC File Exclusion Pattern
+
+**Problem:** The table of contents file can accidentally be added to `.journalrc` as an entry, causing it to appear in its own contents (circular reference).
+
+**Multi-Layer Solution:**
+
+**1. Prevention at Entry Time (`AddEntry`):**
+```csharp
+public void AddEntry(string directory, string name, string file, ...)
+{
+    // Check if file is TOC file - skip it
+    var config = Read(directory);
+    if (config != null && string.Equals(file, config.TableOfContents.File, ...))
+    {
+        return; // Never add TOC file as entry
+    }
+    // ... rest of add logic
+}
+```
+
+**2. Auto-Cleanup on TOC Change (`JournalConfiguration.Update`):**
+```csharp
+public void Update(string directory, Action<JournalConfig> config)
+{
+    var oldTocFile = existingConfig.TableOfContents?.File;
+    config(existingConfig); // Apply user changes
+    var newTocFile = existingConfig.TableOfContents?.File;
+    
+    // If TOC file changed, remove new TOC file from entries
+    if (newTocFile != oldTocFile)
+    {
+        RemoveEntryFromConfig(existingConfig, newTocFile);
+    }
+}
+```
+
+**3. Skip During Update Command (`UpdateCommand`):**
+```csharp
+private void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults)
+{
+    var tocFile = config?.TableOfContents.File;
+    
+    foreach (var relativePath in fileResults.AddedFiles)
+    {
+        // Skip TOC file when processing added files
+        if (string.Equals(relativePath, tocFile, ...)) continue;
+        
+        _journalConfiguration.AddEntry(...);
+    }
+}
+```
+
+**4. Filter During TOC Generation (`TableOfContentsGenerator`):**
+```csharp
+public string GenerateTableOfContents(JournalConfig config)
+{
+    var tocFile = config.TableOfContents.File;
+    var ignoreFiles = config.TableOfContents.IgnoreFiles ?? [];
+    
+    // Auto-append TOC file to ignore list during rendering
+    var ignoreFilesWithToc = ignoreFiles.Append(tocFile).ToArray();
+    
+    // Filter entries using expanded ignore list
+    // ...
+}
+```
+
+**Benefits:**
+- **Defense in Depth**: Multiple layers prevent the issue
+- **Auto-Recovery**: If TOC file somehow becomes an entry, it's automatically removed
+- **User-Proof**: Works even if user manually edits configuration
+- **No Breaking Changes**: Works with existing journals
+
+**Edge Cases Handled:**
+- User changes TOC filename → Old entry removed, new file excluded
+- Manual config edit adds TOC → Update() cleans it up
+- External file sync adds TOC → UpdateCommand skips it
+- Direct AddEntry call with TOC → Rejected at entry point
+
 ## �🧪 Testing Architecture
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (578 tests)
+markdown-journal-cli.Tests/ (634 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs          # New journal command tests
-│   └── Add/
-│       ├── AddEntryCommandTests.cs     # Entry creation tests
-│       ├── AddJournalrcCommandTests.cs # Config creation tests
-│       └── AddTableOfContentsCommandTests.cs
+│   ├── Add/
+│   │   ├── AddEntryCommandTests.cs     # Entry creation tests
+│   │   ├── AddJournalrcCommandTests.cs # Config creation tests
+│   │   └── AddTableOfContentsCommandTests.cs
+│   └── Update/
+│       └── UpdateCommandTests.cs   # Journal synchronization tests
 ├── Infrastructure/
 │   ├── FileSystemTests.cs          # File operations
 │   ├── FileTrackingTests.cs        # Change detection
@@ -582,6 +701,17 @@ public interface IFileSystemAsync
 ### Decision: Ignore Files in Configuration
 **Rationale:** Flexible control over TOC without deleting files
 **Alternatives:** Separate ignore file like .gitignore, file naming conventions
+**Trade-offs:** Requires configuration management, but provides fine-grained control
+
+### Decision: Multi-Layer TOC Exclusion
+**Rationale:** Defense in depth prevents TOC file from appearing in its own contents
+**Alternatives:** Single point of checking (e.g., only at render time)
+**Trade-offs:** More code complexity (4 check points), but bulletproof against edge cases
+
+### Decision: Automatic Last Edited Updates
+**Rationale:** Reduces manual maintenance, leverages existing change detection
+**Alternatives:** Manual date updates, file system modification times
+**Trade-offs:** Modifies file content (not just metadata), but provides consistent, visible tracking
 **Trade-offs:** Centralized in .journalrc, easier to manage but less discoverable
 
 ### Decision: Constructor Injection over Property Injection
