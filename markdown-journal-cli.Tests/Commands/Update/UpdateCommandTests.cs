@@ -208,6 +208,224 @@ public class UpdateCommandTests
 
     #endregion
 
+    #region Tracking Index Only
+
+    [Fact]
+    public void Execute_UpdatesTrackingOnly_WithoutModifyingMetadata_WhenTrackingFlagSet()
+    {
+        // Arrange — create file and index with hash-a, then change hash to hash-b
+        var filePath = Path.Combine(_testPath, "note.md");
+        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+
+        // Simulate modification by changing the hash
+        _hashService.SetHash(filePath, "hash-b");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        var updatedContent = _fileSystem.GetFileContent(filePath);
+        updatedContent.ShouldNotBeNull();
+        // Date should NOT have been updated - tracking only
+        updatedContent.ShouldContain("Last Edited: 01/01/2024");
+        updatedContent.ShouldContain("Created: 01/01/2024");
+        _console.Output.ShouldContain("Updated:");
+        
+        // But tracking index should be updated - verify no changes on next check
+        var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
+        changeResults.HasChanges.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Execute_TrackingFlagOverridesDateFlag_DoesNotUpdateMetadata()
+    {
+        // Arrange
+        var filePath = Path.Combine(_testPath, "note.md");
+        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+        _hashService.SetHash(filePath, "hash-b");
+
+        var command = CreateCommand();
+        // Both flags set - tracking should override date
+        var settings = new UpdateJournalSettings { FilePath = _testPath, DateFlag = true, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        var updatedContent = _fileSystem.GetFileContent(filePath);
+        updatedContent.ShouldNotBeNull();
+        // Date should NOT be updated because tracking flag overrides
+        updatedContent.ShouldContain("Last Edited: 01/01/2024");
+    }
+
+    [Fact]
+    public void Execute_TrackingFlag_HandlesAddedFiles()
+    {
+        // Arrange — start with empty index, add a file
+        _fileTracking.UpdateIndex(_testPath);
+        
+        var filePath = Path.Combine(_testPath, "new-note.md");
+        _fileSystem.CreateFile(_testPath, "new-note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note");
+        _hashService.SetHash(filePath, "hash-new");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("Tracked:");
+        
+        // Verify file is now tracked
+        var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
+        changeResults.HasChanges.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Execute_TrackingFlag_HandlesDeletedFiles()
+    {
+        // Arrange — create file, index it, then delete it
+        var filePath = Path.Combine(_testPath, "note.md");
+        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+        
+        // Delete the file
+        _fileSystem.DeleteFile(filePath);
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("Removed:");
+        
+        // Verify file is removed from tracking
+        var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
+        changeResults.HasChanges.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Execute_TrackingFlag_DoesNotUpdateConfig()
+    {
+        // Arrange — add a new file
+        _fileTracking.UpdateIndex(_testPath);
+        
+        var filePath = Path.Combine(_testPath, "new-note.md");
+        _fileSystem.CreateFile(_testPath, "new-note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note");
+        _hashService.SetHash(filePath, "hash-new");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        // Config should NOT be updated when only tracking flag is set
+        _console.Output.ShouldNotContain("Config added:");
+        
+        // Verify config doesn't have the new entry
+        var config = _journalConfiguration.Read(_testPath);
+        config.ShouldNotBeNull();
+        var allEntries = config.TableOfContents.RootEntries
+            .Concat(config.TableOfContents.Structure.Topics.SelectMany(t => t.Entries))
+            .ToList();
+        allEntries.ShouldNotContain(e => e.File == "new-note.md");
+    }
+
+    [Fact]
+    public void Execute_TrackingFlag_DoesNotUpdateToc()
+    {
+        // Arrange
+        var filePath = Path.Combine(_testPath, "note.md");
+        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+        _hashService.SetHash(filePath, "hash-b");
+
+        // Get initial TOC state
+        var tocPath = Path.Combine(_testPath, "1a-TableOfContents.md");
+        var initialTocContent = _fileSystem.FileExists(tocPath) ? _fileSystem.GetFileContent(tocPath) : null;
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        _console.Output.ShouldNotContain("Table of contents updated");
+        
+        // TOC should be unchanged (or not exist if it didn't before)
+        var finalTocContent = _fileSystem.FileExists(tocPath) ? _fileSystem.GetFileContent(tocPath) : null;
+        finalTocContent.ShouldBe(initialTocContent);
+    }
+
+    [Fact]
+    public void Execute_TrackingFlag_WorksWithMultipleFiles()
+    {
+        // Arrange
+        var file1 = Path.Combine(_testPath, "note1.md");
+        var file2 = Path.Combine(_testPath, "note2.md");
+        var file3 = Path.Combine(_testPath, "note3.md");
+
+        _fileSystem.CreateFile(_testPath, "note1.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 1");
+        _fileSystem.CreateFile(_testPath, "note2.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 2");
+        _fileSystem.CreateFile(_testPath, "note3.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 3");
+
+        _hashService.SetHash(file1, "hash-a");
+        _hashService.SetHash(file2, "hash-b");
+        _hashService.SetHash(file3, "hash-c");
+        _fileTracking.UpdateIndex(_testPath);
+
+        // Modify all files
+        _hashService.SetHash(file1, "hash-a-modified");
+        _hashService.SetHash(file2, "hash-b-modified");
+        _hashService.SetHash(file3, "hash-c-modified");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        
+        // None of the files should have updated dates
+        var content1 = _fileSystem.GetFileContent(file1);
+        content1.ShouldContain("Last Edited: 01/01/2024");
+
+        var content2 = _fileSystem.GetFileContent(file2);
+        content2.ShouldContain("Last Edited: 01/01/2024");
+
+        var content3 = _fileSystem.GetFileContent(file3);
+        content3.ShouldContain("Last Edited: 01/01/2024");
+        
+        // But tracking should be updated
+        var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
+        changeResults.HasChanges.ShouldBeFalse();
+    }
+
+    #endregion
+
     #region Multiple Files
 
     [Fact]
@@ -751,7 +969,7 @@ public class UpdateCommandTests
     }
 
     #endregion
-
+ 
     #region Error Handling
 
     [Fact]
