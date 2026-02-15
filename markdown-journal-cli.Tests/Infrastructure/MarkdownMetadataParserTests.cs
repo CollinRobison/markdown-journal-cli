@@ -424,5 +424,77 @@ Last Edited: 01/20/2024";
         Assert.True(headerEdited, "New Last Edited date should be in the header");
     }
 
+    [Fact]
+    public void UpdateLastEditedDate_PreservesCRLFLineEndings()
+    {
+        // Arrange - content with CRLF line endings
+        var content = "Created: 01/15/2024\r\nLast Edited: 01/20/2024\r\n\r\n# Title\r\n\r\nSome content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        // Verify CRLF is preserved
+        Assert.Contains("\r\n", result);
+        // Count CRLF occurrences should be same as input (replacing line, not adding/removing)
+        var inputCrlfCount = content.Split(new[] { "\r\n" }, StringSplitOptions.None).Length - 1;
+        var resultCrlfCount = result.Split(new[] { "\r\n" }, StringSplitOptions.None).Length - 1;
+        Assert.Equal(inputCrlfCount, resultCrlfCount);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_PreservesLFLineEndings()
+    {
+        // Arrange - content with LF line endings
+        var content = "Created: 01/15/2024\nLast Edited: 01/20/2024\n\n# Title\n\nSome content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        // Verify no CRLF is present (only LF)
+        Assert.DoesNotContain("\r\n", result);
+        Assert.Contains("\n", result);
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_InsertsWithCRLFWhenContentUsesCRLF()
+    {
+        // Arrange - content with CRLF but no Last Edited line
+        var content = "Created: 01/15/2024\r\n\r\n# Title\r\n\r\nSome content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        // Verify the inserted line uses CRLF
+        var lines = result.Split(new[] { "\r\n" }, StringSplitOptions.None);
+        Assert.Contains(lines, l => l == "Last Edited: 02/10/2026");
+    }
+
+    [Fact]
+    public void UpdateLastEditedDate_InsertsWithLFWhenContentUsesLF()
+    {
+        // Arrange - content with LF but no Last Edited line
+        var content = "Created: 01/15/2024\n\n# Title\n\nSome content";
+        var date = new DateTime(2026, 2, 10);
+
+        // Act
+        var result = MarkdownMetadataParser.UpdateLastEditedDate(content, date);
+
+        // Assert
+        Assert.Contains("Last Edited: 02/10/2026", result);
+        // Verify no CRLF is present (only LF)
+        Assert.DoesNotContain("\r\n", result);
+        var lines = result.Split('\n');
+        Assert.Contains(lines, l => l == "Last Edited: 02/10/2026");
+    }
+
     #endregion
 }
