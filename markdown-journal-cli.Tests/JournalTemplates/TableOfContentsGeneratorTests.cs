@@ -94,7 +94,7 @@ public class TableOfContentsGeneratorTests
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
 
-        Assert.Contains("Created: 3/23/2025", content);
+        Assert.Contains("Created: 03/23/2025", content);
         Assert.Contains("Last Edited: 01/04/2026", content);
     }
 
@@ -811,7 +811,7 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        Assert.Contains("Created: 1/1/2024", content);
+        Assert.Contains("Created: 01/01/2024", content);
         Assert.Contains("Last Edited: 02/15/2024", content);
     }
 
@@ -877,9 +877,9 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        Assert.Contains("Created: 3/1/2024", content);
+        Assert.Contains("Created: 03/01/2024", content);
         Assert.Contains("Last Edited: 03/15/2024", content);
-        Assert.DoesNotContain("Created: 1/1/2024", content);
+        Assert.DoesNotContain("Created: 01/01/2024", content);
         Assert.DoesNotContain("Last Edited: 01/15/2024", content);
     }
 
@@ -1497,4 +1497,168 @@ public class TableOfContentsGeneratorTests
     }
 
     #endregion
+
+    #region TOC File Filtering Tests
+
+    [Fact]
+    public void UpdateTableOfContents_ShouldNotIncludeTocFileInOutput()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                File = "newtoc.md",
+                RootEntries =
+                [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Newtoc", File = "newtoc.md" }, // TOC file shouldn't appear
+                    new() { Name = "Other", File = "other.md" }
+                ],
+                Structure = new Structure { Topics = [] }
+            }
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/newtoc.md");
+        Assert.Contains("[Introduction](1b-Intro.md)", content);
+        Assert.Contains("[Other](other.md)", content);
+        Assert.DoesNotContain("[Newtoc](newtoc.md)", content);
+        Assert.DoesNotContain("newtoc.md", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_ShouldNotIncludeTocFileInTopics()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                File = "newtoc.md",
+                RootEntries = [],
+                Structure = new Structure
+                {
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "newtoc",
+                            Entries =
+                            [
+                                new() { Name = "Newtoc", File = "newtoc.md" } // Should be filtered
+                            ],
+                            Subtopics = null
+                        },
+                        new Topic
+                        {
+                            Name = "other",
+                            Entries =
+                            [
+                                new() { Name = "Other", File = "other.md" }
+                            ],
+                            Subtopics = null
+                        }
+                    ]
+                }
+            }
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/newtoc.md");
+        // Topic with only TOC file should not appear (filtered out completely)
+        Assert.DoesNotContain("## Newtoc", content);
+        Assert.DoesNotContain("newtoc.md", content);
+        // Other topic should appear as linked heading (since it has one entry with matching name)
+        Assert.Contains("## [Other](other.md)", content);
+        // Should not have a duplicate entry line
+        Assert.DoesNotContain("  - [Other](other.md)", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_ShouldFilterTocFileCaseInsensitive()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                File = "newtoc.md",
+                RootEntries =
+                [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Newtoc", File = "NewTOC.md" } // Different casing
+                ],
+                Structure = new Structure { Topics = [] }
+            }
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/newtoc.md");
+        Assert.DoesNotContain("NewTOC.md", content);
+        Assert.DoesNotContain("[Newtoc]", content);
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_ShouldFilterTocFileFromIgnoreFilesList()
+    {
+        // Arrange
+        var journalDir = "/test/journal";
+        _fileSystem.CreateDirectory(journalDir);
+
+        var config = new JournalConfig
+        {
+            JournalName = "TestJournal",
+            TableOfContents = new TableOfContents
+            {
+                File = "toc.md",
+                IgnoreFiles = ["draft.md"], // toc.md added automatically
+                RootEntries =
+                [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "TOC", File = "toc.md" },
+                    new() { Name = "Draft", File = "draft.md" }
+                ],
+                Structure = new Structure { Topics = [] }
+            }
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _generator.UpdateTableOfContents(journalDir);
+
+        // Assert
+        var content = _fileSystem.GetFileContent($"{journalDir}/toc.md");
+        Assert.Contains("[Introduction](1b-Intro.md)", content);
+        // Both toc.md and draft.md should be filtered out
+        Assert.DoesNotContain("[TOC](toc.md)", content);
+        Assert.DoesNotContain("[Draft](draft.md)", content);
+    }
+
+    #endregion
 }
+

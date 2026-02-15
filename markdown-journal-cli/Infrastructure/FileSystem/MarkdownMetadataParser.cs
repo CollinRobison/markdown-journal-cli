@@ -52,4 +52,57 @@ public static class MarkdownMetadataParser
 
         return (createdDate, lastEditedDate);
     }
+
+    /// <summary>
+    /// Updates the "Last Edited:" date line in markdown content.
+    /// If the line exists in the metadata header (first few lines before any heading), it is replaced.
+    /// If no "Last Edited:" line is found, one is inserted after the "Created:" line, 
+    /// or at the top of the file if neither exists.
+    /// </summary>
+    /// <param name="content">The markdown file content.</param>
+    /// <param name="date">The date to set as the last edited date.</param>
+    /// <param name="dateFormat">The date format string (e.g. "MM/dd/yyyy"). Defaults to "MM/dd/yyyy".</param>
+    /// <returns>The updated markdown content with the new last edited date.</returns>
+    public static string UpdateLastEditedDate(string content, DateTime date, string dateFormat = "MM/dd/yyyy")
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return $"Last Edited: {date.ToString(dateFormat)}\n";
+        }
+
+        // Detect the newline style used in the content (CRLF or LF)
+        var newline = content.Contains("\r\n") ? "\r\n" : "\n";
+        
+        var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+        var dateString = $"Last Edited: {date.ToString(dateFormat)}";
+        int createdLineIndex = -1;
+
+        // Search the metadata header (first 6 non-empty lines, stop at heading)
+        int nonEmptyCount = 0;
+        for (int i = 0; i < lines.Length && nonEmptyCount < 6; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+            nonEmptyCount++;
+
+            if (trimmed.StartsWith('#')) break;
+
+            if (trimmed.StartsWith("Last Edited:", StringComparison.OrdinalIgnoreCase))
+            {
+                lines[i] = dateString;
+                return string.Join(newline, lines);
+            }
+
+            if (trimmed.StartsWith("Created:", StringComparison.OrdinalIgnoreCase))
+            {
+                createdLineIndex = i;
+            }
+        }
+
+        // No existing "Last Edited:" line found — insert one
+        var result = new List<string>(lines);
+        int insertAt = createdLineIndex >= 0 ? createdLineIndex + 1 : 0;
+        result.Insert(insertAt, dateString);
+        return string.Join(newline, result);
+    }
 }

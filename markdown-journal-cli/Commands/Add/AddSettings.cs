@@ -9,7 +9,7 @@ public class AddSettings : CommandSettings
 {
     [CommandOption("-p|--path")]
     [Description(
-        "Specify the path where the journal will be created. If not specified, it will be created in the current directory."
+        "Specify the path where the file will be created. If not specified, it will be created in the current directory."
     )]
     [DefaultValue(".")]
     public string FilePath { get; set; } = ".";

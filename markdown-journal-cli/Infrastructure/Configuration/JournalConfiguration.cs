@@ -132,8 +132,19 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             return;
         }
 
+        // Capture old TOC file before applying changes
+        var oldTocFile = existingConfig.TableOfContents?.File;
+
         // Only modify the properties specified by the user
         config(existingConfig);
+
+        // If TOC file changed, remove the new TOC file from entries (in case it was already there)
+        var newTocFile = existingConfig.TableOfContents?.File;
+        if (!string.IsNullOrEmpty(newTocFile) && 
+            !string.Equals(oldTocFile, newTocFile, StringComparison.OrdinalIgnoreCase))
+        {
+            RemoveEntryFromConfig(existingConfig, newTocFile);
+        }
 
         // Save with all values (existing + updated)
         string updatedJsonString = JsonSerializer.Serialize(existingConfig, opts);
@@ -312,6 +323,68 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         return updated;
     }
 
+    public bool RemoveEntry(string directory, string file)
+    {
+        var config = Read(directory);
+        if (config == null)
+        {
+            return false;
+        }
+
+        bool removed = false;
+
+        // Try removing from root entries
+        var rootEntries = config.TableOfContents.RootEntries.ToList();
+        var originalCount = rootEntries.Count;
+        rootEntries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
+        if (rootEntries.Count < originalCount)
+        {
+            config.TableOfContents.RootEntries = rootEntries.ToArray();
+            removed = true;
+        }
+
+        // If not found in root entries, search in topics
+        if (!removed)
+        {
+            var topics = config.TableOfContents.Structure.Topics.ToList();
+            removed = RemoveEntryFromTopics(topics, file);
+            if (removed)
+            {
+                config.TableOfContents.Structure.Topics = topics.ToArray();
+            }
+        }
+
+        if (removed)
+        {
+            var actualDirectory = GetJournalrcPaths(directory).directory;
+            var journalConfName = _journalSettings.JournalConfigFileName;
+            string updatedJsonString = JsonSerializer.Serialize(config, opts);
+            _fileSystem.UpdateFile(actualDirectory, journalConfName, updatedJsonString);
+        }
+        else
+        {
+            _logger.LogDebug("Entry with file '{File}' not found in journal configuration", file);
+        }
+
+        return removed;
+    }
+
+    public void RegenerateStructure(string directory, IEnumerable<string> files)
+    {
+        Update(directory, config =>
+        {
+            // Clear existing structure but preserve JournalName, IgnoreFiles, Extensions, TOC file
+            config.TableOfContents.RootEntries = [];
+            config.TableOfContents.Structure = new Structure { Topics = [] };
+        });
+
+        // Re-add all files — AddEntry handles root vs topic classification
+        foreach (var file in files)
+        {
+            AddEntry(directory, string.Empty, file);
+        }
+    }
+
     #region Private Helper Methods
 
     /// <summary>
@@ -363,6 +436,25 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
         var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
         return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase) || fileName.ToLower().Equals("readme");
+    }
+
+    /// <summary>
+    /// Removes an entry from the config object directly (used internally, doesn't persist).
+    /// </summary>
+    private static void RemoveEntryFromConfig(JournalConfig config, string file)
+    {
+        // Check root entries
+        var rootEntries = config.TableOfContents.RootEntries?.ToList() ?? new List<Entries>();
+        rootEntries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
+        config.TableOfContents.RootEntries = rootEntries.ToArray();
+
+        // Check topics (RemoveEntryFromTopics already handles cleanup of empty topics)
+        if (config.TableOfContents.Structure?.Topics != null)
+        {
+            var topics = config.TableOfContents.Structure.Topics.ToList();
+            RemoveEntryFromTopics(topics, file);
+            config.TableOfContents.Structure.Topics = topics.ToArray();
+        }
     }
 
     /// <summary>
@@ -554,5 +646,55 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
             existingTopic.Subtopics = subtopics.ToArray();
         }
     }
+
+    /// <summary>
+    /// Recursively removes an entry by filename from the topic hierarchy.
+    /// Cleans up empty topics after removal.
+    /// </summary>
+    private static bool RemoveEntryFromTopics(List<Topic> topics, string file)
+    {
+        for (int i = topics.Count - 1; i >= 0; i--)
+        {
+            var topic = topics[i];
+
+            // Try removing from this topic's entries
+            var entries = topic.Entries.ToList();
+            var originalCount = entries.Count;
+            entries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
+            if (entries.Count < originalCount)
+            {
+                topic.Entries = entries.ToArray();
+
+                // Clean up empty topic (no entries and no subtopics)
+                if (topic.Entries.Length == 0 && (topic.Subtopics == null || topic.Subtopics.Length == 0))
+                {
+                    topics.RemoveAt(i);
+                }
+
+                return true;
+            }
+
+            // Recursively search subtopics
+            if (topic.Subtopics != null)
+            {
+                var subtopics = topic.Subtopics.ToList();
+                if (RemoveEntryFromTopics(subtopics, file))
+                {
+                    topic.Subtopics = subtopics.ToArray();
+
+                    // Clean up topic if it's now empty
+                    if (topic.Entries.Length == 0 && topic.Subtopics.Length == 0)
+                    {
+                        topics.RemoveAt(i);
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     #endregion
 }

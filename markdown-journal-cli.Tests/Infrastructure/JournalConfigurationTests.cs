@@ -1997,4 +1997,378 @@ public class JournalConfigurationTests
     }
 
     #endregion
+
+    #region RemoveEntry Tests
+
+    [Fact]
+    public void RemoveEntry_ShouldRemoveRootEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        var result = _journalConfiguration.RemoveEntry(_testDirectory, "1a-home.md");
+
+        // Assert
+        result.ShouldBeTrue();
+        var updatedConfig = _journalConfiguration.Read(_testDirectory);
+        updatedConfig.ShouldNotBeNull();
+        updatedConfig.TableOfContents.RootEntries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RemoveEntry_ShouldRemoveTopicEntry()
+    {
+        // Arrange
+        var config = new JournalConfig
+        {
+            JournalName = "Test",
+            TableOfContents = new TableOfContents
+            {
+                File = "toc.md",
+                Extensions = [".md"],
+                Structure = new Structure
+                {
+                    Topics = [new Topic
+                    {
+                        Name = "Learning",
+                        Entries = [
+                            new Entries { Name = "Rust", File = "Learning-Rust.md" },
+                            new Entries { Name = "Go", File = "Learning-Go.md" }
+                        ]
+                    }]
+                },
+                RootEntries = []
+            }
+        };
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        var result = _journalConfiguration.RemoveEntry(_testDirectory, "Learning-Rust.md");
+
+        // Assert
+        result.ShouldBeTrue();
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        var topic = updated.TableOfContents.Structure.Topics.FirstOrDefault(t => t.Name == "Learning");
+        topic.ShouldNotBeNull();
+        topic.Entries.Length.ShouldBe(1);
+        topic.Entries[0].File.ShouldBe("Learning-Go.md");
+    }
+
+    [Fact]
+    public void RemoveEntry_ShouldCleanUpEmptyTopics()
+    {
+        // Arrange
+        var config = new JournalConfig
+        {
+            JournalName = "Test",
+            TableOfContents = new TableOfContents
+            {
+                File = "toc.md",
+                Extensions = [".md"],
+                Structure = new Structure
+                {
+                    Topics = [new Topic
+                    {
+                        Name = "OnlyTopic",
+                        Entries = [new Entries { Name = "Only Entry", File = "OnlyTopic-Only_Entry.md" }]
+                    }]
+                },
+                RootEntries = []
+            }
+        };
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        var result = _journalConfiguration.RemoveEntry(_testDirectory, "OnlyTopic-Only_Entry.md");
+
+        // Assert
+        result.ShouldBeTrue();
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.Structure.Topics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RemoveEntry_ShouldReturnFalse_WhenEntryNotFound()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        var result = _journalConfiguration.RemoveEntry(_testDirectory, "nonexistent.md");
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RemoveEntry_ShouldRemoveFromSubtopics()
+    {
+        // Arrange
+        var config = new JournalConfig
+        {
+            JournalName = "Test",
+            TableOfContents = new TableOfContents
+            {
+                File = "toc.md",
+                Extensions = [".md"],
+                Structure = new Structure
+                {
+                    Topics = [new Topic
+                    {
+                        Name = "Programming",
+                        Entries = [],
+                        Subtopics = [new Topic
+                        {
+                            Name = "Rust",
+                            Entries = [new Entries { Name = "Basics", File = "Programming-Rust-Basics.md" }]
+                        }]
+                    }]
+                },
+                RootEntries = []
+            }
+        };
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        var result = _journalConfiguration.RemoveEntry(_testDirectory, "Programming-Rust-Basics.md");
+
+        // Assert
+        result.ShouldBeTrue();
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        // Both the subtopic and parent should be cleaned up since they're now empty
+        updated.TableOfContents.Structure.Topics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RemoveEntry_IsCaseInsensitive()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        var result = _journalConfiguration.RemoveEntry(_testDirectory, "1A-HOME.MD");
+
+        // Assert
+        result.ShouldBeTrue();
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    #region RegenerateStructure Tests
+
+    [Fact]
+    public void RegenerateStructure_ShouldRebuildFromFileList()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        _journalConfiguration.Create(_testDirectory, config);
+
+        var files = new[] { "1b-Introduction.md", "Learning-Rust.md", "Learning-Go.md" };
+
+        // Act
+        _journalConfiguration.RegenerateStructure(_testDirectory, files);
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updated.TableOfContents.RootEntries[0].File.ShouldBe("1b-Introduction.md");
+
+        var learningTopic = updated.TableOfContents.Structure.Topics
+            .FirstOrDefault(t => t.Name == "Learning");
+        learningTopic.ShouldNotBeNull();
+        learningTopic.Entries.Length.ShouldBe(2);
+    }
+
+    [Fact]
+    public void RegenerateStructure_ShouldPreserveJournalName()
+    {
+        // Arrange
+        var config = new JournalConfig
+        {
+            JournalName = "My Custom Journal",
+            TableOfContents = new TableOfContents
+            {
+                File = "toc.md",
+                Extensions = [".md"],
+                IgnoreFiles = ["secret.md"],
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new Entries { Name = "Old", File = "old.md" }]
+            }
+        };
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act
+        _journalConfiguration.RegenerateStructure(_testDirectory, ["1a-Home.md"]);
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.JournalName.ShouldBe("My Custom Journal");
+        updated.TableOfContents.IgnoreFiles.ShouldContain("secret.md");
+    }
+
+    [Fact]
+    public void RegenerateStructure_ShouldClearOldEntries()
+    {
+        // Arrange
+        var config = new JournalConfig
+        {
+            JournalName = "Test",
+            TableOfContents = new TableOfContents
+            {
+                File = "toc.md",
+                Extensions = [".md"],
+                Structure = new Structure
+                {
+                    Topics = [new Topic
+                    {
+                        Name = "OldTopic",
+                        Entries = [new Entries { Name = "Old", File = "OldTopic-Old.md" }]
+                    }]
+                },
+                RootEntries = [new Entries { Name = "OldRoot", File = "1a-OldRoot.md" }]
+            }
+        };
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act — regenerate with completely different files
+        _journalConfiguration.RegenerateStructure(_testDirectory, ["NewTopic-New_Entry.md"]);
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries.ShouldBeEmpty();
+        updated.TableOfContents.Structure.Topics
+            .Any(t => t.Name == "OldTopic").ShouldBeFalse();
+        updated.TableOfContents.Structure.Topics
+            .Any(t => t.Name == "NewTopic").ShouldBeTrue();
+    }
+
+    #endregion
+
+    #region TOC File Auto-Cleanup Tests
+
+    [Fact]
+    public void Update_ShouldRemoveTocFileFromEntries_WhenTocFileChanges()
+    {
+        // Arrange - create config with "old-toc.md" as a root entry
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.RootEntries = 
+        [
+            new Entries { Name = "Home", File = "1a-home.md" },
+            new Entries { Name = "Old TOC", File = "old-toc.md" }
+        ];
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act - change TOC file to "old-toc.md"
+        _journalConfiguration.Update(_testDirectory, c =>
+        {
+            c.TableOfContents.File = "old-toc.md";
+        });
+
+        // Assert - "old-toc.md" should be removed from root entries
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.File.ShouldBe("old-toc.md");
+        updated.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updated.TableOfContents.RootEntries[0].File.ShouldBe("1a-home.md");
+    }
+
+    [Fact]
+    public void Update_ShouldRemoveTocFileFromTopics_WhenTocFileChanges()
+    {
+        // Arrange - create config with "new-toc.md" as a topic entry
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.Structure.Topics = 
+        [
+            new Topic 
+            { 
+                Name = "newtoc", 
+                Entries = 
+                [
+                    new Entries { Name = "Newtoc", File = "new-toc.md" }
+                ],
+                Subtopics = null 
+            }
+        ];
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act - change TOC file to "new-toc.md"
+        _journalConfiguration.Update(_testDirectory, c =>
+        {
+            c.TableOfContents.File = "new-toc.md";
+        });
+
+        // Assert - "new-toc.md" should be removed from topics, and empty topic should be cleaned up
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.File.ShouldBe("new-toc.md");
+        updated.TableOfContents.Structure.Topics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Update_ShouldNotRemoveEntries_WhenTocFileDoesNotChange()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.RootEntries = 
+        [
+            new Entries { Name = "Home", File = "1a-home.md" },
+            new Entries { Name = "Other", File = "other.md" }
+        ];
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act - update something else, not TOC file
+        _journalConfiguration.Update(_testDirectory, c =>
+        {
+            c.JournalName = "New Name";
+        });
+
+        // Assert - entries should remain unchanged
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries.Length.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Update_ShouldHandleCaseInsensitive_WhenRemovingTocFile()
+    {
+        // Arrange - create config with "NewTOC.md" as entry (different casing)
+        var config = CreateTestConfig();
+        config.TableOfContents.File = "toc.md";
+        config.TableOfContents.RootEntries = 
+        [
+            new Entries { Name = "Home", File = "1a-home.md" },
+            new Entries { Name = "New TOC", File = "NewTOC.md" }
+        ];
+        _journalConfiguration.Create(_testDirectory, config);
+
+        // Act - change TOC file to "newtoc.md" (different casing)
+        _journalConfiguration.Update(_testDirectory, c =>
+        {
+            c.TableOfContents.File = "newtoc.md";
+        });
+
+        // Assert - "NewTOC.md" should be removed despite case difference
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries.Length.ShouldBe(1);
+        updated.TableOfContents.RootEntries[0].File.ShouldBe("1a-home.md");
+    }
+
+    #endregion
 }

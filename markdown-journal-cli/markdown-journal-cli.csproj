@@ -21,6 +21,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Commands/Update/" />
     <Folder Include="Infrastructure/Tracking/Models/" />
   </ItemGroup>
 </Project>

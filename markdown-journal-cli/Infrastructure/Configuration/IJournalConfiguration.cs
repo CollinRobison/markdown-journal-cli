@@ -93,4 +93,22 @@ public interface IJournalConfiguration
     /// <param name="newEntryName">The new display name for the entry.</param>
     /// <returns>True if the entry was found and updated, false otherwise.</returns>
     bool UpdateEntryName(string directory, string file, string newEntryName);
+
+    /// <summary>
+    /// Removes an entry from the journal configuration by filename.
+    /// Searches root entries and all topics/subtopics recursively.
+    /// Cleans up any topics that become empty after removal.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="file">The filename of the entry to remove.</param>
+    /// <returns>True if the entry was found and removed, false otherwise.</returns>
+    bool RemoveEntry(string directory, string file);
+
+    /// <summary>
+    /// Regenerates the table of contents structure (RootEntries and Topics) from the provided file list.
+    /// Preserves JournalName, IgnoreFiles, Extensions, and TOC filename.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="files">The list of markdown filenames to populate the structure from.</param>
+    void RegenerateStructure(string directory, IEnumerable<string> files);
 }

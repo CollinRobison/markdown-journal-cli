@@ -353,6 +353,18 @@ public class TestJournalConfiguration : IJournalConfiguration
         // Not implemented for tests - can be added if needed
         throw new NotImplementedException();
     }
+
+    public bool RemoveEntry(string directory, string file)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
+
+    public void RegenerateStructure(string directory, IEnumerable<string> files)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
 }
 
 /// <summary>

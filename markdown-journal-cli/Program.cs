@@ -1,5 +1,6 @@
 ﻿using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -56,6 +57,7 @@ public static class Program
         host.Services.AddSingleton<AddJournalrc>();
         host.Services.AddSingleton<AddTableOfContents>();
         host.Services.AddSingleton<AddFileTracking>();
+        host.Services.AddSingleton<UpdateCommand>();
 
         // Build the host and get the service provider
         var builtHost = host.Build();
@@ -73,6 +75,7 @@ public static class Program
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
             config.AddExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
+            config.AddExample("update", "--path", "Source/Repos/TestJournal", "journal");
 
             // New
             config.AddCommand<NewCommand>("new");
@@ -87,6 +90,16 @@ public static class Program
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
                     add.AddCommand<AddFileTracking>("tracking");
+                }
+            );
+
+            config.AddBranch<UpdateSettings>(
+                "update",
+                update =>
+                {
+                    update.SetDescription("Updates various aspects of an existing journal.");
+                    update.AddCommand<UpdateCommand>("journal")
+                    .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");
                 }
             );
         });

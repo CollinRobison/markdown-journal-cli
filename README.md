@@ -76,6 +76,15 @@ mdjournal add --path ~/Documents/MyJournal toc
 
 # Create or refresh the tracking index for a journal
 mdjournal add --path ~/Documents/MyJournal tracking
+
+# Update journal (config, dates, tracking, and TOC) based on file changes
+mdjournal update --path ~/Documents/MyJournal journal
+
+# Update only specific aspects
+mdjournal update --path ~/Documents/MyJournal journal --config    # Only update configuration
+mdjournal update --path ~/Documents/MyJournal journal --dates     # Only update last edited dates and tracking
+mdjournal update --path ~/Documents/MyJournal journal --tracking  # Only update tracking index without metadata
+mdjournal update --path ~/Documents/MyJournal journal --toc       # Only update table of contents
 ```
 
 ## Commands
@@ -188,6 +197,55 @@ mdjournal add tracking --path ~/Documents/MyJournal
 mdjournal add tracking --path ~/Documents/MyJournal --ignoreconfig
 ```
 
+### `update journal` - Update Journal
+Detects and synchronizes file changes in your journal. Updates configuration, last edited dates, and table of contents based on added, modified, or deleted files. All updates are performed by default unless specific flags are provided.
+
+**Syntax:**
+```bash
+mdjournal update journal [options]
+```
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `-c|--config` - Only update the `.journalrc` configuration (add/remove entries)
+- `-d|--dates` - Only update "Last Edited:" dates for modified files and update tracking
+- `-t|--tracking` - Only update tracking index without modifying "Last Edited:" metadata (overrides `--dates`)
+- `--toc|--tableofcontents` - Only regenerate the table of contents
+
+**Behavior:**
+- **Without flags**: Updates configuration, dates, and TOC (equivalent to `--config --dates --toc`)
+- **With flags**: Only performs the specified updates
+- **Tracking override**: When `--tracking` is specified with `--dates`, tracking takes precedence and metadata is not modified
+- **Change Detection**: Uses SHA256 hashing to identify added, modified, and deleted files. 
+- **TOC File Exclusion**: Automatically prevents the TOC file from appearing as an entry in its own contents
+
+**Examples:**
+```bash
+# Update everything (config, dates, and TOC)
+mdjournal update journal --path ~/Documents/MyJournal
+
+# Only update configuration with new/deleted entries
+mdjournal update journal --path ~/Documents/MyJournal --config
+
+# Only update last edited dates for modified files and refresh tracking
+mdjournal update journal --path ~/Documents/MyJournal --dates
+
+# Only update tracking index without modifying file metadata
+mdjournal update journal --path ~/Documents/MyJournal --tracking
+
+# Only regenerate the table of contents
+mdjournal update journal --path ~/Documents/MyJournal --toc
+
+# Update both config and TOC, but skip dates
+mdjournal update journal --path ~/Documents/MyJournal --config --toc
+```
+
+**What Gets Updated:**
+- **Configuration (`--config`)**: Adds new markdown files to `.journalrc` and removes deleted files
+- **Dates (`--dates`)**: Updates "Last Edited:" metadata in modified files and refreshes the tracking index
+- **Tracking (`--tracking`)**: Updates tracking index without modifying "Last Edited:" metadata (useful for resynchronizing without changing file contents)
+- **Table of Contents (`--toc`)**: Regenerates the TOC markdown file from current configuration
+
 ## Contributing
 
 Interested in contributing? Check out the **[Development Guide](docs/DEVELOPMENT.md)** for:
@@ -205,39 +263,42 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ `new` command implementation  
 - ✅ `add entry` command for creating journal entries
 - ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
+- ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **500+ passing unit tests** covering core functionality
+- ✅ **645+ passing unit tests** covering core functionality
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
 - ✅ **File tracking and change detection** using SHA256 hashing
+- ✅ **Automatic "Last Edited" date updates** for modified files
+- ✅ **Tracking-only update mode** to resynchronize without modifying file metadata
+- ✅ **TOC file exclusion** - prevents TOC from appearing in its own contents
 - ✅ **Natural alphanumeric sorting** for entries (file_5 before file_10)
 - ✅ **Ignore files functionality** to exclude entries from TOC
 - ✅ Entry formatting with customizable separators
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ Additional commands (update, rename, open, search)
+- ⏳ Additional commands (update files, init, rename, open, search)
 - ⏳ Global tool installation
 - ⏳ Advanced configuration options
-- ⏳ Automatic change detection and synchronization
+- ⏳ Pre-update change preview (--check flag)
 
 ### Planned Commands
 ```bash
 # TODO: Document these commands when implemented
 
-mdjournal <path> init [name] # adds a the needed items (journalrc, file tracking, and toc) to an existing md file directory and updates all to include directories md files.
+mdjournal init [name] # Initializes an existing markdown directory as a journal (adds journalrc, file tracking, and toc)
 
-mdjournal update --config --dates --toc no flag = all # look at what has changed and update .jounralrc, table of contents, and last edited dates. have an option to check all files in directory and if any aren't in journalrc list them out so people can confirm whether they want to update everything --check to list changes before applying to journalrc --all to appky change without listing.
+mdjournal update file --ignore # Updates file-specific settings like adding to ignore list
 
-md journal update file --ignore # updates a file with specific settings like moving to ignore may this and rename should be the same command. 
+mdjournal update toc --rename <name> # Renames the TOC file and updates all references
 
-mdjournal rename <file> --file-added # A command that renames a file and updates that change in the journalrc and table of contents. (maybe have it search and update in other places as well such a places where referenced) --file-added flag is saying someone renamed the file manually and it just needs to be reflected everywhere else. 
+mdjournal rename <file> <newname> # Renames a file and updates all references in config and TOC
 
-mdjournal open [name]                   # Open journal in default editor (start with vscode and vim support)
+mdjournal open [name] # Opens journal in default editor (VS Code, Vim support)
 
-mdjournal search <term>                 # Search across journal entries
-
+mdjournal search <term> # Searches across journal entries
 
 ```
 

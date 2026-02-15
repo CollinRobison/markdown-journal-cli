@@ -68,7 +68,7 @@ public class TableOfContentsGenerator(
         // Add dates if provided
         if (createdDate.HasValue)
         {
-            sb.AppendLine($"Created: {createdDate.Value:M/d/yyyy}");
+            sb.AppendLine($"Created: {createdDate.Value:MM/dd/yyyy}");
         }
 
         if (lastEditedDate.HasValue)
@@ -85,15 +85,17 @@ public class TableOfContentsGenerator(
         // Add title
         sb.AppendLine($"# {_journalSettings.TableOfContentsTitle}");
 
-        // Get ignore files list
+        // Get ignore files list and add the TOC file itself to prevent it from appearing in its own contents
+        var tocFile = config.TableOfContents.File;
         var ignoreFiles = config.TableOfContents.IgnoreFiles ?? Array.Empty<string>();
+        var ignoreFilesWithToc = ignoreFiles.Append(tocFile).ToArray();
 
         // Add root entries (filter out ignored files)
         if (config.TableOfContents.RootEntries != null && config.TableOfContents.RootEntries.Length > 0)
         {
             foreach (var entry in config.TableOfContents.RootEntries)
             {
-                if (!IsFileIgnored(entry.File, ignoreFiles))
+                if (!IsFileIgnored(entry.File, ignoreFilesWithToc))
                 {
                     sb.AppendLine($"- [{entry.Name}]({entry.File})");
                 }
@@ -105,7 +107,7 @@ public class TableOfContentsGenerator(
         {
             foreach (var topic in config.TableOfContents.Structure.Topics)
             {
-                GenerateTopicSection(sb, topic, 0, ignoreFiles); // Start with no indentation
+                GenerateTopicSection(sb, topic, 0, ignoreFilesWithToc); // Start with no indentation
             }
         }
 
@@ -117,6 +119,17 @@ public class TableOfContentsGenerator(
         // Filter out ignored entries first
         var visibleEntries = topic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray() 
             ?? Array.Empty<Entries>();
+
+        // Get all subtopics (don't pre-filter them - let each subtopic decide whether to render itself)
+        var subtopics = topic.Subtopics ?? Array.Empty<Topic>();
+
+        // For top-level topics, skip entirely if no visible entries and no subtopics
+        // (This filters out topics where the only entry was the TOC file)
+        // But for nested subtopics, always render them to show the hierarchy
+        if (indentLevel == 0 && visibleEntries.Length == 0 && subtopics.Length == 0)
+        {
+            return;
+        }
 
         // Top-level topics (indentLevel == 0) get headings
         // Subtopics (indentLevel > 0) are rendered as indented list items
@@ -155,13 +168,13 @@ public class TableOfContentsGenerator(
         var parentMatches = new Dictionary<Entries, Topic>();
         var processedSubtopics = new HashSet<Topic>();
 
-        if (visibleEntries.Length > 0 && topic.Subtopics != null && topic.Subtopics.Length > 0)
+        if (visibleEntries.Length > 0 && subtopics.Length > 0)
         {
             foreach (var entry in visibleEntries)
             {
                 var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
                 
-                foreach (var subtopic in topic.Subtopics)
+                foreach (var subtopic in subtopics)
                 {
                     // Check if entry name matches subtopic name AND entry path is prefix of subtopic files
                     if (string.Equals(entry.Name, subtopic.Name, StringComparison.OrdinalIgnoreCase) &&
@@ -203,9 +216,9 @@ public class TableOfContentsGenerator(
         }
 
         // Always render subtopics that weren't merged with parent entries
-        if (topic.Subtopics != null)
+        if (subtopics.Length > 0)
         {
-            foreach (var subtopic in topic.Subtopics)
+            foreach (var subtopic in subtopics)
             {
                 if (!processedSubtopics.Contains(subtopic))
                 {
@@ -277,6 +290,32 @@ public class TableOfContentsGenerator(
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Checks if a topic has any visible content (non-ignored entries or subtopics with visible content).
+    /// </summary>
+    private static bool HasVisibleContent(Topic topic, string[] ignoreFiles)
+    {
+        // Check if topic has any visible entries
+        if (topic.Entries != null && topic.Entries.Length > 0)
+        {
+            if (topic.Entries.Where(entry => !IsFileIgnored(entry.File, ignoreFiles)).Any())
+            {
+                return true;
+            }
+        }
+
+        // Check if topic has any subtopics with visible content (recursive)
+        if (topic.Subtopics != null && topic.Subtopics.Length > 0)
+        {
+            if (topic.Subtopics.Where(subtopic => HasVisibleContent(subtopic, ignoreFiles)).Any())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

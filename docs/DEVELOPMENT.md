@@ -38,8 +38,11 @@ markdown-journal-cli/
 │   │   │   ├── AddJournalrcCommand.cs
 │   │   │   ├── AddTableOfContentsCommand.cs
 │   │   │   └── AddSettings.cs
-│   │   └── New/                 # New journal command
-│   │       └── NewCommand.cs
+│   │   ├── New/                   # New journal command
+│   │   │   └── NewCommand.cs
+│   │   └── Update/                # Update journal command
+│   │       ├── UpdateCommand.cs
+│   │       └── UpdateSettings.cs
 │   ├── Exceptions/                # Custom exceptions
 │   │   └── JournalExceptions.cs
 │   ├── Infrastructure/            # Core services
@@ -77,15 +80,17 @@ markdown-journal-cli/
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (500+ tests)
+├── markdown-journal-cli.Tests/    # Unit tests (634 tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
-│   │   └── Add/
-│   │       ├── AddEntryCommandTests.cs
-│   │       ├── AddFileTrackingCommandTests.cs
-│   │       ├── AddJournalrcCommandTests.cs
-│   │       ├── AddTableOfContentsCommandTests.cs
-│   │       └── AddTableOfContentsIntegrationTests.cs
+│   │   ├── Add/
+│   │   │   ├── AddEntryCommandTests.cs
+│   │   │   ├── AddFileTrackingCommandTests.cs
+│   │   │   ├── AddJournalrcCommandTests.cs
+│   │   │   ├── AddTableOfContentsCommandTests.cs
+│   │   │   └── AddTableOfContentsIntegrationTests.cs
+│   │   └── Update/
+│   │       └── UpdateCommandTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
 │   │   ├── FileSystemTests.cs
 │   │   ├── FileTrackingTests.cs
@@ -490,14 +495,16 @@ The following areas need detailed documentation (you should write these based on
 **IJournalConfiguration Pattern**
 - **Purpose**: Manages journal configuration CRUD operations and topic hierarchy
 - **Benefits**: Centralized configuration management, supports complex nested structures
-- **Features**: Natural sorting, ignore files, parent-child topic detection
+- **Features**: Natural sorting, ignore files, parent-child topic detection, entry removal
 - **Example**: `AddEntry` uses this to update `.journalrc` with new entry metadata
+- **TOC Protection**: Auto-removes TOC file if accidentally added as entry (multi-layer defense)
 
 **ITableOfContentsGenerator Pattern**
 - **Purpose**: Generates markdown table of contents from journal configuration
 - **Benefits**: Automated TOC updates, smart parent-child detection, ignore file support
-- **Features**: Natural alphanumeric sorting, nested topic rendering, date preservation
+- **Features**: Natural alphanumeric sorting, nested topic rendering, date preservation, TOC self-exclusion
 - **Example**: Automatically updates TOC when new entries are added
+- **Protection**: Automatically excludes TOC file from being listed in itself
 
 **IFileTracking Pattern**
 - **Purpose**: Tracks file changes using SHA256 hashing for change detection
@@ -515,6 +522,12 @@ The following areas need detailed documentation (you should write these based on
 - **Benefits**: Consistent file naming, handles heading/subheading hierarchy
 - **Features**: Space separator conversion, heading separator management
 - **Example**: Converts "My Entry" to "My_Entry" or parses "Tech-Backend-API"
+
+**MarkdownMetadataParser Pattern**
+- **Purpose**: Updates markdown file metadata (Created/Last Edited dates)
+- **Benefits**: Automatic change tracking, preserves file structure
+- **Features**: Searches metadata header (first 6 lines), inserts after "Created:" line
+- **Example**: Used by `UpdateCommand` to update "Last Edited:" dates for modified files
 
 ### Service Registration (Program.cs)
 ```csharp
@@ -650,9 +663,13 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ Basic project structure established
 - ✅ Core `new` command implemented
 - ✅ `add` command branch with entry, config, toc, and tracking subcommands
+- ✅ `update` command for journal synchronization (config, dates, TOC)
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (500+ tests)
+- ✅ Testing framework setup (634 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
-- ⏳ Additional commands (list, open, search, update, rename)
+- ✅ File change detection with SHA256 hashing
+- ✅ Automatic metadata date updates
+- ✅ Multi-layer TOC self-reference prevention
+- ⏳ Additional commands (list, open, search, rename)
 - ⏳ Documentation completion
