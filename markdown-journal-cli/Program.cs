@@ -99,7 +99,7 @@ public static class Program
                 {
                     update.SetDescription("Updates various aspects of an existing journal.");
                     update.AddCommand<UpdateCommand>("journal")
-                    .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");;
+                    .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");
                 }
             );
         });
