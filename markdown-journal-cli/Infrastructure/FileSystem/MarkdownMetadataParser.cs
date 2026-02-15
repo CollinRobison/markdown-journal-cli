@@ -70,7 +70,10 @@ public static class MarkdownMetadataParser
             return $"Last Edited: {date.ToString(dateFormat)}\n";
         }
 
-        var lines = content.Split('\n');
+        // Detect the newline style used in the content (CRLF or LF)
+        var newline = content.Contains("\r\n") ? "\r\n" : "\n";
+        
+        var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
         var dateString = $"Last Edited: {date.ToString(dateFormat)}";
         int createdLineIndex = -1;
 
@@ -87,7 +90,7 @@ public static class MarkdownMetadataParser
             if (trimmed.StartsWith("Last Edited:", StringComparison.OrdinalIgnoreCase))
             {
                 lines[i] = dateString;
-                return string.Join('\n', lines);
+                return string.Join(newline, lines);
             }
 
             if (trimmed.StartsWith("Created:", StringComparison.OrdinalIgnoreCase))
@@ -100,6 +103,6 @@ public static class MarkdownMetadataParser
         var result = new List<string>(lines);
         int insertAt = createdLineIndex >= 0 ? createdLineIndex + 1 : 0;
         result.Insert(insertAt, dateString);
-        return string.Join('\n', result);
+        return string.Join(newline, result);
     }
 }
