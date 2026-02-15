@@ -300,24 +300,18 @@ public class TableOfContentsGenerator(
         // Check if topic has any visible entries
         if (topic.Entries != null && topic.Entries.Length > 0)
         {
-            foreach (var entry in topic.Entries)
+            if (topic.Entries.Where(e => !IsFileIgnored(e.File, ignoreFiles)).Any())
             {
-                if (!IsFileIgnored(entry.File, ignoreFiles))
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
         // Check if topic has any subtopics with visible content (recursive)
         if (topic.Subtopics != null && topic.Subtopics.Length > 0)
         {
-            foreach (var subtopic in topic.Subtopics)
+            if (topic.Subtopics.Where(s => HasVisibleContent(s, ignoreFiles)).Any())
             {
-                if (HasVisibleContent(subtopic, ignoreFiles))
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
