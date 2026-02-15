@@ -43,8 +43,8 @@ public sealed class UpdateCommand(
         try
         {
             var trackingFileName = $".{_journalSettings.AppName}";
-            var trackingFilePath = $"{settings.FilePath}/{trackingFileName}";
-            var journalrcPath = $"{settings.FilePath}/{_journalSettings.JournalConfigFileName}";
+            var trackingFilePath = _fileSystem.CombinePaths(settings.FilePath, trackingFileName);
+            var journalrcPath = _fileSystem.CombinePaths(settings.FilePath, _journalSettings.JournalConfigFileName);
 
             if (!_fileSystem.FileExists(trackingFilePath))
             {
@@ -53,12 +53,9 @@ public sealed class UpdateCommand(
 
             bool all = !settings.DateFlag && !settings.ConfigFlag && !settings.TocFlag; 
 
-            if (all || settings.ConfigFlag || settings.TocFlag)
+            if ((all || settings.ConfigFlag || settings.TocFlag) && !_fileSystem.FileExists(journalrcPath))
             {
-                if (!_fileSystem.FileExists(journalrcPath))
-                {
-                    throw new JournalrcNotFoundException(settings.FilePath);
-                }
+                throw new JournalrcNotFoundException(settings.FilePath);
             }
 
             var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
@@ -69,9 +66,9 @@ public sealed class UpdateCommand(
                 return 0;
             }
 
-            if (all || settings.DateFlag)
+            if (all || settings.DateFlag || settings.Tracking)
             {
-                UpdateLastEditedDates(settings.FilePath, fileResults);
+                UpdateLastEditedDatesAndTracking(settings.FilePath, fileResults, settings.Tracking);
             }
 
             if (all || settings.ConfigFlag)
@@ -107,21 +104,23 @@ public sealed class UpdateCommand(
     /// Updates the "Last Edited:" date for modified files, adds new files to the tracking index,
     /// and removes deleted files from the tracking index.
     /// </summary>
-    private void UpdateLastEditedDates(string journalPath, ChangeDetectionResult fileResults)
+    private void UpdateLastEditedDatesAndTracking(string journalPath, ChangeDetectionResult fileResults, bool trackingOnly)
     {
         // Update "Last Edited:" for modified files and re-hash
         foreach (var relativePath in fileResults.ModifiedFiles)
         {
-            var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
-            var content = _fileSystem.GetFileContent(absolutePath);
+            if (!trackingOnly)
+            {
+                var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
+                var content = _fileSystem.GetFileContent(absolutePath);
 
-            var updatedContent = MarkdownMetadataParser.UpdateLastEditedDate(
-                content, DateTime.Now, _journalSettings.DateFormat);
+                var updatedContent = MarkdownMetadataParser.UpdateLastEditedDate(
+                    content, DateTime.Now, _journalSettings.DateFormat);
 
-            var directory = Path.GetDirectoryName(absolutePath) ?? journalPath;
-            var fileName = Path.GetFileName(absolutePath);
-            _fileSystem.UpdateFile(directory, fileName, updatedContent);
-
+                var directory = Path.GetDirectoryName(absolutePath) ?? journalPath;
+                var fileName = Path.GetFileName(absolutePath);
+                _fileSystem.UpdateFile(directory, fileName, updatedContent);                
+            }
             _fileTracking.UpdateFileInIndex(journalPath, relativePath);
 
             _console.MarkupLine($"[green]Updated:[/] {relativePath}");
@@ -173,8 +172,11 @@ public sealed class UpdateCommand(
 
         foreach (var relativePath in fileResults.DeletedFiles)
         {
-            _journalConfiguration.RemoveEntry(journalPath, relativePath);
-            _console.MarkupLine($"[yellow]Config removed:[/] {relativePath}");
+            var removed = _journalConfiguration.RemoveEntry(journalPath, relativePath);
+            if (removed)
+                _console.MarkupLine($"[yellow]Config removed:[/] {relativePath}");
+            else
+                _console.MarkupLine($"[dim]Config entry not found for deleted file:[/] {relativePath}");
         }
 
         if (fileResults.AddedFiles.Count > 0 || fileResults.DeletedFiles.Count > 0)
@@ -187,13 +189,14 @@ public sealed class UpdateCommand(
     /// Regenerates the table of contents markdown file from the current journal configuration.
     /// </summary>
     private void UpdateTableOfContents(string journalPath)
-    {
+    {   
         _tableOfContentsGenerator.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
-
-        // Track the TOC file in the index so it doesn't show as "added" on next run
-        var tocFileName = $"{_journalSettings.TableOfContentsFileName}.md";
-        _fileTracking.UpdateFileInIndex(journalPath, tocFileName);
-
+        
+        // Track the TOC file so it doesn't show as "added" on next run
+        var config = _journalConfiguration.Read(journalPath);
+        var tocFile = config?.TableOfContents.File ?? $"{_journalSettings.TableOfContentsFileName}.md";
+        _fileTracking.UpdateFileInIndex(journalPath, tocFile);
+        
         _console.MarkupLine($"[green]Table of contents updated.[/]");
     }
 }

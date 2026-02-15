@@ -8,7 +8,7 @@ public class UpdateSettings : CommandSettings
 {
     [CommandOption("-p|--path")]
     [Description(
-        "Specify the path of the journal. If not specified, it will defaulted to the current directory."
+        "Specify the path of the journal. If not specified, it will default to the current directory."
     )]
     [DefaultValue(".")]
     public string FilePath { get; set; } = ".";
@@ -22,11 +22,19 @@ public class UpdateJournalSettings : UpdateSettings
     )]
     public bool ConfigFlag {get; set;}
 
-    [CommandOption("-d|--dates")]
+    [CommandOption("-d|--date")]
     [Description(
-        "Flag to update the created dates of modified files."
+        "Flag to update the markdown \"Last Edited:\" metadata and related tracking for modified files."
     )]
     public bool DateFlag {get; set;} // make sure the date also updates tracking
+
+    [CommandOption("-t|--tracking")]
+    [Description(
+    "Updates file tracking independently without touching \"Last Edited:\" metadata. " +
+    "This overrides --date if both are specified, leaving file metadata unchanged."
+    )]
+    public bool Tracking {get; set;}
+
 
     [CommandOption("--toc|--tableofcontents")]
     [Description(
