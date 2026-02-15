@@ -51,7 +51,7 @@ public sealed class UpdateCommand(
                 throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
             }
 
-            bool all = !settings.DateFlag && !settings.ConfigFlag && !settings.TocFlag; 
+            bool all = !settings.DateFlag && !settings.ConfigFlag && !settings.TocFlag && !settings.Tracking; 
 
             if ((all || settings.ConfigFlag || settings.TocFlag) && !_fileSystem.FileExists(journalrcPath))
             {
