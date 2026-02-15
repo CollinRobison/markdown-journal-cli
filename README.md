@@ -81,9 +81,10 @@ mdjournal add --path ~/Documents/MyJournal tracking
 mdjournal update --path ~/Documents/MyJournal journal
 
 # Update only specific aspects
-mdjournal update --path ~/Documents/MyJournal journal --config  # Only update configuration
-mdjournal update --path ~/Documents/MyJournal journal --dates   # Only update last edited dates and tracking
-mdjournal update --path ~/Documents/MyJournal journal --toc     # Only update table of contents
+mdjournal update --path ~/Documents/MyJournal journal --config    # Only update configuration
+mdjournal update --path ~/Documents/MyJournal journal --dates     # Only update last edited dates and tracking
+mdjournal update --path ~/Documents/MyJournal journal --tracking  # Only update tracking index without metadata
+mdjournal update --path ~/Documents/MyJournal journal --toc       # Only update table of contents
 ```
 
 ## Commands
@@ -207,12 +208,14 @@ mdjournal update journal [options]
 **Options:**
 - `-p|--path <path>` - Path to the journal directory (default: current directory)
 - `-c|--config` - Only update the `.journalrc` configuration (add/remove entries)
-- `-d|--dates` - Only update "Last Edited:" dates for modified files
+- `-d|--dates` - Only update "Last Edited:" dates for modified files and update tracking
+- `-t|--tracking` - Only update tracking index without modifying "Last Edited:" metadata (overrides `--dates`)
 - `--toc|--tableofcontents` - Only regenerate the table of contents
 
 **Behavior:**
 - **Without flags**: Updates configuration, dates, and TOC (equivalent to `--config --dates --toc`)
 - **With flags**: Only performs the specified updates
+- **Tracking override**: When `--tracking` is specified with `--dates`, tracking takes precedence and metadata is not modified
 - **Change Detection**: Uses SHA256 hashing to identify added, modified, and deleted files. 
 - **TOC File Exclusion**: Automatically prevents the TOC file from appearing as an entry in its own contents
 
@@ -224,8 +227,11 @@ mdjournal update journal --path ~/Documents/MyJournal
 # Only update configuration with new/deleted entries
 mdjournal update journal --path ~/Documents/MyJournal --config
 
-# Only update last edited dates for modified files
+# Only update last edited dates for modified files and refresh tracking
 mdjournal update journal --path ~/Documents/MyJournal --dates
+
+# Only update tracking index without modifying file metadata
+mdjournal update journal --path ~/Documents/MyJournal --tracking
 
 # Only regenerate the table of contents
 mdjournal update journal --path ~/Documents/MyJournal --toc
@@ -237,6 +243,7 @@ mdjournal update journal --path ~/Documents/MyJournal --config --toc
 **What Gets Updated:**
 - **Configuration (`--config`)**: Adds new markdown files to `.journalrc` and removes deleted files
 - **Dates (`--dates`)**: Updates "Last Edited:" metadata in modified files and refreshes the tracking index
+- **Tracking (`--tracking`)**: Updates tracking index without modifying "Last Edited:" metadata (useful for resynchronizing without changing file contents)
 - **Table of Contents (`--toc`)**: Regenerates the TOC markdown file from current configuration
 
 ## Contributing
@@ -256,14 +263,15 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ `new` command implementation  
 - ✅ `add entry` command for creating journal entries
 - ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
-- ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC)
+- ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **630+ passing unit tests** covering core functionality
+- ✅ **645+ passing unit tests** covering core functionality
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
 - ✅ **File tracking and change detection** using SHA256 hashing
 - ✅ **Automatic "Last Edited" date updates** for modified files
+- ✅ **Tracking-only update mode** to resynchronize without modifying file metadata
 - ✅ **TOC file exclusion** - prevents TOC from appearing in its own contents
 - ✅ **Natural alphanumeric sorting** for entries (file_5 before file_10)
 - ✅ **Ignore files functionality** to exclude entries from TOC
