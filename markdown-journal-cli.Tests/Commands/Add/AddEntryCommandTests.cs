@@ -7,7 +7,6 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
@@ -67,8 +66,7 @@ public class AddEntryCommandTests
         services.AddSingleton(_journalSettings);
         services.AddSingleton<AddEntry>();
 
-        var host = Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services)
         {

@@ -62,9 +62,7 @@ public class NewCommandTests
         services.AddSingleton(_journalSettings);
         services.AddSingleton<NewCommand>();
 
-        // Use IHost constructor and manually register services
-        var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services)
         {
@@ -1280,8 +1278,7 @@ public class NewCommandTests
             services.AddSingleton<NewCommand>();
         }
 
-        var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services)
         {

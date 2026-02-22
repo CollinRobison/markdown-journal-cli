@@ -91,8 +91,7 @@ public class AddEntryIntegrationTests : IDisposable
         services.AddSingleton(_journalSettings);
         services.AddSingleton<AddEntry>();
 
-        var host = Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services)
         {

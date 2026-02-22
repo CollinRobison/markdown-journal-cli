@@ -49,8 +49,7 @@ public class AddFileTrackingCommandTests
         services.AddSingleton(_journalSettings);
         services.AddSingleton<AddFileTracking>();
 
-        var host = Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services.Where(s => s.ImplementationInstance != null))
         {
