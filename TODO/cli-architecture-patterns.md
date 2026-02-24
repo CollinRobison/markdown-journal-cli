@@ -310,7 +310,7 @@ public class JournalEntryService : IJournalEntryService
             return new EntryCreationResult(false, ErrorMessage: validationResult.Error);
 
         // 2. Format names
-        var entryTitle = _entryFormatter.RemoveSpaceSeperators(
+        var entryTitle = _entryFormatter.RemoveSpaceSeparators(
             request.EntryTitle ?? request.EntryName
         );
         
@@ -332,9 +332,9 @@ public class JournalEntryService : IJournalEntryService
 
     private string BuildFileName(CreateEntryRequest request)
     {
-        var entryNameFormatted = _entryFormatter.AddSpaceSeperators(request.EntryName);
+        var entryNameFormatted = _entryFormatter.AddSpaceSeparators(request.EntryName);
         var headingFormatted = request.Heading != null
-            ? _entryFormatter.AddSpaceSeperators(request.Heading)
+            ? _entryFormatter.AddSpaceSeparators(request.Heading)
             : null;
 
         var fileName = new[] { headingFormatted, request.Subheading, entryNameFormatted }
@@ -342,7 +342,7 @@ public class JournalEntryService : IJournalEntryService
             .Cast<string>()
             .ToArray();
 
-        return $"{_entryFormatter.AddHeadingSeperators(fileName)}.md";
+        return $"{_entryFormatter.AddHeadingSeparators(fileName)}.md";
     }
 
     private async Task CreateEntryFileAsync(string filePath, string title)
@@ -364,7 +364,7 @@ public class JournalEntryService : IJournalEntryService
     {
         // Build headings array
         string[] headings = (request.Heading != null
-                ? [_entryFormatter.RemoveSpaceSeperators(request.Heading)]
+                ? [_entryFormatter.RemoveSpaceSeparators(request.Heading)]
                 : Array.Empty<string>())
             .Concat(request.Subheading != null
                 ? _entryFormatter.SeperateSubheadingString(request.Subheading)

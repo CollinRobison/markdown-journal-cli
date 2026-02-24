@@ -30,7 +30,7 @@ public class TableOfContentsMarkdownParser : ITableOfContentsMarkdownParser
             var file = match.Groups[2].Value.Trim();
             
             // Only include .md files
-            if (file.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            if (file.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase))
             {
                 entries.Add(new Entries { Name = name, File = file });
             }

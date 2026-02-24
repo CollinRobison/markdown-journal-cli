@@ -33,7 +33,7 @@ public class JournalEntryTemplate : ITemplateGenerator
             ?? DateTime.Now.ToString("M/d/yyyy")
         ).ToString();
 
-        return $@"[Back to Table of Contents](1a-TableOfContents.md)
+        return $@"[Back to Table of Contents](1a-TableOfContents{FileConstants.MarkdownExtension})
 
 Created: {createdDate}
 Last Edited: {lastEditedDate}

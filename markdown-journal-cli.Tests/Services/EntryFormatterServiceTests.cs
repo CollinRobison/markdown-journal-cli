@@ -14,141 +14,141 @@ public class EntryFormatterServiceTests
     public EntryFormatterServiceTests()
     {
         _journalSettings = Options.Create(
-            new JournalSettings { TitleSpaceSeperator = "_", HeadingSeperator = "-" }
+            new JournalSettings { TitleSpaceSeparator = "_", HeadingSeparator = "-" }
         );
         _formatterService = new EntryFormatterService(_journalSettings);
     }
 
     // ==========================
-    // Tests for AddSpaceSeperators
+    // Tests for AddSpaceSeparators
     // ==========================
 
     [Fact]
-    public void AddSpaceSeperators_formats_correctly()
+    public void AddSpaceSeparators_formats_correctly()
     {
         // Given
         string test = "does this actually work";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("does_this_actually_work");
     }
 
     [Fact]
-    public void AddSpaceSeperators_formats_correctly_with_consecutive_spaces()
+    public void AddSpaceSeparators_formats_correctly_with_consecutive_spaces()
     {
         // Given
         string test = "does this  actually        work";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("does_this_actually_work");
     }
 
     [Fact]
-    public void AddSpaceSeperators_formats_correctly_with_whitespace_at_start_and_end()
+    public void AddSpaceSeparators_formats_correctly_with_whitespace_at_start_and_end()
     {
         // Given
         string test = " does this actually work   ";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("does_this_actually_work");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_empty_string()
+    public void AddSpaceSeparators_handles_empty_string()
     {
         // Given
         string test = "";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_null_input()
+    public void AddSpaceSeparators_handles_null_input()
     {
         // Given
         string? test = null;
         // When & Then
-        Should.Throw<ArgumentNullException>(() => _formatterService.AddSpaceSeperators(test));
+        Should.Throw<ArgumentNullException>(() => _formatterService.AddSpaceSeparators(test));
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_single_word()
+    public void AddSpaceSeparators_handles_single_word()
     {
         // Given
         string test = "word";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("word");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_only_whitespace()
+    public void AddSpaceSeparators_handles_only_whitespace()
     {
         // Given
         string test = "     ";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void AddSpaceSeperators_preserves_existing_underscores()
+    public void AddSpaceSeparators_preserves_existing_underscores()
     {
         // Given
         string test = "already_has underscores_here";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("already_has_underscores_here");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_tabs_and_newlines()
+    public void AddSpaceSeparators_handles_tabs_and_newlines()
     {
         // Given
         string test = "has\ttabs\nand\rnewlines";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("has_tabs_and_newlines");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_special_characters()
+    public void AddSpaceSeparators_handles_special_characters()
     {
         // Given
         string test = "test with !@#$ special chars";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("test_with_!@#$_special_chars");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_numbers()
+    public void AddSpaceSeparators_handles_numbers()
     {
         // Given
         string test = "entry 123 test 456";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("entry_123_test_456");
     }
 
     [Fact]
-    public void AddSpaceSeperators_handles_unicode_characters()
+    public void AddSpaceSeparators_handles_unicode_characters()
     {
         // Given
         string test = "café résumé naïve";
         // When
-        var result = _formatterService.AddSpaceSeperators(test);
+        var result = _formatterService.AddSpaceSeparators(test);
         // Then
         result.ShouldBe("café_résumé_naïve");
     }
@@ -161,22 +161,22 @@ public class EntryFormatterServiceTests
     [InlineData("trailing  ", "trailing")]
     [InlineData("a", "a")]
     [InlineData("a b", "a_b")]
-    public void AddSpaceSeperators_theory_test(string input, string expected)
+    public void AddSpaceSeparators_theory_test(string input, string expected)
     {
         // When
-        var result = _formatterService.AddSpaceSeperators(input);
+        var result = _formatterService.AddSpaceSeparators(input);
         // Then
         result.ShouldBe(expected);
     }
 
     [Fact]
-    public void AddSpaceSeperators_Handles_Very_Long_String()
+    public void AddSpaceSeparators_Handles_Very_Long_String()
     {
         // Given - Very long string (1000 words)
         var longString = string.Join(" ", Enumerable.Repeat("word", 1000));
 
         // When
-        var result = _formatterService.AddSpaceSeperators(longString);
+        var result = _formatterService.AddSpaceSeparators(longString);
 
         // Then
         result.Split('_').Length.ShouldBe(1000);
@@ -185,135 +185,135 @@ public class EntryFormatterServiceTests
     }
 
     // ==========================
-    // Tests for RemoveSpaceSeperators
+    // Tests for RemoveSpaceSeparators
     // ==========================
 
     [Fact]
-    public void RemoveSpaceSeperators_removes_space_seperators()
+    public void RemoveSpaceSeparators_removes_space_Separators()
     {
         // Given
         string test = "does_this_work";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("does this work");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_removes_space_seperators_with_consecutive_seperators()
+    public void RemoveSpaceSeparators_removes_space_Separators_with_consecutive_Separators()
     {
         // Given
         string test = "does__this___work_________now";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("does this work now");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_removes_space_seperators_with_whitespace_at_start_and_end()
+    public void RemoveSpaceSeparators_removes_space_Separators_with_whitespace_at_start_and_end()
     {
         // Given
         string test = " does_this_work      ";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("does this work");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_empty_string()
+    public void RemoveSpaceSeparators_handles_empty_string()
     {
         // Given
         string test = "";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_null_input()
+    public void RemoveSpaceSeparators_handles_null_input()
     {
         // Given
         string? test = null;
         // When & Then
-        Should.Throw<ArgumentNullException>(() => _formatterService.RemoveSpaceSeperators(test));
+        Should.Throw<ArgumentNullException>(() => _formatterService.RemoveSpaceSeparators(test));
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_single_word()
+    public void RemoveSpaceSeparators_handles_single_word()
     {
         // Given
         string test = "word";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("word");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_only_whitespace()
+    public void RemoveSpaceSeparators_handles_only_whitespace()
     {
         // Given
         string test = "     ";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_preserves_existing_spaces()
+    public void RemoveSpaceSeparators_preserves_existing_spaces()
     {
         // Given
         string test = "already has spaces here";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("already has spaces here");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_tabs_and_newlines()
+    public void RemoveSpaceSeparators_handles_tabs_and_newlines()
     {
         // Given
         string test = "has\ttabs\nand\rnewlines";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("has tabs and newlines");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_special_characters()
+    public void RemoveSpaceSeparators_handles_special_characters()
     {
         // Given
         string test = "test_with_!@#$ special_chars";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("test with !@#$ special chars");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_numbers()
+    public void RemoveSpaceSeparators_handles_numbers()
     {
         // Given
         string test = "entry_123_test_456";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("entry 123 test 456");
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_unicode_characters()
+    public void RemoveSpaceSeparators_handles_unicode_characters()
     {
         // Given
         string test = "café_résumé_naïve";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("café résumé naïve");
     }
@@ -326,21 +326,21 @@ public class EntryFormatterServiceTests
     [InlineData("trailing__", "trailing")]
     [InlineData("a", "a")]
     [InlineData("a_b", "a b")]
-    public void RemoveSpaceSeperators_theory_test(string input, string expected)
+    public void RemoveSpaceSeparators_theory_test(string input, string expected)
     {
         // When
-        var result = _formatterService.RemoveSpaceSeperators(input);
+        var result = _formatterService.RemoveSpaceSeparators(input);
         // Then
         result.ShouldBe(expected);
     }
 
     [Fact]
-    public void RemoveSpaceSeperators_handles_only_underscores()
+    public void RemoveSpaceSeparators_handles_only_underscores()
     {
         // Given
         string test = "____";
         // When
-        var result = _formatterService.RemoveSpaceSeperators(test);
+        var result = _formatterService.RemoveSpaceSeparators(test);
         // Then
         result.ShouldBe("");
     }
@@ -361,7 +361,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_With_Space_Seperators()
+    public void SeperateSubheadingString_Splits_String_Into_Array_With_Space_Separators()
     {
         // Given
         string test = "heading_1-heading_2-heading_3";
@@ -372,7 +372,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_With_Consecutive_Seperators()
+    public void SeperateSubheadingString_Splits_String_Into_Array_With_Consecutive_Separators()
     {
         // Given
         string test = "heading1--heading2---heading3-----Heading4";
@@ -394,7 +394,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_with_whitespace_in_seperators_start_and_ends()
+    public void SeperateSubheadingString_Splits_String_Into_Array_with_whitespace_in_Separators_start_and_ends()
     {
         // Given
         string test = "heading1-  heading2  - heading3";
@@ -536,113 +536,113 @@ public class EntryFormatterServiceTests
     }
 
     // ==========================
-    // Tests for AddHeadingSeperators
+    // Tests for AddHeadingSeparators
     // ==========================
 
     [Fact]
-    public void AddHeadingSeperators_combines_heading_strings()
+    public void AddHeadingSeparators_combines_heading_strings()
     {
         // Given
         string[] test = ["Heading 1", "Heading_2-Heading_3", "title of journal entry"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Heading_1-Heading_2-Heading_3-title_of_journal_entry");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Combines_Strings_With_Separators()
+    public void AddHeadingSeparators_Combines_Strings_With_Separators()
     {
         // Given
         string[] test = ["Heading 1", "Heading_2", "Heading-3"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Heading_1-Heading_2-Heading-3");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Empty_Array()
+    public void AddHeadingSeparators_Handles_Empty_Array()
     {
         // Given
         string[] test = [];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Null_Input()
+    public void AddHeadingSeparators_Handles_Null_Input()
     {
         // Given
         string[]? test = null;
         // When & Then
-        Should.Throw<ArgumentNullException>(() => _formatterService.AddHeadingSeperators(test));
+        Should.Throw<ArgumentNullException>(() => _formatterService.AddHeadingSeparators(test));
     }
 
     [Fact]
-    public void AddHeadingSeperators_Trims_Whitespace_From_Sections()
+    public void AddHeadingSeparators_Trims_Whitespace_From_Sections()
     {
         // Given
         string[] test = ["  Heading 1  ", " Heading_2 ", " Heading-3 "];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Heading_1-Heading_2-Heading-3");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Special_Characters()
+    public void AddHeadingSeparators_Handles_Special_Characters()
     {
         // Given
         string[] test = ["Heading!@#$", "Heading%^&*", "Heading()_+"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Heading!@#$-Heading%^&*-Heading()_+");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Unicode_Characters()
+    public void AddHeadingSeparators_Handles_Unicode_Characters()
     {
         // Given
         string[] test = ["café", "résumé", "naïve"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("café-résumé-naïve");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Empty_Strings_In_Array()
+    public void AddHeadingSeparators_Handles_Empty_Strings_In_Array()
     {
         // Given
         string[] test = ["Heading 1", "", "Heading 3"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Heading_1-Heading_3");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Only_Empty_Strings()
+    public void AddHeadingSeparators_Handles_Only_Empty_Strings()
     {
         // Given
         string[] test = ["", "", ""];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Mixed_Separators()
+    public void AddHeadingSeparators_Handles_Mixed_Separators()
     {
         // Given
         string[] test = ["Heading 1", "Heading_2", "Heading-3"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Heading_1-Heading_2-Heading-3");
     }
@@ -653,55 +653,55 @@ public class EntryFormatterServiceTests
     [InlineData(new string[] { "Heading1", "" }, "Heading1")]
     [InlineData(new string[] { "" }, "")]
     [InlineData(new string[] { "Heading1" }, "Heading1")]
-    public void AddHeadingSeperators_Theory_Tests(string[] input, string expected)
+    public void AddHeadingSeparators_Theory_Tests(string[] input, string expected)
     {
         // When
-        var result = _formatterService.AddHeadingSeperators(input);
+        var result = _formatterService.AddHeadingSeparators(input);
         // Then
         result.ShouldBe(expected);
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Only_Whitespace_Strings()
+    public void AddHeadingSeparators_Handles_Only_Whitespace_Strings()
     {
         // Given
         string[] test = ["  ", "   ", "  "];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Single_Element_With_Spaces()
+    public void AddHeadingSeparators_Handles_Single_Element_With_Spaces()
     {
         // Given
         string[] test = ["Hello World Test"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Hello_World_Test");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Tabs_And_Newlines_In_Sections()
+    public void AddHeadingSeparators_Handles_Tabs_And_Newlines_In_Sections()
     {
         // Given
         string[] test = ["Hello\tWorld", "Test\nEntry", "Sample\rData"];
         // When
-        var result = _formatterService.AddHeadingSeperators(test);
+        var result = _formatterService.AddHeadingSeparators(test);
         // Then
         result.ShouldBe("Hello_World-Test_Entry-Sample_Data");
     }
 
     [Fact]
-    public void AddHeadingSeperators_Handles_Large_Array()
+    public void AddHeadingSeparators_Handles_Large_Array()
     {
         // Given - Large array (100 sections)
         var largeArray = Enumerable.Range(1, 100).Select(i => $"Section {i}").ToArray();
 
         // When
-        var result = _formatterService.AddHeadingSeperators(largeArray);
+        var result = _formatterService.AddHeadingSeparators(largeArray);
 
         // Then
         result.Split('-').Length.ShouldBe(100);

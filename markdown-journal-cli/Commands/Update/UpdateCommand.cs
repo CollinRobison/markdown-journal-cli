@@ -194,7 +194,7 @@ public sealed class UpdateCommand(
         
         // Track the TOC file so it doesn't show as "added" on next run
         var config = _journalConfiguration.Read(journalPath);
-        var tocFile = config?.TableOfContents.File ?? $"{_journalSettings.TableOfContentsFileName}.md";
+        var tocFile = config?.TableOfContents.File ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
         _fileTracking.UpdateFileInIndex(journalPath, tocFile);
         
         _console.MarkupLine($"[green]Table of contents updated.[/]");

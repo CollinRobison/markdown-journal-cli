@@ -6,10 +6,10 @@ namespace markdown_journal_cli.Infrastructure.Configuration.Models;
 public class TableOfContents
 {
     [JsonPropertyName("file")]
-    public string File { get; set; } = "1a-TableOfContents.md";
+    public string File { get; set; } = $"1a-TableOfContents{FileConstants.MarkdownExtension}";
 
     [JsonPropertyName("extensions")]
-    public string[] Extensions { get; set; } = [".md"];
+    public string[] Extensions { get; set; } = [FileConstants.MarkdownExtension];
 
     [JsonPropertyName("ignoreFiles")]
     public string[]? IgnoreFiles { get; set; }

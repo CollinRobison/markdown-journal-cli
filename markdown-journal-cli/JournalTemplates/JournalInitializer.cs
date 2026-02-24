@@ -137,17 +137,17 @@ public class JournalInitializer : IJournalInitializer
             new()
             {
                 Name = _journalSettings.IntroductionTitle,
-                File = $"{_journalSettings.IntroductionFileName}.md",
+                File = $"{_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension}",
             },
             new()
             {
                 Name = _journalSettings.JournalEntryTemplateTitle,
-                File = $"{_journalSettings.JournalEntryTemplateFileName}.md",
+                File = $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
             },
             new()
             {
                 Name = _journalSettings.AllJournalsTitle,
-                File = $"{_journalSettings.AllJournalsFileName}.md",
+                File = $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}",
             },
         ];
 

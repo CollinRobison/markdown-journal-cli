@@ -58,8 +58,8 @@ public class AddEntryIntegrationTests : IDisposable
                 IntroductionTitle = "Introduction",
                 JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
                 JournalEntryTemplateTitle = "Journal Entry Template",
-                TitleSpaceSeperator = "_",
-                HeadingSeperator = "-"
+                TitleSpaceSeparator = "_",
+                HeadingSeparator = "-"
             }
         );
 

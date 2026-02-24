@@ -100,13 +100,13 @@ public class AddEntryCommandTests
             .Returns(false);
 
         // Default entry formatter behaviors
-        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeperators(It.IsAny<string>()))
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input?.Replace(" ", "").Replace("_", "") ?? "");
         
-        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeperators(It.IsAny<string>()))
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input?.Replace(" ", "_") ?? "");
         
-        _mockEntryFormatter.Setup(ef => ef.AddHeadingSeperators(It.IsAny<string[]>()))
+        _mockEntryFormatter.Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns((string[] parts) => string.Join("-", parts));
         
         _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString(It.IsAny<string>()))

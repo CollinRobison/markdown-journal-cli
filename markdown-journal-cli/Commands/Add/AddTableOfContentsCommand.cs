@@ -50,7 +50,7 @@ public class AddTableOfContents(
             }
 
             var tocName = settings.TableOfContentsName ?? _journalSettings.TableOfContentsFileName;
-            var tocFile = $"{tocName}.md";
+            var tocFile = $"{tocName}{FileConstants.MarkdownExtension}";
             var tocPath = Path.Combine(settings.FilePath, tocFile);
 
             if (_fileSystem.FileExists(tocPath))
