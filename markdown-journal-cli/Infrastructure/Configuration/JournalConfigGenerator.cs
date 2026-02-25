@@ -39,7 +39,7 @@ public class JournalConfigGenerator(
             throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
         }
 
-        var tocFilePath = Path.Combine(directory, $"{tocFileName}.md");
+        var tocFilePath = Path.Combine(directory, $"{tocFileName}{FileConstants.MarkdownExtension}");
         
         if (!_fileSystem.FileExists(tocFilePath))
         {
@@ -60,8 +60,8 @@ public class JournalConfigGenerator(
             JournalName = journalName ?? GetJournalNameFromDirectory(directory),
             TableOfContents = new TableOfContents
             {
-                File = $"{tocFileName}.md",
-                Extensions = [".md"],
+                File = $"{tocFileName}{FileConstants.MarkdownExtension}",
+                Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
                 Structure = new Structure
                 {
@@ -127,7 +127,7 @@ public class JournalConfigGenerator(
 
         // Get all markdown files from tracking index
         var markdownFiles = index.Files.Keys
-            .Where(f => f.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            .Where(f => f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         // Create initial empty config
@@ -136,8 +136,8 @@ public class JournalConfigGenerator(
             JournalName = journalName ?? GetJournalNameFromDirectory(directory),
             TableOfContents = new TableOfContents
             {
-                File = $"{tocFileName}.md",
-                Extensions = [".md"],
+                File = $"{tocFileName}{FileConstants.MarkdownExtension}",
+                Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
                 Structure = new Structure
                 {
@@ -188,7 +188,7 @@ public class JournalConfigGenerator(
         }
 
         // Get all markdown files in directory
-        var markdownFiles = _fileSystem.GetFiles(directory, "*.md", SearchOption.TopDirectoryOnly)
+        var markdownFiles = _fileSystem.GetFiles(directory, $"*{FileConstants.MarkdownExtension}", SearchOption.TopDirectoryOnly)
             .Select(f => Path.GetFileName(f))
             .Where(f => !string.IsNullOrEmpty(f))
             .Cast<string>()
@@ -200,8 +200,8 @@ public class JournalConfigGenerator(
             JournalName = journalName ?? GetJournalNameFromDirectory(directory),
             TableOfContents = new TableOfContents
             {
-                File = $"{tocFileName}.md",
-                Extensions = [".md"],
+                File = $"{tocFileName}{FileConstants.MarkdownExtension}",
+                Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
                 Structure = new Structure
                 {

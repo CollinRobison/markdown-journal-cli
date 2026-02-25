@@ -9,7 +9,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
     private readonly IServiceProvider? _provider;
 
     // Constructor for building services
-    public TypeRegistrar(Microsoft.Extensions.Hosting.IHost host)
+    public TypeRegistrar()
     {
         _services = new ServiceCollection();
     }

@@ -37,7 +37,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
     /// <returns>all markdown files in the journal directory (excluding metadata directory).</returns>
     private HashSet<string> GetCurrentMarkdownFiles(string path)
     {
-        return [.. _fileSystem.GetFiles(path, "*.md", SearchOption.AllDirectories)
+        return [.. _fileSystem.GetFiles(path, $"*{FileConstants.MarkdownExtension}", SearchOption.AllDirectories)
             .Where(f => !f.Contains(_indexFileName))
             .Select(f => Path.GetRelativePath(path, f))];
     }

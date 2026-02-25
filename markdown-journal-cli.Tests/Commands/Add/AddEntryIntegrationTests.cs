@@ -58,8 +58,8 @@ public class AddEntryIntegrationTests : IDisposable
                 IntroductionTitle = "Introduction",
                 JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
                 JournalEntryTemplateTitle = "Journal Entry Template",
-                TitleSpaceSeperator = "_",
-                HeadingSeperator = "-"
+                TitleSpaceSeparator = "_",
+                HeadingSeparator = "-"
             }
         );
 
@@ -91,8 +91,7 @@ public class AddEntryIntegrationTests : IDisposable
         services.AddSingleton(_journalSettings);
         services.AddSingleton<AddEntry>();
 
-        var host = Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services)
         {

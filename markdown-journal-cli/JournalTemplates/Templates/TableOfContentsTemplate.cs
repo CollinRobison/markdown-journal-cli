@@ -28,7 +28,7 @@ public class TableOfContentsTemplate : ITemplateGenerator
 Last Edited: {lastEditedDate}
 
 # Table of Contents
-- [{_journalSettings.IntroductionTitle}]({_journalSettings.IntroductionFileName}.md)
+- [{_journalSettings.IntroductionTitle}]({_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension})
 - [{_journalSettings.JournalEntryTemplateTitle}]({_journalSettings.JournalEntryTemplateFileName})
 - [{_journalSettings.AllJournalsTitle}]({_journalSettings.AllJournalsFileName})
 ## Example Topic

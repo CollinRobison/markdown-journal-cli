@@ -34,16 +34,16 @@ public class JournalSettings
     public string JournalEntryTemplateTitle { get; set; } = "Journal Entry Template";
 
     [Required]
-    public string AllJournalsFileName = "1h-All-My-Journals";
+    public string AllJournalsFileName {get; set;} = "1h-All-My-Journals";
 
     [Required]
     public string AllJournalsTitle { get; set; } = "All My Journals";
 
     [Required]
-    public string TitleSpaceSeperator { get; set; } = "_";
+    public string TitleSpaceSeparator { get; set; } = "_";
 
     [Required]
-    public string HeadingSeperator { get; set; } = "-";
+    public string HeadingSeparator { get; set; } = "-";
 
     public bool CapitalizeTopicHeadings { get; set; } = true;
 

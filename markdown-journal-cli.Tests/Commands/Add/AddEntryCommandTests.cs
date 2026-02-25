@@ -7,7 +7,6 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
@@ -67,8 +66,7 @@ public class AddEntryCommandTests
         services.AddSingleton(_journalSettings);
         services.AddSingleton<AddEntry>();
 
-        var host = Host.CreateDefaultBuilder().Build();
-        var registrar = new TypeRegistrar(host);
+        var registrar = new TypeRegistrar();
 
         foreach (var service in services)
         {
@@ -102,13 +100,13 @@ public class AddEntryCommandTests
             .Returns(false);
 
         // Default entry formatter behaviors
-        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeperators(It.IsAny<string>()))
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input?.Replace(" ", "").Replace("_", "") ?? "");
         
-        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeperators(It.IsAny<string>()))
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input?.Replace(" ", "_") ?? "");
         
-        _mockEntryFormatter.Setup(ef => ef.AddHeadingSeperators(It.IsAny<string[]>()))
+        _mockEntryFormatter.Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns((string[] parts) => string.Join("-", parts));
         
         _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString(It.IsAny<string>()))

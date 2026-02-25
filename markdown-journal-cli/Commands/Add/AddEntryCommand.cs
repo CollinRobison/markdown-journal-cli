@@ -66,16 +66,16 @@ public sealed class AddEntry(
             //format entry name and subheading with - in place of spaces. - (make this into helper function)
 
             // title for use in table of contents and entry file
-            var entryTitle = _entryFormatter.RemoveSpaceSeperators(
+            var entryTitle = _entryFormatter.RemoveSpaceSeparators(
                 settings.EntryTitle ?? settings.EntryName
             );
             // title for use in the file name
-            var entryNameFormatted = _entryFormatter.AddSpaceSeperators(settings.EntryName);
+            var entryNameFormatted = _entryFormatter.AddSpaceSeparators(settings.EntryName);
 
             // heading for use in file name
             var headingFormatted =
                 settings.Heading != null
-                    ? entryFormatter.AddSpaceSeperators(settings.Heading)
+                    ? entryFormatter.AddSpaceSeparators(settings.Heading)
                     : null;
 
             var fileName = new[] { headingFormatted, settings.Subheading, entryNameFormatted }
@@ -84,7 +84,7 @@ public sealed class AddEntry(
                 .ToArray();
 
             //generate file name by merging heading - subheading - file name. (make this a helper function)
-            var fileNameFormatted = $"{entryFormatter.AddHeadingSeperators(fileName)}.md";
+            var fileNameFormatted = $"{entryFormatter.AddHeadingSeparators(fileName)}{FileConstants.MarkdownExtension}";
             var entryFilePath = $"{settings.FilePath}/{fileNameFormatted}";
             //check if file exists
             if (_fileSystem.FileExists(entryFilePath))
@@ -106,7 +106,7 @@ public sealed class AddEntry(
             );
             //update journalrc 
             string[] headings = (settings.Heading != null 
-                    ? [entryFormatter.RemoveSpaceSeperators(settings.Heading)] 
+                    ? [entryFormatter.RemoveSpaceSeparators(settings.Heading)] 
                     : Array.Empty<string>())
                 .Concat(settings.Subheading != null 
                     ? entryFormatter.SeperateSubheadingString(settings.Subheading) 

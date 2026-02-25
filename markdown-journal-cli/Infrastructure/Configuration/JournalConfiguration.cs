@@ -5,7 +5,6 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.VisualBasic;
 
 namespace markdown_journal_cli.Infrastructure.Configuration;
 
@@ -433,7 +432,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
 
         // Pattern matches: starts with single digit 1-9 followed by single lowercase letter a-z
         // Followed by either end of string or the heading separator from settings
-        var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeperator);
+        var escapedSeparator = Regex.Escape(_journalSettings.HeadingSeparator);
         var pattern = $@"^[1-9][a-z](?:{escapedSeparator}|$)";
         return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase) || fileName.ToLower().Equals("readme");
     }
@@ -488,32 +487,32 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         {
             // For root entries like "1b-Intro", extract "Intro" after the pattern
             // Pattern is: digit + letter + separator (e.g., "1b-")
-            var match = Regex.Match(fileName, @"^[0-9][a-zA-Z]" + Regex.Escape(_journalSettings.HeadingSeperator) + "(.+)$");
+            var match = Regex.Match(fileName, @"^[0-9][a-zA-Z]" + Regex.Escape(_journalSettings.HeadingSeparator) + "(.+)$");
             if (match.Success && match.Groups.Count > 1)
             {
                 var name = match.Groups[1].Value;
                 // Replace both separators with spaces
                 return name
-                    .Replace(_journalSettings.TitleSpaceSeperator, " ")
-                    .Replace(_journalSettings.HeadingSeperator, " ")
+                    .Replace(_journalSettings.TitleSpaceSeparator, " ")
+                    .Replace(_journalSettings.HeadingSeparator, " ")
                     .Trim();
             }
             // Fallback if pattern doesn't match
             return fileName
-                .Replace(_journalSettings.TitleSpaceSeperator, " ")
-                .Replace(_journalSettings.HeadingSeperator, " ")
+                .Replace(_journalSettings.TitleSpaceSeparator, " ")
+                .Replace(_journalSettings.HeadingSeparator, " ")
                 .Trim();
         }
         else
         {
             // For topic entries, get the last part after splitting by heading separator
-            var parts = fileName.Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries);
+            var parts = fileName.Split(_journalSettings.HeadingSeparator, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length > 0)
             {
                 var lastName = parts[^1];
-                return lastName.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim();
+                return lastName.Replace(_journalSettings.TitleSpaceSeparator, " ").Trim();
             }
-            return fileName.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim();
+            return fileName.Replace(_journalSettings.TitleSpaceSeparator, " ").Trim();
         }
     }
 
@@ -525,7 +524,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         }
 
         // Split by heading separator to get topic hierarchy
-        var parts = fileName.Split(_journalSettings.HeadingSeperator, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileName.Split(_journalSettings.HeadingSeparator, StringSplitOptions.RemoveEmptyEntries);
         
         if (parts.Length == 0)
         {
@@ -535,7 +534,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         // If only one part, treat it as a single topic
         if (parts.Length == 1)
         {
-            var singleTopic = parts[0].Replace(_journalSettings.TitleSpaceSeperator, " ").Trim();
+            var singleTopic = parts[0].Replace(_journalSettings.TitleSpaceSeparator, " ").Trim();
             return string.IsNullOrEmpty(singleTopic) ? new[] { "General" } : new[] { singleTopic };
         }
         
@@ -543,7 +542,7 @@ public class JournalConfiguration(IFileSystem fileSystem, IOptions<JournalSettin
         // Convert each topic part: replace title separators with spaces for display
         return parts
             .Take(parts.Length - 1)  // Exclude the last part (entry name)
-            .Select(part => part.Replace(_journalSettings.TitleSpaceSeperator, " ").Trim())
+            .Select(part => part.Replace(_journalSettings.TitleSpaceSeparator, " ").Trim())
             .Where(part => !string.IsNullOrEmpty(part))
             .ToArray();
     }
