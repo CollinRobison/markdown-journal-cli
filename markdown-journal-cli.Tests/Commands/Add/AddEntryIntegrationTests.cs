@@ -21,12 +21,7 @@ namespace markdown_journal_cli.Tests.Commands.Add;
 /// <summary>
 /// Integration tests for AddEntry command using real services and file operations.
 /// These tests validate actual performance, file I/O, and end-to-end scenarios.
-/// 
-/// NOTE: Currently skipped due to CommandAppTester limitation with branch command settings binding.
-/// The -p (path) parameter from AddSettings base class is not properly bound when using
-/// config.AddBranch<AddSettings>("add", ...). This causes commands to use "." instead of test directory.
-/// 
-/// TODO: Either fix CommandAppTester binding or run these as manual E2E tests with actual CLI invocation.
+/// Uses real FileSystem with temporary directories for true integration testing.
 /// </summary>
 public class AddEntryIntegrationTests : IDisposable
 {
