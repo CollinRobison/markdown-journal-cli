@@ -1,6 +1,5 @@
-using System.Collections.Generic;
 
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Infrastructure.JournalTemplates;
 
 /// <summary>
 /// Contract for a template manager that can register template generators

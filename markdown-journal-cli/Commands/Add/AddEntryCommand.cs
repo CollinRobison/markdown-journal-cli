@@ -3,8 +3,8 @@ using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
-using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
@@ -20,7 +20,7 @@ public sealed class AddEntry(
     IEntryFormatterService entryFormatter,
     IJournalConfiguration journalConfiguration,
     IFileTracking fileTracking,
-    ITableOfContentsGenerator tableOfContentsGenerator,
+    ITableOfContentsService tableOfContentsGenerator,
     IOptions<JournalSettings> journalSettings
 ) : Command<AddEntrySettings>
 {
@@ -41,7 +41,7 @@ public sealed class AddEntry(
     private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
 
-    private readonly ITableOfContentsGenerator _tableOfContentsGenerator = 
+    private readonly ITableOfContentsService _tableOfContentsGenerator = 
         tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -12,7 +12,7 @@ namespace markdown_journal_cli.Commands.New;
 public sealed class NewCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,
-    IJournalInitializer journalInitializer,
+    INewJournalService journalInitializer,
     IOptions<JournalSettings> journalSettings
 ) : Command<NewCommand.Settings>
 {
@@ -21,7 +21,7 @@ public sealed class NewCommand(
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-    private readonly IJournalInitializer _journalInitializer =
+    private readonly INewJournalService _journalInitializer =
         journalInitializer ?? throw new ArgumentNullException(nameof(journalInitializer));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;

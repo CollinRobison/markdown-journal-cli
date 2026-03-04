@@ -1,4 +1,4 @@
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 
 namespace markdown_journal_cli.Tests.Infrastructure;
 

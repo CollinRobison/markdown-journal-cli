@@ -5,7 +5,7 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -18,7 +18,7 @@ public sealed class UpdateCommand(
     IFileSystem fileSystem,
     IFileTracking fileTracking,
     IJournalConfiguration journalConfiguration,
-    ITableOfContentsGenerator tableOfContentsGenerator,
+    ITableOfContentsService tableOfContentsGenerator,
     IOptions<JournalSettings> journalSettings
 ) : Command<UpdateJournalSettings>
 {
@@ -33,7 +33,7 @@ public sealed class UpdateCommand(
     private readonly IJournalConfiguration _journalConfiguration =
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
 
-    private readonly ITableOfContentsGenerator _tableOfContentsGenerator =
+    private readonly ITableOfContentsService _tableOfContentsGenerator =
         tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;

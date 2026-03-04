@@ -1,9 +1,9 @@
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Services;
 
 /// <summary>
 /// Generates and updates the table of contents based on journal configuration.
 /// </summary>
-public interface ITableOfContentsGenerator
+public interface ITableOfContentsService
 {
     /// <summary>
     /// Updates the table of contents file based on the current journal configuration.

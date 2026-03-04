@@ -1,9 +1,10 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -17,7 +18,7 @@ public class JournalInitializerTests
     private readonly TestJournalConfiguration _testJournalConfiguration;
     private readonly Mock<IFileTracking> _mockFileTracking;
     private readonly IOptions<JournalSettings> _journalSettings;
-    private readonly JournalInitializer _journalInitializer;
+    private readonly NewJournalService _journalInitializer;
 
     public JournalInitializerTests()
     {
@@ -41,7 +42,7 @@ public class JournalInitializerTests
             }
         );
         _mockFileTracking = new Mock<IFileTracking>();
-        _journalInitializer = new JournalInitializer(
+        _journalInitializer = new NewJournalService(
             _testFileSystem,
             _testTemplateManager,
             _testJournalConfiguration,
@@ -205,7 +206,7 @@ public class JournalInitializerTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new JournalInitializer(
+            new NewJournalService(
                 null!,
                 _testTemplateManager,
                 _testJournalConfiguration,
@@ -221,7 +222,7 @@ public class JournalInitializerTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new JournalInitializer(
+            new NewJournalService(
                 _testFileSystem,
                 null!,
                 _testJournalConfiguration,
@@ -237,7 +238,7 @@ public class JournalInitializerTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new JournalInitializer(_testFileSystem, _testTemplateManager, null!, _mockFileTracking.Object, _journalSettings)
+            new NewJournalService(_testFileSystem, _testTemplateManager, null!, _mockFileTracking.Object, _journalSettings)
         );
         Assert.Equal("journalConfiguration", exception.ParamName);
     }

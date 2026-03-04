@@ -3,7 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -21,7 +21,7 @@ public class UpdateCommandTests
     private readonly TestHashService _hashService;
     private readonly FileTracking _fileTracking;
     private readonly JournalConfiguration _journalConfiguration;
-    private readonly TableOfContentsGenerator _tableOfContentsGenerator;
+    private readonly TableOfContentsService _tableOfContentsGenerator;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly string _testPath;
 
@@ -55,7 +55,7 @@ public class UpdateCommandTests
             NullLogger<JournalConfiguration>.Instance
         );
 
-        _tableOfContentsGenerator = new TableOfContentsGenerator(
+        _tableOfContentsGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             _journalSettings
@@ -525,7 +525,7 @@ public class UpdateCommandTests
         _hashService.SetHash(filePath, "hash-b");
 
         var customConfig = new JournalConfiguration(_fileSystem, customSettings, NullLogger<JournalConfiguration>.Instance);
-        var customTocGen = new TableOfContentsGenerator(_fileSystem, customConfig, customSettings);
+        var customTocGen = new TableOfContentsService(_fileSystem, customConfig, customSettings);
         var command = new UpdateCommand(_console, _fileSystem, tracking, customConfig, customTocGen, customSettings);
         var settings = new UpdateJournalSettings { FilePath = _testPath };
 

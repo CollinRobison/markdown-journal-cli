@@ -3,8 +3,8 @@ using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
-using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -12,7 +12,6 @@ using Moq;
 using Shouldly;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
-using Xunit;
 
 namespace markdown_journal_cli.Tests.Commands.Add;
 
@@ -27,7 +26,7 @@ public class AddEntryCommandTests
     private readonly Mock<IEntryFormatterService> _mockEntryFormatter;
     private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
     private readonly Mock<IFileTracking> _mockFileTracking;
-    private readonly Mock<ITableOfContentsGenerator> _mockTocGenerator;
+    private readonly Mock<ITableOfContentsService> _mockTocGenerator;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly TestConsole _console;
     private readonly CommandAppTester _app;
@@ -40,7 +39,7 @@ public class AddEntryCommandTests
         _mockEntryFormatter = new Mock<IEntryFormatterService>();
         _mockJournalConfiguration = new Mock<IJournalConfiguration>();
         _mockFileTracking = new Mock<IFileTracking>();
-        _mockTocGenerator = new Mock<ITableOfContentsGenerator>();
+        _mockTocGenerator = new Mock<ITableOfContentsService>();
 
         _journalSettings = Options.Create(
             new JournalSettings

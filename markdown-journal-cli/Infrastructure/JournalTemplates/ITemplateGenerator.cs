@@ -1,6 +1,5 @@
-using System;
 
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Infrastructure.JournalTemplates;
 
 /// <summary>
 /// Defines a contract for generating journal entry templates using string interpolation.

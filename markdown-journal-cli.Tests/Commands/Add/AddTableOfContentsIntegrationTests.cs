@@ -2,7 +2,7 @@ using System.Text.Json;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shouldly;
@@ -20,7 +20,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     private readonly string _testDirectory;
     private readonly IFileSystem _fileSystem;
     private readonly IJournalConfiguration _journalConfiguration;
-    private readonly ITableOfContentsGenerator _tocGenerator;
+    private readonly ITableOfContentsService _tocGenerator;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly AddTableOfContents _command;
     private readonly TestConsole _console;
@@ -49,7 +49,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
             _journalSettings,
             NullLogger<JournalConfiguration>.Instance
         );
-        _tocGenerator = new TableOfContentsGenerator(
+        _tocGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             _journalSettings

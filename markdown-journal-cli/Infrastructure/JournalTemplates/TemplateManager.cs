@@ -1,8 +1,7 @@
-using markdown_journal_cli.JournalTemplates;
-using markdown_journal_cli.JournalTemplates.Templates;
+using markdown_journal_cli.Infrastructure.JournalTemplates.Templates;
 using Microsoft.Extensions.Options;
 
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Infrastructure.JournalTemplates;
 
 /// <summary>
 /// Manages available template generators and provides helper methods to

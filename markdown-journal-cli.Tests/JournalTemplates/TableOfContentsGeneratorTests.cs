@@ -1,5 +1,5 @@
 using markdown_journal_cli.Infrastructure.Configuration.Models;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -11,7 +11,7 @@ public class TableOfContentsGeneratorTests
     private readonly TestFileSystem _fileSystem;
     private readonly TestJournalConfiguration _journalConfiguration;
     private readonly IOptions<JournalSettings> _journalSettings;
-    private readonly TableOfContentsGenerator _generator;
+    private readonly TableOfContentsService _generator;
 
     public TableOfContentsGeneratorTests()
     {
@@ -26,7 +26,7 @@ public class TableOfContentsGeneratorTests
                 TableOfContentsTitle = "Table of Contents",
             }
         );
-        _generator = new TableOfContentsGenerator(
+        _generator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             _journalSettings
@@ -670,7 +670,7 @@ public class TableOfContentsGeneratorTests
             }
         );
 
-        var generatorWithoutCaps = new TableOfContentsGenerator(
+        var generatorWithoutCaps = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             settingsWithoutCaps
@@ -740,7 +740,7 @@ public class TableOfContentsGeneratorTests
             }
         );
 
-        var generatorWithCaps = new TableOfContentsGenerator(
+        var generatorWithCaps = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             settingsWithCaps

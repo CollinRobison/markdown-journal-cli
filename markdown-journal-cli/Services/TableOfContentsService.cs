@@ -4,16 +4,16 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
 
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Services;
 
 /// <summary>
 /// Generates and updates the table of contents based on journal configuration.
 /// </summary>
-public class TableOfContentsGenerator(
+public class TableOfContentsService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
     IOptions<JournalSettings> journalSettings
-    ) : ITableOfContentsGenerator
+    ) : ITableOfContentsService
 {
     private readonly IFileSystem _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     private readonly IJournalConfiguration _journalConfiguration =

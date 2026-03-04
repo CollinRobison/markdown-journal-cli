@@ -1,6 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services;

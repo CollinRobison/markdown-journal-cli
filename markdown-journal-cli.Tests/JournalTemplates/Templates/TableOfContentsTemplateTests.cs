@@ -1,4 +1,4 @@
-using markdown_journal_cli.JournalTemplates.Templates;
+using markdown_journal_cli.Infrastructure.JournalTemplates.Templates;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;

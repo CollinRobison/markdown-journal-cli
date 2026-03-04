@@ -3,11 +3,10 @@ using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
-using markdown_journal_cli.JournalTemplates;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shouldly;
@@ -31,7 +30,7 @@ public class AddEntryIntegrationTests : IDisposable
     private readonly IEntryFormatterService _entryFormatter;
     private readonly IJournalConfiguration _journalConfiguration;
     private readonly IFileTracking _fileTracking;
-    private readonly ITableOfContentsGenerator _tocGenerator;
+    private readonly ITableOfContentsService _tocGenerator;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly CommandAppTester _app;
 
@@ -65,7 +64,7 @@ public class AddEntryIntegrationTests : IDisposable
         var hashService = new HashService();
         _fileTracking = new FileTracking(_fileSystem, _journalSettings, hashService);
         _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings, NullLogger<JournalConfiguration>.Instance);
-        _tocGenerator = new TableOfContentsGenerator(
+        _tocGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             _journalSettings

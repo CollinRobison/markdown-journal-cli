@@ -1,6 +1,5 @@
-using markdown_journal_cli.JournalTemplates.Templates;
+using markdown_journal_cli.Infrastructure.JournalTemplates.Templates;
 using Shouldly;
-using Xunit;
 
 namespace markdown_journal_cli.Tests.JournalTemplates.Templates;
 

@@ -1,9 +1,9 @@
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Services;
 
 /// <summary>
 /// Provides functionality to initialize a new journal with default files and configuration.
 /// </summary>
-public interface IJournalInitializer
+public interface INewJournalService
 {
     /// <summary>
     /// Initializes a new journal by creating the directory structure, default files, and configuration.

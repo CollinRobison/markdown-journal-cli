@@ -4,7 +4,7 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -23,7 +23,7 @@ public class AddTableOfContentsCommandTests
     private readonly TestFileSystem _fileSystem;
     private readonly TestConsole _console;
     private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
-    private readonly Mock<ITableOfContentsGenerator> _mockTocGenerator;
+    private readonly Mock<ITableOfContentsService> _mockTocGenerator;
     private readonly JournalSettings _journalSettings;
     private readonly AddTableOfContents _command;
 
@@ -32,7 +32,7 @@ public class AddTableOfContentsCommandTests
         _fileSystem = new TestFileSystem();
         _console = new TestConsole();
         _mockJournalConfiguration = new Mock<IJournalConfiguration>();
-        _mockTocGenerator = new Mock<ITableOfContentsGenerator>();
+        _mockTocGenerator = new Mock<ITableOfContentsService>();
         _journalSettings = new JournalSettings
         {
             JournalConfigFileName = ".journalrc",

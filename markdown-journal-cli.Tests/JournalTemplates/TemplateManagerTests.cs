@@ -1,4 +1,5 @@
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
+using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Options;
 using Shouldly;

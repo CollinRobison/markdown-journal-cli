@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Extensions.Options;
 
-namespace markdown_journal_cli.JournalTemplates.Templates;
+namespace markdown_journal_cli.Infrastructure.JournalTemplates.Templates;
 
 public class TableOfContentsTemplate : ITemplateGenerator
 {

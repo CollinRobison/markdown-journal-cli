@@ -1,15 +1,16 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using Microsoft.Extensions.Options;
 
-namespace markdown_journal_cli.JournalTemplates;
+namespace markdown_journal_cli.Services;
 
 /// <summary>
 /// Default implementation of IJournalInitializer that creates a new journal with standard files and configuration.
 /// </summary>
-public class JournalInitializer : IJournalInitializer
+public class NewJournalService : INewJournalService
 {
     private readonly IFileSystem _fileSystem;
     private readonly ITemplateManager _templateManager;
@@ -24,7 +25,7 @@ public class JournalInitializer : IJournalInitializer
     /// <param name="templateManager">The template manager for generating content from templates.</param>
     /// <param name="journalConfiguration">The configuration service for creating journalrc files.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
-    public JournalInitializer(
+    public NewJournalService(
         IFileSystem fileSystem,
         ITemplateManager templateManager,
         IJournalConfiguration journalConfiguration,
