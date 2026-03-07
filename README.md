@@ -288,6 +288,8 @@ For technical details about the project architecture, see the **[Architecture Gu
 ```bash
 # TODO: Document these commands when implemented
 
+mdjournal --version
+
 mdjournal init [name] # Initializes an existing markdown directory as a journal (adds journalrc, file tracking, and toc)
 
 mdjournal update file --ignore # Updates file-specific settings like adding to ignore list
