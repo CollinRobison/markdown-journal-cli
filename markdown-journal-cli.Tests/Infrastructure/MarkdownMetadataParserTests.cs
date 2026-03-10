@@ -30,7 +30,8 @@ public class MarkdownMetadataParserTests
     public void ParseDates_ParsesCreatedDate_WhenPresent()
     {
         // Arrange
-        var content = @"Created: 1/15/2024
+        var content =
+            @"Created: 1/15/2024
 Last Edited: 02/20/2024
 
 # Title";
@@ -47,7 +48,8 @@ Last Edited: 02/20/2024
     public void ParseDates_ParsesLastEditedDate_WhenPresent()
     {
         // Arrange
-        var content = @"Created: 1/15/2024
+        var content =
+            @"Created: 1/15/2024
 Last Edited: 02/20/2024
 
 # Title";
@@ -64,7 +66,8 @@ Last Edited: 02/20/2024
     public void ParseDates_ParsesBothDates_WhenBothPresent()
     {
         // Arrange
-        var content = @"Created: 1/15/2024
+        var content =
+            @"Created: 1/15/2024
 Last Edited: 02/20/2024
 
 # Title";
@@ -83,7 +86,8 @@ Last Edited: 02/20/2024
     public void ParseDates_ReturnsNullCreated_WhenOnlyLastEditedPresent()
     {
         // Arrange
-        var content = @"Last Edited: 02/20/2024
+        var content =
+            @"Last Edited: 02/20/2024
 
 # Title";
 
@@ -100,7 +104,8 @@ Last Edited: 02/20/2024
     public void ParseDates_ReturnsNullEdited_WhenOnlyCreatedPresent()
     {
         // Arrange
-        var content = @"Created: 1/15/2024
+        var content =
+            @"Created: 1/15/2024
 
 # Title";
 
@@ -117,7 +122,8 @@ Last Edited: 02/20/2024
     public void ParseDates_IsCaseInsensitive()
     {
         // Arrange
-        var content = @"CREATED: 1/15/2024
+        var content =
+            @"CREATED: 1/15/2024
 last edited: 02/20/2024
 
 # Title";
@@ -136,7 +142,8 @@ last edited: 02/20/2024
     public void ParseDates_StopsAtFirstHeading()
     {
         // Arrange
-        var content = @"Created: 1/15/2024
+        var content =
+            @"Created: 1/15/2024
 
 # Title
 
@@ -156,7 +163,8 @@ Last Edited: 02/20/2024";
     public void ParseDates_HandlesExtraWhitespace()
     {
         // Arrange
-        var content = @"  Created:   1/15/2024  
+        var content =
+            @"  Created:   1/15/2024  
     Last Edited:    02/20/2024   
 
 # Title";
@@ -175,7 +183,8 @@ Last Edited: 02/20/2024";
     public void ParseDates_ReturnsNull_WhenDateFormatIsInvalid()
     {
         // Arrange
-        var content = @"Created: not-a-date
+        var content =
+            @"Created: not-a-date
 Last Edited: also-not-a-date
 
 # Title";
@@ -192,7 +201,8 @@ Last Edited: also-not-a-date
     public void ParseDates_HandlesContentWithoutDates()
     {
         // Arrange
-        var content = @"# Title
+        var content =
+            @"# Title
 
 Some content here
 - List item 1
@@ -210,7 +220,8 @@ Some content here
     public void ParseDates_OnlyChecksFirstSixLines()
     {
         // Arrange - dates on lines 7 and 8 should not be found
-        var content = @"Line 1
+        var content =
+            @"Line 1
 Line 2
 Line 3
 Line 4
@@ -231,7 +242,8 @@ Last Edited: 02/20/2024";
     public void ParseDates_SupportsVariousDateFormats()
     {
         // Arrange
-        var content = @"Created: 12/25/2023
+        var content =
+            @"Created: 12/25/2023
 Last Edited: 01/01/2024
 
 # Title";
@@ -265,7 +277,8 @@ Last Edited: 01/01/2024
     public void UpdateLastEditedDate_ReplacesExistingLastEditedLine()
     {
         // Arrange
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 Last Edited: 01/20/2024
 
 # Title
@@ -287,7 +300,8 @@ Some content";
     public void UpdateLastEditedDate_InsertsAfterCreatedLine_WhenNoLastEditedExists()
     {
         // Arrange
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 
 # Title
 
@@ -311,7 +325,8 @@ Some content";
     public void UpdateLastEditedDate_InsertsAtTop_WhenNoMetadataExists()
     {
         // Arrange
-        var content = @"# Title
+        var content =
+            @"# Title
 
 Some content";
         var date = new DateTime(2026, 2, 10);
@@ -328,7 +343,8 @@ Some content";
     public void UpdateLastEditedDate_PreservesRestOfContent()
     {
         // Arrange
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 Last Edited: 01/20/2024
 
 # Title
@@ -354,7 +370,8 @@ Some paragraph";
     public void UpdateLastEditedDate_UsesCustomDateFormat()
     {
         // Arrange
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 Last Edited: 01/20/2024
 
 # Title";
@@ -371,7 +388,8 @@ Last Edited: 01/20/2024
     public void UpdateLastEditedDate_UsesDefaultFormat_WhenNoFormatSpecified()
     {
         // Arrange
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 Last Edited: 01/20/2024
 
 # Title";
@@ -388,7 +406,8 @@ Last Edited: 01/20/2024
     public void UpdateLastEditedDate_IsCaseInsensitive_WhenReplacingExistingLine()
     {
         // Arrange
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 last edited: 01/20/2024
 
 # Title";
@@ -406,7 +425,8 @@ last edited: 01/20/2024
     public void UpdateLastEditedDate_DoesNotModifyLastEditedAfterHeading()
     {
         // Arrange — "Last Edited:" after heading should not be touched
-        var content = @"Created: 01/15/2024
+        var content =
+            @"Created: 01/15/2024
 
 # Title
 
@@ -428,7 +448,8 @@ Last Edited: 01/20/2024";
     public void UpdateLastEditedDate_PreservesCRLFLineEndings()
     {
         // Arrange - content with CRLF line endings
-        var content = "Created: 01/15/2024\r\nLast Edited: 01/20/2024\r\n\r\n# Title\r\n\r\nSome content";
+        var content =
+            "Created: 01/15/2024\r\nLast Edited: 01/20/2024\r\n\r\n# Title\r\n\r\nSome content";
         var date = new DateTime(2026, 2, 10);
 
         // Act

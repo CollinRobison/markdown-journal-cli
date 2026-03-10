@@ -25,7 +25,11 @@ public class JournalConfigurationTests
         _journalSettings = Options.Create(
             new JournalSettings { JournalConfigFileName = ".journalrc" }
         );
-        _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings, NullLogger<JournalConfiguration>.Instance);
+        _journalConfiguration = new JournalConfiguration(
+            _fileSystem,
+            _journalSettings,
+            NullLogger<JournalConfiguration>.Instance
+        );
         _testDirectory = "/test/directory";
     }
 
@@ -40,7 +44,15 @@ public class JournalConfigurationTests
                 Extensions = [".md", ".txt"],
                 Structure = new Structure
                 {
-                    Topics = [new Topic { Name = "General", Entries = [], Subtopics = null }],
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "General",
+                            Entries = [],
+                            Subtopics = null,
+                        },
+                    ],
                 },
                 RootEntries = [new Entries { Name = "Home", File = "1a-home.md" }],
             },
@@ -381,9 +393,10 @@ public class JournalConfigurationTests
 
         updatedConfig.ShouldNotBeNull();
         updatedConfig.TableOfContents.Structure.Topics.Length.ShouldBe(2);
-        
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(1);
         learningTopic.Entries[0].Name.ShouldBe("Getting Started");
@@ -416,7 +429,7 @@ public class JournalConfigurationTests
 
         updatedConfig.ShouldNotBeNull();
         updatedConfig.TableOfContents.Structure.Topics.Length.ShouldBe(1);
-        
+
         var generalTopic = updatedConfig.TableOfContents.Structure.Topics[0];
         generalTopic.Name.ShouldBe("General");
         generalTopic.Entries.Length.ShouldBe(1);
@@ -448,29 +461,31 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
+
         // Navigate the hierarchy
-        var piratesTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "pirates");
+        var piratesTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "pirates"
+        );
         piratesTopic.ShouldNotBeNull();
         piratesTopic.Subtopics.ShouldNotBeNull();
-        
-        var swordsTopic = piratesTopic.Subtopics!
-            .FirstOrDefault(t => t.Name == "swords");
+
+        var swordsTopic = piratesTopic.Subtopics!.FirstOrDefault(t => t.Name == "swords");
         swordsTopic.ShouldNotBeNull();
         swordsTopic.Subtopics.ShouldNotBeNull();
-        
-        var cutlassTopic = swordsTopic.Subtopics!
-            .FirstOrDefault(t => t.Name == "cutlass");
+
+        var cutlassTopic = swordsTopic.Subtopics!.FirstOrDefault(t => t.Name == "cutlass");
         cutlassTopic.ShouldNotBeNull();
         cutlassTopic.Subtopics.ShouldNotBeNull();
-        
-        var piratesWhoOwnedTopic = cutlassTopic.Subtopics!
-            .FirstOrDefault(t => t.Name == "pirates who owned");
+
+        var piratesWhoOwnedTopic = cutlassTopic.Subtopics!.FirstOrDefault(t =>
+            t.Name == "pirates who owned"
+        );
         piratesWhoOwnedTopic.ShouldNotBeNull();
         piratesWhoOwnedTopic.Entries.Length.ShouldBe(1);
         piratesWhoOwnedTopic.Entries[0].Name.ShouldBe("Jack Sparrow");
-        piratesWhoOwnedTopic.Entries[0].File.ShouldBe("pirates-swords-cutlass-pirates_who_owned-Jack_Sparrow.md");
+        piratesWhoOwnedTopic
+            .Entries[0]
+            .File.ShouldBe("pirates-swords-cutlass-pirates_who_owned-Jack_Sparrow.md");
     }
 
     [Fact]
@@ -486,9 +501,27 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add topics in non-alphabetical order
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Zebra"], "Z Entry", "Zebra-Z.md", sortAlphabetically: true);
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Apple"], "A Entry", "Apple-A.md", sortAlphabetically: true);
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Banana"], "B Entry", "Banana-B.md", sortAlphabetically: true);
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Zebra"],
+            "Z Entry",
+            "Zebra-Z.md",
+            sortAlphabetically: true
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Apple"],
+            "A Entry",
+            "Apple-A.md",
+            sortAlphabetically: true
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Banana"],
+            "B Entry",
+            "Banana-B.md",
+            sortAlphabetically: true
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -497,7 +530,7 @@ public class JournalConfigurationTests
         updatedConfig.ShouldNotBeNull();
         var topics = updatedConfig.TableOfContents.Structure.Topics;
         topics.Length.ShouldBe(4); // Apple, Banana, General (original), Zebra
-        
+
         // Check alphabetical order
         topics[0].Name.ShouldBe("Apple");
         topics[1].Name.ShouldBe("Banana");
@@ -518,20 +551,36 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add entries with names that would sort differently than files
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Zebra Display Name", "Tech-Apple.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Alpha Display Name", "Tech-Zebra.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Middle Display Name", "Tech-Banana.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Zebra Display Name",
+            "Tech-Apple.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Alpha Display Name",
+            "Tech-Zebra.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Middle Display Name",
+            "Tech-Banana.md"
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         techTopic.ShouldNotBeNull();
         techTopic.Entries.Length.ShouldBe(3);
-        
+
         // Should be sorted by file name, not display name
         techTopic.Entries[0].File.ShouldBe("Tech-Apple.md");
         techTopic.Entries[0].Name.ShouldBe("Zebra Display Name");
@@ -554,9 +603,27 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add topics in specific order with sorting disabled
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Zebra"], "Z Entry", "Zebra-Z.md", sortAlphabetically: false);
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Apple"], "A Entry", "Apple-A.md", sortAlphabetically: false);
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Banana"], "B Entry", "Banana-B.md", sortAlphabetically: false);
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Zebra"],
+            "Z Entry",
+            "Zebra-Z.md",
+            sortAlphabetically: false
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Apple"],
+            "A Entry",
+            "Apple-A.md",
+            sortAlphabetically: false
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Banana"],
+            "B Entry",
+            "Banana-B.md",
+            sortAlphabetically: false
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -565,7 +632,7 @@ public class JournalConfigurationTests
         updatedConfig.ShouldNotBeNull();
         var topics = updatedConfig.TableOfContents.Structure.Topics;
         topics.Length.ShouldBe(4);
-        
+
         // Should maintain insertion order (General was first, then Zebra, Apple, Banana)
         topics[0].Name.ShouldBe("General");
         topics[1].Name.ShouldBe("Zebra");
@@ -586,16 +653,27 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add same file twice
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "First Entry", "Tech-Tutorial.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Second Entry", "Tech-Tutorial.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "First Entry",
+            "Tech-Tutorial.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Second Entry",
+            "Tech-Tutorial.md"
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         techTopic.ShouldNotBeNull();
         techTopic.Entries.Length.ShouldBe(1);
         techTopic.Entries[0].Name.ShouldBe("First Entry");
@@ -622,8 +700,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         techTopic.ShouldNotBeNull();
         techTopic.Entries.Length.ShouldBe(1);
     }
@@ -684,7 +763,7 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
+
         // Navigate to deepest level
         var l1 = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t => t.Name == "L1");
         l1.ShouldNotBeNull();
@@ -715,12 +794,7 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        _journalConfiguration.AddTopicEntry(
-            _testDirectory,
-            [],
-            "Entry",
-            "File.md"
-        );
+        _journalConfiguration.AddTopicEntry(_testDirectory, [], "Entry", "File.md");
 
         // Assert - Should not modify config
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -743,26 +817,42 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add entries with overlapping paths
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Programming", "Languages"], "Python", "Programming-Languages-Python.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Programming", "Languages"], "JavaScript", "Programming-Languages-JavaScript.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Programming", "Tools"], "VSCode", "Programming-Tools-VSCode.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Programming", "Languages"],
+            "Python",
+            "Programming-Languages-Python.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Programming", "Languages"],
+            "JavaScript",
+            "Programming-Languages-JavaScript.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Programming", "Tools"],
+            "VSCode",
+            "Programming-Tools-VSCode.md"
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
-        var programmingTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Programming");
+
+        var programmingTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Programming"
+        );
         programmingTopic.ShouldNotBeNull();
         programmingTopic.Subtopics.ShouldNotBeNull();
         programmingTopic.Subtopics!.Length.ShouldBe(2);
-        
+
         var languagesTopic = programmingTopic.Subtopics!.FirstOrDefault(t => t.Name == "Languages");
         languagesTopic.ShouldNotBeNull();
         languagesTopic.Entries.Length.ShouldBe(2);
-        
+
         var toolsTopic = programmingTopic.Subtopics!.FirstOrDefault(t => t.Name == "Tools");
         toolsTopic.ShouldNotBeNull();
         toolsTopic.Entries.Length.ShouldBe(1);
@@ -834,7 +924,11 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "1a-home.md", "Updated Home");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "1a-home.md",
+            "Updated Home"
+        );
 
         // Assert
         result.ShouldBeTrue();
@@ -860,10 +954,19 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Add an entry first
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Original Name", "Tech-Tutorial.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Original Name",
+            "Tech-Tutorial.md"
+        );
 
         // Act
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "Tech-Tutorial.md", "Updated Tutorial");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "Tech-Tutorial.md",
+            "Updated Tutorial"
+        );
 
         // Assert
         result.ShouldBeTrue();
@@ -871,8 +974,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         techTopic.ShouldNotBeNull();
         techTopic.Entries.Length.ShouldBe(1);
         techTopic.Entries[0].Name.ShouldBe("Updated Tutorial");
@@ -912,18 +1016,23 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
+
         // Navigate to the deeply nested entry
-        var piratesTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "pirates");
+        var piratesTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "pirates"
+        );
         var swordsTopic = piratesTopic?.Subtopics?.FirstOrDefault(t => t.Name == "swords");
         var cutlassTopic = swordsTopic?.Subtopics?.FirstOrDefault(t => t.Name == "cutlass");
-        var piratesWhoOwnedTopic = cutlassTopic?.Subtopics?.FirstOrDefault(t => t.Name == "pirates who owned");
-        
+        var piratesWhoOwnedTopic = cutlassTopic?.Subtopics?.FirstOrDefault(t =>
+            t.Name == "pirates who owned"
+        );
+
         piratesWhoOwnedTopic.ShouldNotBeNull();
         piratesWhoOwnedTopic.Entries.Length.ShouldBe(1);
         piratesWhoOwnedTopic.Entries[0].Name.ShouldBe("Captain Jack Sparrow");
-        piratesWhoOwnedTopic.Entries[0].File.ShouldBe("pirates-swords-cutlass-pirates_who_owned-Jack_Sparrow.md");
+        piratesWhoOwnedTopic
+            .Entries[0]
+            .File.ShouldBe("pirates-swords-cutlass-pirates_who_owned-Jack_Sparrow.md");
     }
 
     [Fact]
@@ -938,10 +1047,19 @@ public class JournalConfigurationTests
         );
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Original", "Tech-Tutorial.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Original",
+            "Tech-Tutorial.md"
+        );
 
         // Act - Search with different case
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "TECH-TUTORIAL.MD", "Updated Name");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "TECH-TUTORIAL.MD",
+            "Updated Name"
+        );
 
         // Assert
         result.ShouldBeTrue();
@@ -949,8 +1067,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         techTopic.ShouldNotBeNull();
         techTopic.Entries[0].Name.ShouldBe("Updated Name");
     }
@@ -968,7 +1087,11 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "NonExistent.md", "New Name");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "NonExistent.md",
+            "New Name"
+        );
 
         // Assert
         result.ShouldBeFalse();
@@ -978,7 +1101,11 @@ public class JournalConfigurationTests
     public void UpdateEntryName_ShouldReturnFalse_WhenConfigDoesNotExist()
     {
         // Act
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "any-file.md", "New Name");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "any-file.md",
+            "New Name"
+        );
 
         // Assert
         result.ShouldBeFalse();
@@ -997,11 +1124,25 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Add entries in different topics
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech", "Languages"], "Python Basics", "Tech-Languages-Python.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Learning"], "Advanced Python", "Learning-Python.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech", "Languages"],
+            "Python Basics",
+            "Tech-Languages-Python.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Learning"],
+            "Advanced Python",
+            "Learning-Python.md"
+        );
 
         // Act - Update the first one added
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "Tech-Languages-Python.md", "Python 101");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "Tech-Languages-Python.md",
+            "Python 101"
+        );
 
         // Assert
         result.ShouldBeTrue();
@@ -1009,16 +1150,18 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         var languagesTopic = techTopic?.Subtopics?.FirstOrDefault(t => t.Name == "Languages");
         languagesTopic.ShouldNotBeNull();
         languagesTopic.Entries[0].Name.ShouldBe("Python 101");
-        
+
         // Verify the other entry wasn't changed
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries[0].Name.ShouldBe("Advanced Python");
     }
@@ -1035,11 +1178,25 @@ public class JournalConfigurationTests
         );
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Original", "Tech-Tutorial.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Tech"], "Another Entry", "Tech-Another.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Original",
+            "Tech-Tutorial.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Tech"],
+            "Another Entry",
+            "Tech-Another.md"
+        );
 
         // Act
-        var result = _journalConfiguration.UpdateEntryName(_testDirectory, "Tech-Tutorial.md", "Updated");
+        var result = _journalConfiguration.UpdateEntryName(
+            _testDirectory,
+            "Tech-Tutorial.md",
+            "Updated"
+        );
 
         // Assert
         result.ShouldBeTrue();
@@ -1047,16 +1204,17 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
+
         // Verify journal name and other properties are unchanged
         updatedConfig.JournalName.ShouldBe("Test Journal");
         updatedConfig.TableOfContents.File.ShouldBe("toc.md");
-        
-        var techTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Tech");
+
+        var techTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Tech"
+        );
         techTopic.ShouldNotBeNull();
         techTopic.Entries.Length.ShouldBe(2);
-        
+
         // Entries are sorted alphabetically by file name
         techTopic.Entries[0].File.ShouldBe("Tech-Another.md");
         techTopic.Entries[0].Name.ShouldBe("Another Entry");
@@ -1129,9 +1287,9 @@ public class JournalConfigurationTests
 
         // Act
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Topic Entry", 
-            $"{fileName}.md", 
+            _testDirectory,
+            "Topic Entry",
+            $"{fileName}.md",
             topicPath: ["Learning"]
         );
 
@@ -1140,9 +1298,10 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(1);
         learningTopic.Entries[0].Name.ShouldBe("Topic Entry");
@@ -1189,9 +1348,9 @@ public class JournalConfigurationTests
 
         // Act
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Topic Entry", 
-            "learning.md", 
+            _testDirectory,
+            "Topic Entry",
+            "learning.md",
             topicPath: null
         );
 
@@ -1201,8 +1360,9 @@ public class JournalConfigurationTests
 
         updatedConfig.ShouldNotBeNull();
         // Should parse filename and create "learning" topic
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "learning");
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(1);
         learningTopic.Entries[0].Name.ShouldBe("Topic Entry");
@@ -1222,12 +1382,7 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act
-        _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Topic Entry", 
-            "learning.md", 
-            topicPath: []
-        );
+        _journalConfiguration.AddEntry(_testDirectory, "Topic Entry", "learning.md", topicPath: []);
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -1235,8 +1390,9 @@ public class JournalConfigurationTests
 
         updatedConfig.ShouldNotBeNull();
         // Should parse filename and create "learning" topic
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "learning");
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(1);
         learningTopic.Entries[0].Name.ShouldBe("Topic Entry");
@@ -1257,19 +1413,16 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - filename with underscores should be converted to spaces
-        _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "New Entry", 
-            "new_entry.md"
-        );
+        _journalConfiguration.AddEntry(_testDirectory, "New Entry", "new_entry.md");
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var newEntryTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "new entry");
+        var newEntryTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "new entry"
+        );
         newEntryTopic.ShouldNotBeNull();
         newEntryTopic.Entries.Length.ShouldBe(1);
         newEntryTopic.Entries[0].Name.ShouldBe("New Entry");
@@ -1290,22 +1443,19 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - filename with hyphens should create nested topics
-        _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Tutorial", 
-            "Learning-Rust-Tutorial.md"
-        );
+        _journalConfiguration.AddEntry(_testDirectory, "Tutorial", "Learning-Rust-Tutorial.md");
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Subtopics.ShouldNotBeNull();
-        
+
         var rustTopic = learningTopic.Subtopics.FirstOrDefault(t => t.Name == "Rust");
         rustTopic.ShouldNotBeNull();
         rustTopic.Entries.Length.ShouldBe(1);
@@ -1328,8 +1478,8 @@ public class JournalConfigurationTests
 
         // Act - filename with both underscores and hyphens
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Rust Programming", 
+            _testDirectory,
+            "Rust Programming",
             "Learning-Rust_Programming.md"
         );
 
@@ -1338,8 +1488,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(1);
         learningTopic.Entries[0].Name.ShouldBe("Rust Programming");
@@ -1360,16 +1511,16 @@ public class JournalConfigurationTests
 
         // Act - Add multiple entries with sorting
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Z Entry", 
-            "learning-z.md", 
+            _testDirectory,
+            "Z Entry",
+            "learning-z.md",
             topicPath: ["Learning"],
             sortAlphabetically: true
         );
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "A Entry", 
-            "learning-a.md", 
+            _testDirectory,
+            "A Entry",
+            "learning-a.md",
             topicPath: ["Learning"],
             sortAlphabetically: true
         );
@@ -1379,9 +1530,10 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(2);
         // Should be sorted alphabetically by file name
@@ -1571,7 +1723,12 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - try to add TOC file as topic entry
-        _journalConfiguration.AddEntry(_testDirectory, "Table of Contents", "toc.md", topicPath: ["General"]);
+        _journalConfiguration.AddEntry(
+            _testDirectory,
+            "Table of Contents",
+            "toc.md",
+            topicPath: ["General"]
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -1611,13 +1768,17 @@ public class JournalConfigurationTests
     public void AddEntry_ShouldSkipDefaultTocFile_WhenConfigFileNotSpecified()
     {
         // Arrange
-        var settings = new JournalSettings 
-        { 
+        var settings = new JournalSettings
+        {
             JournalConfigFileName = ".journalrc",
-            TableOfContentsFileName = "toc"  // Default TOC filename without extension
+            TableOfContentsFileName = "toc", // Default TOC filename without extension
         };
-        var journalConfig = new JournalConfiguration(_fileSystem, Options.Create(settings), NullLogger<JournalConfiguration>.Instance);
-        
+        var journalConfig = new JournalConfiguration(
+            _fileSystem,
+            Options.Create(settings),
+            NullLogger<JournalConfiguration>.Instance
+        );
+
         var config = CreateTestConfig();
         config.TableOfContents.File = null!; // Config doesn't specify TOC file
         config.TableOfContents.RootEntries = [];
@@ -1685,8 +1846,8 @@ public class JournalConfigurationTests
 
         // Act
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Root Entry", 
+            _testDirectory,
+            "Root Entry",
             "1a-Introduction.md",
             ignoreFile: true
         );
@@ -1721,8 +1882,8 @@ public class JournalConfigurationTests
 
         // Act
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Root Entry", 
+            _testDirectory,
+            "Root Entry",
             "1a-Introduction.md",
             ignoreFile: false
         );
@@ -1756,8 +1917,8 @@ public class JournalConfigurationTests
 
         // Act
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Topic Entry", 
+            _testDirectory,
+            "Topic Entry",
             "Learning-Rust.md",
             topicPath: ["Learning"],
             ignoreFile: true
@@ -1769,8 +1930,9 @@ public class JournalConfigurationTests
 
         updatedConfig.ShouldNotBeNull();
         // Should be added to topic structure
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(1);
         learningTopic.Entries[0].File.ShouldBe("Learning-Rust.md");
@@ -1796,8 +1958,8 @@ public class JournalConfigurationTests
 
         // Act
         _journalConfiguration.AddEntry(
-            _testDirectory, 
-            "Root Entry", 
+            _testDirectory,
+            "Root Entry",
             "1a-Introduction.md",
             ignoreFile: true
         );
@@ -1833,22 +1995,38 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add entries with numeric filenames in non-sorted order
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 10", "test_file_10.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Test"],
+            "Entry 10",
+            "test_file_10.md"
+        );
         _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 5", "test_file_5.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 100", "test_file_100.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Test"],
+            "Entry 100",
+            "test_file_100.md"
+        );
         _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 1", "test_file_1.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Test"], "Entry 20", "test_file_20.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Test"],
+            "Entry 20",
+            "test_file_20.md"
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var testTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Test");
+        var testTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Test"
+        );
         testTopic.ShouldNotBeNull();
         testTopic.Entries.Length.ShouldBe(5);
-        
+
         // Should be sorted naturally: 1, 5, 10, 20, 100
         testTopic.Entries[0].File.ShouldBe("test_file_1.md");
         testTopic.Entries[1].File.ShouldBe("test_file_5.md");
@@ -1880,11 +2058,12 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var codeTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Code");
+        var codeTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Code"
+        );
         codeTopic.ShouldNotBeNull();
         codeTopic.Entries.Length.ShouldBe(4);
-        
+
         // Should be sorted naturally: chapter1, chapter2, chapter10, chapter20
         codeTopic.Entries[0].File.ShouldBe("chapter1.md");
         codeTopic.Entries[1].File.ShouldBe("chapter2.md");
@@ -1914,11 +2093,12 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var filesTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Files");
+        var filesTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Files"
+        );
         filesTopic.ShouldNotBeNull();
         filesTopic.Entries.Length.ShouldBe(3);
-        
+
         // Should be sorted case-insensitively with natural numeric sorting
         filesTopic.Entries[0].File.ShouldBe("FILE_1.md");
         filesTopic.Entries[1].File.ShouldBe("file_2.md");
@@ -1938,10 +2118,30 @@ public class JournalConfigurationTests
         _fileSystem.CreateFile(_testDirectory, ".journalrc", originalJson);
 
         // Act - Add topics with numeric names
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 10"], "Entry", "topic10-entry.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 2"], "Entry", "topic2-entry.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 1"], "Entry", "topic1-entry.md");
-        _journalConfiguration.AddTopicEntry(_testDirectory, ["Topic 20"], "Entry", "topic20-entry.md");
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Topic 10"],
+            "Entry",
+            "topic10-entry.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Topic 2"],
+            "Entry",
+            "topic2-entry.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Topic 1"],
+            "Entry",
+            "topic1-entry.md"
+        );
+        _journalConfiguration.AddTopicEntry(
+            _testDirectory,
+            ["Topic 20"],
+            "Entry",
+            "topic20-entry.md"
+        );
 
         // Assert
         var updatedContent = _fileSystem.GetFileContent(journalrcPath);
@@ -1949,11 +2149,11 @@ public class JournalConfigurationTests
 
         updatedConfig.ShouldNotBeNull();
         var topics = updatedConfig.TableOfContents.Structure.Topics;
-        
+
         // Find the "Topic X" entries (excluding "General")
         var topicEntries = topics.Where(t => t.Name.StartsWith("Topic")).ToArray();
         topicEntries.Length.ShouldBe(4);
-        
+
         // Should be sorted naturally: Topic 1, Topic 2, Topic 10, Topic 20
         topicEntries[0].Name.ShouldBe("Topic 1");
         topicEntries[1].Name.ShouldBe("Topic 2");
@@ -1984,11 +2184,12 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        var docsTopic = updatedConfig.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Docs");
+        var docsTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Docs"
+        );
         docsTopic.ShouldNotBeNull();
         docsTopic.Entries.Length.ShouldBe(4);
-        
+
         // Should be sorted naturally by numeric value: 1, 2, 10, 100
         docsTopic.Entries[0].File.ShouldBe("doc_001.md");
         docsTopic.Entries[1].File.ShouldBe("doc_002.md");
@@ -2030,17 +2231,21 @@ public class JournalConfigurationTests
                 Extensions = [".md"],
                 Structure = new Structure
                 {
-                    Topics = [new Topic
-                    {
-                        Name = "Learning",
-                        Entries = [
-                            new Entries { Name = "Rust", File = "Learning-Rust.md" },
-                            new Entries { Name = "Go", File = "Learning-Go.md" }
-                        ]
-                    }]
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "Learning",
+                            Entries =
+                            [
+                                new Entries { Name = "Rust", File = "Learning-Rust.md" },
+                                new Entries { Name = "Go", File = "Learning-Go.md" },
+                            ],
+                        },
+                    ],
                 },
-                RootEntries = []
-            }
+                RootEntries = [],
+            },
         };
         _journalConfiguration.Create(_testDirectory, config);
 
@@ -2051,7 +2256,9 @@ public class JournalConfigurationTests
         result.ShouldBeTrue();
         var updated = _journalConfiguration.Read(_testDirectory);
         updated.ShouldNotBeNull();
-        var topic = updated.TableOfContents.Structure.Topics.FirstOrDefault(t => t.Name == "Learning");
+        var topic = updated.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         topic.ShouldNotBeNull();
         topic.Entries.Length.ShouldBe(1);
         topic.Entries[0].File.ShouldBe("Learning-Go.md");
@@ -2070,14 +2277,24 @@ public class JournalConfigurationTests
                 Extensions = [".md"],
                 Structure = new Structure
                 {
-                    Topics = [new Topic
-                    {
-                        Name = "OnlyTopic",
-                        Entries = [new Entries { Name = "Only Entry", File = "OnlyTopic-Only_Entry.md" }]
-                    }]
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "OnlyTopic",
+                            Entries =
+                            [
+                                new Entries
+                                {
+                                    Name = "Only Entry",
+                                    File = "OnlyTopic-Only_Entry.md",
+                                },
+                            ],
+                        },
+                    ],
                 },
-                RootEntries = []
-            }
+                RootEntries = [],
+            },
         };
         _journalConfiguration.Create(_testDirectory, config);
 
@@ -2118,24 +2335,40 @@ public class JournalConfigurationTests
                 Extensions = [".md"],
                 Structure = new Structure
                 {
-                    Topics = [new Topic
-                    {
-                        Name = "Programming",
-                        Entries = [],
-                        Subtopics = [new Topic
+                    Topics =
+                    [
+                        new Topic
                         {
-                            Name = "Rust",
-                            Entries = [new Entries { Name = "Basics", File = "Programming-Rust-Basics.md" }]
-                        }]
-                    }]
+                            Name = "Programming",
+                            Entries = [],
+                            Subtopics =
+                            [
+                                new Topic
+                                {
+                                    Name = "Rust",
+                                    Entries =
+                                    [
+                                        new Entries
+                                        {
+                                            Name = "Basics",
+                                            File = "Programming-Rust-Basics.md",
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
                 },
-                RootEntries = []
-            }
+                RootEntries = [],
+            },
         };
         _journalConfiguration.Create(_testDirectory, config);
 
         // Act
-        var result = _journalConfiguration.RemoveEntry(_testDirectory, "Programming-Rust-Basics.md");
+        var result = _journalConfiguration.RemoveEntry(
+            _testDirectory,
+            "Programming-Rust-Basics.md"
+        );
 
         // Assert
         result.ShouldBeTrue();
@@ -2184,8 +2417,9 @@ public class JournalConfigurationTests
         updated.TableOfContents.RootEntries.Length.ShouldBe(1);
         updated.TableOfContents.RootEntries[0].File.ShouldBe("1b-Introduction.md");
 
-        var learningTopic = updated.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var learningTopic = updated.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Length.ShouldBe(2);
     }
@@ -2203,8 +2437,8 @@ public class JournalConfigurationTests
                 Extensions = [".md"],
                 IgnoreFiles = ["secret.md"],
                 Structure = new Structure { Topics = [] },
-                RootEntries = [new Entries { Name = "Old", File = "old.md" }]
-            }
+                RootEntries = [new Entries { Name = "Old", File = "old.md" }],
+            },
         };
         _journalConfiguration.Create(_testDirectory, config);
 
@@ -2231,14 +2465,17 @@ public class JournalConfigurationTests
                 Extensions = [".md"],
                 Structure = new Structure
                 {
-                    Topics = [new Topic
-                    {
-                        Name = "OldTopic",
-                        Entries = [new Entries { Name = "Old", File = "OldTopic-Old.md" }]
-                    }]
+                    Topics =
+                    [
+                        new Topic
+                        {
+                            Name = "OldTopic",
+                            Entries = [new Entries { Name = "Old", File = "OldTopic-Old.md" }],
+                        },
+                    ],
                 },
-                RootEntries = [new Entries { Name = "OldRoot", File = "1a-OldRoot.md" }]
-            }
+                RootEntries = [new Entries { Name = "OldRoot", File = "1a-OldRoot.md" }],
+            },
         };
         _journalConfiguration.Create(_testDirectory, config);
 
@@ -2249,10 +2486,8 @@ public class JournalConfigurationTests
         var updated = _journalConfiguration.Read(_testDirectory);
         updated.ShouldNotBeNull();
         updated.TableOfContents.RootEntries.ShouldBeEmpty();
-        updated.TableOfContents.Structure.Topics
-            .Any(t => t.Name == "OldTopic").ShouldBeFalse();
-        updated.TableOfContents.Structure.Topics
-            .Any(t => t.Name == "NewTopic").ShouldBeTrue();
+        updated.TableOfContents.Structure.Topics.Any(t => t.Name == "OldTopic").ShouldBeFalse();
+        updated.TableOfContents.Structure.Topics.Any(t => t.Name == "NewTopic").ShouldBeTrue();
     }
 
     #endregion
@@ -2265,18 +2500,21 @@ public class JournalConfigurationTests
         // Arrange - create config with "old-toc.md" as a root entry
         var config = CreateTestConfig();
         config.TableOfContents.File = "toc.md";
-        config.TableOfContents.RootEntries = 
+        config.TableOfContents.RootEntries =
         [
             new Entries { Name = "Home", File = "1a-home.md" },
-            new Entries { Name = "Old TOC", File = "old-toc.md" }
+            new Entries { Name = "Old TOC", File = "old-toc.md" },
         ];
         _journalConfiguration.Create(_testDirectory, config);
 
         // Act - change TOC file to "old-toc.md"
-        _journalConfiguration.Update(_testDirectory, c =>
-        {
-            c.TableOfContents.File = "old-toc.md";
-        });
+        _journalConfiguration.Update(
+            _testDirectory,
+            c =>
+            {
+                c.TableOfContents.File = "old-toc.md";
+            }
+        );
 
         // Assert - "old-toc.md" should be removed from root entries
         var updated = _journalConfiguration.Read(_testDirectory);
@@ -2292,25 +2530,25 @@ public class JournalConfigurationTests
         // Arrange - create config with "new-toc.md" as a topic entry
         var config = CreateTestConfig();
         config.TableOfContents.File = "toc.md";
-        config.TableOfContents.Structure.Topics = 
+        config.TableOfContents.Structure.Topics =
         [
-            new Topic 
-            { 
-                Name = "newtoc", 
-                Entries = 
-                [
-                    new Entries { Name = "Newtoc", File = "new-toc.md" }
-                ],
-                Subtopics = null 
-            }
+            new Topic
+            {
+                Name = "newtoc",
+                Entries = [new Entries { Name = "Newtoc", File = "new-toc.md" }],
+                Subtopics = null,
+            },
         ];
         _journalConfiguration.Create(_testDirectory, config);
 
         // Act - change TOC file to "new-toc.md"
-        _journalConfiguration.Update(_testDirectory, c =>
-        {
-            c.TableOfContents.File = "new-toc.md";
-        });
+        _journalConfiguration.Update(
+            _testDirectory,
+            c =>
+            {
+                c.TableOfContents.File = "new-toc.md";
+            }
+        );
 
         // Assert - "new-toc.md" should be removed from topics, and empty topic should be cleaned up
         var updated = _journalConfiguration.Read(_testDirectory);
@@ -2325,18 +2563,21 @@ public class JournalConfigurationTests
         // Arrange
         var config = CreateTestConfig();
         config.TableOfContents.File = "toc.md";
-        config.TableOfContents.RootEntries = 
+        config.TableOfContents.RootEntries =
         [
             new Entries { Name = "Home", File = "1a-home.md" },
-            new Entries { Name = "Other", File = "other.md" }
+            new Entries { Name = "Other", File = "other.md" },
         ];
         _journalConfiguration.Create(_testDirectory, config);
 
         // Act - update something else, not TOC file
-        _journalConfiguration.Update(_testDirectory, c =>
-        {
-            c.JournalName = "New Name";
-        });
+        _journalConfiguration.Update(
+            _testDirectory,
+            c =>
+            {
+                c.JournalName = "New Name";
+            }
+        );
 
         // Assert - entries should remain unchanged
         var updated = _journalConfiguration.Read(_testDirectory);
@@ -2350,18 +2591,21 @@ public class JournalConfigurationTests
         // Arrange - create config with "NewTOC.md" as entry (different casing)
         var config = CreateTestConfig();
         config.TableOfContents.File = "toc.md";
-        config.TableOfContents.RootEntries = 
+        config.TableOfContents.RootEntries =
         [
             new Entries { Name = "Home", File = "1a-home.md" },
-            new Entries { Name = "New TOC", File = "NewTOC.md" }
+            new Entries { Name = "New TOC", File = "NewTOC.md" },
         ];
         _journalConfiguration.Create(_testDirectory, config);
 
         // Act - change TOC file to "newtoc.md" (different casing)
-        _journalConfiguration.Update(_testDirectory, c =>
-        {
-            c.TableOfContents.File = "newtoc.md";
-        });
+        _journalConfiguration.Update(
+            _testDirectory,
+            c =>
+            {
+                c.TableOfContents.File = "newtoc.md";
+            }
+        );
 
         // Assert - "NewTOC.md" should be removed despite case difference
         var updated = _journalConfiguration.Read(_testDirectory);

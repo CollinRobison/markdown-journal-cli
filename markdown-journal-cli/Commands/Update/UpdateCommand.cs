@@ -12,7 +12,9 @@ using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Update;
 
-[Description("Updates configuration, table of contents, and Last Edited dates metadata. All items are updated by default unless specific flags are provided")]
+[Description(
+    "Updates configuration, table of contents, and Last Edited dates metadata. All items are updated by default unless specific flags are provided"
+)]
 public sealed class UpdateCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,
@@ -27,14 +29,15 @@ public sealed class UpdateCommand(
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-    private readonly IFileTracking _fileTracking = 
+    private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
 
     private readonly IJournalConfiguration _journalConfiguration =
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
 
     private readonly ITableOfContentsService _tableOfContentsGenerator =
-        tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
+        tableOfContentsGenerator
+        ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
@@ -44,16 +47,26 @@ public sealed class UpdateCommand(
         {
             var trackingFileName = $".{_journalSettings.AppName}";
             var trackingFilePath = _fileSystem.CombinePaths(settings.FilePath, trackingFileName);
-            var journalrcPath = _fileSystem.CombinePaths(settings.FilePath, _journalSettings.JournalConfigFileName);
+            var journalrcPath = _fileSystem.CombinePaths(
+                settings.FilePath,
+                _journalSettings.JournalConfigFileName
+            );
 
             if (!_fileSystem.FileExists(trackingFilePath))
             {
                 throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
             }
 
-            bool all = !settings.DateFlag && !settings.ConfigFlag && !settings.TocFlag && !settings.Tracking; 
+            bool all =
+                !settings.DateFlag
+                && !settings.ConfigFlag
+                && !settings.TocFlag
+                && !settings.Tracking;
 
-            if ((all || settings.ConfigFlag || settings.TocFlag) && !_fileSystem.FileExists(journalrcPath))
+            if (
+                (all || settings.ConfigFlag || settings.TocFlag)
+                && !_fileSystem.FileExists(journalrcPath)
+            )
             {
                 throw new JournalrcNotFoundException(settings.FilePath);
             }
@@ -104,7 +117,11 @@ public sealed class UpdateCommand(
     /// Updates the "Last Edited:" date for modified files, adds new files to the tracking index,
     /// and removes deleted files from the tracking index.
     /// </summary>
-    private void UpdateLastEditedDatesAndTracking(string journalPath, ChangeDetectionResult fileResults, bool trackingOnly)
+    private void UpdateLastEditedDatesAndTracking(
+        string journalPath,
+        ChangeDetectionResult fileResults,
+        bool trackingOnly
+    )
     {
         // Update "Last Edited:" for modified files and re-hash
         foreach (var relativePath in fileResults.ModifiedFiles)
@@ -115,11 +132,14 @@ public sealed class UpdateCommand(
                 var content = _fileSystem.GetFileContent(absolutePath);
 
                 var updatedContent = MarkdownMetadataParser.UpdateLastEditedDate(
-                    content, DateTime.Now, _journalSettings.DateFormat);
+                    content,
+                    DateTime.Now,
+                    _journalSettings.DateFormat
+                );
 
                 var directory = Path.GetDirectoryName(absolutePath) ?? journalPath;
                 var fileName = Path.GetFileName(absolutePath);
-                _fileSystem.UpdateFile(directory, fileName, updatedContent);                
+                _fileSystem.UpdateFile(directory, fileName, updatedContent);
             }
             _fileTracking.UpdateFileInIndex(journalPath, relativePath);
 
@@ -141,11 +161,15 @@ public sealed class UpdateCommand(
         }
 
         if (fileResults.ModifiedFiles.Count > 0)
-            _console.MarkupLine($"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]");
+            _console.MarkupLine(
+                $"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]"
+            );
         if (fileResults.AddedFiles.Count > 0)
             _console.MarkupLine($"[green]Tracked {fileResults.AddedFiles.Count} new file(s).[/]");
         if (fileResults.DeletedFiles.Count > 0)
-            _console.MarkupLine($"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]");
+            _console.MarkupLine(
+                $"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]"
+            );
     }
 
     /// <summary>
@@ -156,16 +180,18 @@ public sealed class UpdateCommand(
         // Get the TOC filename to exclude it from being added as an entry
         var config = _journalConfiguration.Read(journalPath);
         var tocFile = config?.TableOfContents.File;
-        
+
         foreach (var relativePath in fileResults.AddedFiles)
         {
             // Skip the TOC file - it should never be an entry
-            if (!string.IsNullOrEmpty(tocFile) && 
-                string.Equals(relativePath, tocFile, StringComparison.OrdinalIgnoreCase))
+            if (
+                !string.IsNullOrEmpty(tocFile)
+                && string.Equals(relativePath, tocFile, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 continue;
             }
-            
+
             _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
             _console.MarkupLine($"[green]Config added:[/] {relativePath}");
         }
@@ -176,7 +202,9 @@ public sealed class UpdateCommand(
             if (removed)
                 _console.MarkupLine($"[yellow]Config removed:[/] {relativePath}");
             else
-                _console.MarkupLine($"[dim]Config entry not found for deleted file:[/] {relativePath}");
+                _console.MarkupLine(
+                    $"[dim]Config entry not found for deleted file:[/] {relativePath}"
+                );
         }
 
         if (fileResults.AddedFiles.Count > 0 || fileResults.DeletedFiles.Count > 0)
@@ -189,14 +217,16 @@ public sealed class UpdateCommand(
     /// Regenerates the table of contents markdown file from the current journal configuration.
     /// </summary>
     private void UpdateTableOfContents(string journalPath)
-    {   
+    {
         _tableOfContentsGenerator.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
-        
+
         // Track the TOC file so it doesn't show as "added" on next run
         var config = _journalConfiguration.Read(journalPath);
-        var tocFile = config?.TableOfContents.File ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+        var tocFile =
+            config?.TableOfContents.File
+            ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
         _fileTracking.UpdateFileInIndex(journalPath, tocFile);
-        
+
         _console.MarkupLine($"[green]Table of contents updated.[/]");
     }
 }

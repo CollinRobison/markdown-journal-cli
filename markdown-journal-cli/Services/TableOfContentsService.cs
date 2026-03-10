@@ -13,11 +13,12 @@ public class TableOfContentsService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
     IOptions<JournalSettings> journalSettings
-    ) : ITableOfContentsService
+) : ITableOfContentsService
 {
-    private readonly IFileSystem _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     private readonly IJournalConfiguration _journalConfiguration =
-            journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     /// <inheritdoc />
@@ -35,7 +36,9 @@ public class TableOfContentsService(
             );
         }
 
-        var config = _journalConfiguration.Read(journalDirectory) ?? throw new InvalidOperationException(
+        var config =
+            _journalConfiguration.Read(journalDirectory)
+            ?? throw new InvalidOperationException(
                 $"Could not read journal configuration from {journalDirectory}"
             );
 
@@ -45,8 +48,10 @@ public class TableOfContentsService(
         if (_fileSystem.FileExists(tocFilePath))
         {
             var existingContent = _fileSystem.GetFileContent(tocFilePath);
-            var (existingCreated, existingEdited) = MarkdownMetadataParser.ParseDates(existingContent);
-            
+            var (existingCreated, existingEdited) = MarkdownMetadataParser.ParseDates(
+                existingContent
+            );
+
             // Use existing dates if new ones aren't provided
             createdDate ??= existingCreated;
             lastEditedDate ??= existingEdited;
@@ -91,7 +96,10 @@ public class TableOfContentsService(
         var ignoreFilesWithToc = ignoreFiles.Append(tocFile).ToArray();
 
         // Add root entries (filter out ignored files)
-        if (config.TableOfContents.RootEntries != null && config.TableOfContents.RootEntries.Length > 0)
+        if (
+            config.TableOfContents.RootEntries != null
+            && config.TableOfContents.RootEntries.Length > 0
+        )
         {
             foreach (var entry in config.TableOfContents.RootEntries)
             {
@@ -103,7 +111,10 @@ public class TableOfContentsService(
         }
 
         // Add topics
-        if (config.TableOfContents.Structure?.Topics != null && config.TableOfContents.Structure.Topics.Length > 0)
+        if (
+            config.TableOfContents.Structure?.Topics != null
+            && config.TableOfContents.Structure.Topics.Length > 0
+        )
         {
             foreach (var topic in config.TableOfContents.Structure.Topics)
             {
@@ -114,10 +125,16 @@ public class TableOfContentsService(
         return sb.ToString();
     }
 
-    private void GenerateTopicSection(StringBuilder sb, Topic topic, int indentLevel, string[] ignoreFiles)
+    private void GenerateTopicSection(
+        StringBuilder sb,
+        Topic topic,
+        int indentLevel,
+        string[] ignoreFiles
+    )
     {
         // Filter out ignored entries first
-        var visibleEntries = topic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray() 
+        var visibleEntries =
+            topic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray()
             ?? Array.Empty<Entries>();
 
         // Get all subtopics (don't pre-filter them - let each subtopic decide whether to render itself)
@@ -133,18 +150,24 @@ public class TableOfContentsService(
 
         // Top-level topics (indentLevel == 0) get headings
         // Subtopics (indentLevel > 0) are rendered as indented list items
-        
+
         if (indentLevel == 0)
         {
             // Top-level topic: use heading with optional title-casing
-            var displayName = _journalSettings.CapitalizeTopicHeadings 
-                ? ToTitleCase(topic.Name) 
+            var displayName = _journalSettings.CapitalizeTopicHeadings
+                ? ToTitleCase(topic.Name)
                 : topic.Name;
-            
+
             // Edge case: if topic has exactly one visible entry and the entry name matches the topic name,
             // make the topic heading a link
-            if (visibleEntries.Length == 1 && 
-                string.Equals(topic.Name, visibleEntries[0].Name, StringComparison.OrdinalIgnoreCase))
+            if (
+                visibleEntries.Length == 1
+                && string.Equals(
+                    topic.Name,
+                    visibleEntries[0].Name,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 sb.AppendLine($"## [{displayName}]({visibleEntries[0].File})");
             }
@@ -158,8 +181,8 @@ public class TableOfContentsService(
         {
             // Subtopic: render as indented list item with optional title-casing
             var indent = new string(' ', indentLevel * 2);
-            var displayName = _journalSettings.CapitalizeTopicHeadings 
-                ? ToTitleCase(topic.Name) 
+            var displayName = _journalSettings.CapitalizeTopicHeadings
+                ? ToTitleCase(topic.Name)
                 : topic.Name;
             sb.AppendLine($"{indent}- {displayName}");
         }
@@ -173,12 +196,14 @@ public class TableOfContentsService(
             foreach (var entry in visibleEntries)
             {
                 var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
-                
+
                 foreach (var subtopic in subtopics)
                 {
                     // Check if entry name matches subtopic name AND entry path is prefix of subtopic files
-                    if (string.Equals(entry.Name, subtopic.Name, StringComparison.OrdinalIgnoreCase) &&
-                        IsSubtopicChildOfEntry(entryPathWithoutExt, subtopic, ignoreFiles))
+                    if (
+                        string.Equals(entry.Name, subtopic.Name, StringComparison.OrdinalIgnoreCase)
+                        && IsSubtopicChildOfEntry(entryPathWithoutExt, subtopic, ignoreFiles)
+                    )
                     {
                         parentMatches[entry] = subtopic;
                         processedSubtopics.Add(subtopic);
@@ -189,9 +214,14 @@ public class TableOfContentsService(
         }
 
         // Check if this is the edge case: top-level topic with single matching entry
-        var isTopLevelMatchingEntry = indentLevel == 0 && 
-                                      visibleEntries.Length == 1 && 
-                                      string.Equals(topic.Name, visibleEntries[0].Name, StringComparison.OrdinalIgnoreCase);
+        var isTopLevelMatchingEntry =
+            indentLevel == 0
+            && visibleEntries.Length == 1
+            && string.Equals(
+                topic.Name,
+                visibleEntries[0].Name,
+                StringComparison.OrdinalIgnoreCase
+            );
 
         var entryIndent = new string(' ', (indentLevel + 1) * 2);
 
@@ -232,26 +262,42 @@ public class TableOfContentsService(
     /// Renders the content of a subtopic (entries and nested subtopics) without rendering the subtopic heading itself.
     /// Used when a subtopic is merged with a parent entry.
     /// </summary>
-    private void RenderSubtopicContent(StringBuilder sb, Topic subtopic, int indentLevel, string[] ignoreFiles)
+    private void RenderSubtopicContent(
+        StringBuilder sb,
+        Topic subtopic,
+        int indentLevel,
+        string[] ignoreFiles
+    )
     {
         // Filter out ignored entries
-        var visibleEntries = subtopic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray() 
+        var visibleEntries =
+            subtopic.Entries?.Where(e => !IsFileIgnored(e.File, ignoreFiles)).ToArray()
             ?? Array.Empty<Entries>();
 
         // Identify parent-child relationships at this level too
         var parentMatches = new Dictionary<Entries, Topic>();
         var processedSubtopics = new HashSet<Topic>();
 
-        if (visibleEntries.Length > 0 && subtopic.Subtopics != null && subtopic.Subtopics.Length > 0)
+        if (
+            visibleEntries.Length > 0
+            && subtopic.Subtopics != null
+            && subtopic.Subtopics.Length > 0
+        )
         {
             foreach (var entry in visibleEntries)
             {
                 var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
-                
+
                 foreach (var nestedSubtopic in subtopic.Subtopics)
                 {
-                    if (string.Equals(entry.Name, nestedSubtopic.Name, StringComparison.OrdinalIgnoreCase) &&
-                        IsSubtopicChildOfEntry(entryPathWithoutExt, nestedSubtopic, ignoreFiles))
+                    if (
+                        string.Equals(
+                            entry.Name,
+                            nestedSubtopic.Name,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                        && IsSubtopicChildOfEntry(entryPathWithoutExt, nestedSubtopic, ignoreFiles)
+                    )
                     {
                         parentMatches[entry] = nestedSubtopic;
                         processedSubtopics.Add(nestedSubtopic);
@@ -321,7 +367,11 @@ public class TableOfContentsService(
     /// <summary>
     /// Checks if a subtopic is a child of an entry based on file path prefix matching.
     /// </summary>
-    private bool IsSubtopicChildOfEntry(string entryPathWithoutExt, Topic subtopic, string[] ignoreFiles)
+    private bool IsSubtopicChildOfEntry(
+        string entryPathWithoutExt,
+        Topic subtopic,
+        string[] ignoreFiles
+    )
     {
         // Check if all visible files in the subtopic (and nested subtopics) start with the entry path
         return HasFilesWithPrefix(subtopic, entryPathWithoutExt, ignoreFiles);
@@ -369,8 +419,9 @@ public class TableOfContentsService(
     /// </summary>
     private static bool IsFileIgnored(string file, string[] ignoreFiles)
     {
-        return ignoreFiles.Any(ignored => 
-            string.Equals(file, ignored, StringComparison.OrdinalIgnoreCase));
+        return ignoreFiles.Any(ignored =>
+            string.Equals(file, ignored, StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     private static string ToTitleCase(string input)

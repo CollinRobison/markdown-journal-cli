@@ -73,9 +73,8 @@ public class NewJournalService : INewJournalService
         // Create journal configuration
         CreateJournalConfiguration(journalDirectory, journalName);
 
-        // create file tracking 
+        // create file tracking
         CreateFileTrackingIndex(journalDirectory);
-
     }
 
     private void CreateTableOfContents(string journalDirectory)
@@ -143,7 +142,8 @@ public class NewJournalService : INewJournalService
             new()
             {
                 Name = _journalSettings.JournalEntryTemplateTitle,
-                File = $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
+                File =
+                    $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
             },
             new()
             {

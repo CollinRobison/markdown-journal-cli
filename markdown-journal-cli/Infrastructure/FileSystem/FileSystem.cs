@@ -21,7 +21,9 @@ public class FileSystem : IFileSystem
 
     public void CreateMarkdownFile(string path, string fileName, string body)
     {
-        var fullFileName = fileName.Contains(FileConstants.MarkdownExtension) ? fileName : fileName + FileConstants.MarkdownExtension;
+        var fullFileName = fileName.Contains(FileConstants.MarkdownExtension)
+            ? fileName
+            : fileName + FileConstants.MarkdownExtension;
         string filePath = Path.Combine(path, fullFileName);
         if (FileExists(filePath))
         {

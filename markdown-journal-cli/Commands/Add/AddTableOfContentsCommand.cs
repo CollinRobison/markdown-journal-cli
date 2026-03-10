@@ -27,15 +27,16 @@ public class AddTableOfContents(
 
     private readonly IJournalConfiguration _journalConfiguration =
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
-    
+
     private readonly ITableOfContentsService _tableOfContentsGenerator =
-        tableOfContentsGenerator ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
+        tableOfContentsGenerator
+        ?? throw new ArgumentNullException(nameof(tableOfContentsGenerator));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, AddTableOfContentsSettings settings)
     {
         var journalrc = Path.Combine(settings.FilePath, _journalSettings.JournalConfigFileName);
-        
+
         try
         {
             if (!_fileSystem.FileExists(journalrc))
@@ -46,7 +47,9 @@ public class AddTableOfContents(
             var configCurrent = _journalConfiguration.Read(settings.FilePath);
             if (configCurrent == null)
             {
-                throw new InvalidOperationException($"Failed to read journal configuration from {settings.FilePath}");
+                throw new InvalidOperationException(
+                    $"Failed to read journal configuration from {settings.FilePath}"
+                );
             }
 
             var tocName = settings.TableOfContentsName ?? _journalSettings.TableOfContentsFileName;
@@ -55,25 +58,32 @@ public class AddTableOfContents(
 
             if (_fileSystem.FileExists(tocPath))
             {
-                _console.MarkupLine($"[yellow]Warning:[/] Table of Contents file '{tocFile}' already exists at '{settings.FilePath}'");
+                _console.MarkupLine(
+                    $"[yellow]Warning:[/] Table of Contents file '{tocFile}' already exists at '{settings.FilePath}'"
+                );
                 return 0;
             }
 
             if (configCurrent.TableOfContents.File != tocFile)
             {
-                _journalConfiguration.Update(settings.FilePath, config =>
-                {
-                    config.TableOfContents.File = tocFile;
-                });
+                _journalConfiguration.Update(
+                    settings.FilePath,
+                    config =>
+                    {
+                        config.TableOfContents.File = tocFile;
+                    }
+                );
             }
 
             _tableOfContentsGenerator.UpdateTableOfContents(
-                settings.FilePath, 
-                createdDate: DateTime.Now, 
+                settings.FilePath,
+                createdDate: DateTime.Now,
                 lastEditedDate: DateTime.Now
             );
 
-            _console.MarkupLine($"[green]Success:[/] Created Table of Contents file '{tocFile}' at '{settings.FilePath}'");
+            _console.MarkupLine(
+                $"[green]Success:[/] Created Table of Contents file '{tocFile}' at '{settings.FilePath}'"
+            );
             return 0;
         }
         catch (JournalrcNotFoundException ex)

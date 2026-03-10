@@ -8,7 +8,7 @@ using Xunit;
 namespace markdown_journal_cli.Tests.Infrastructure;
 
 /// <summary>
-/// Unit tests for the <see cref="FileTracking"/> class, covering change detection, 
+/// Unit tests for the <see cref="FileTracking"/> class, covering change detection,
 /// index management, and file tracking operations.
 /// Uses TestFileSystem for in-memory testing.
 /// </summary>
@@ -25,13 +25,13 @@ public class FileTrackingTests : IDisposable
         _fileSystem = new TestFileSystem();
         _hashService = new TestHashService();
         _testPath = "/test/journal";
-        
+
         var journalSettings = new JournalSettings { AppName = "testapp" };
         var options = Options.Create(journalSettings);
         _indexFileName = $".{journalSettings.AppName}";
-        
+
         _fileTracking = new FileTracking(_fileSystem, options, _hashService);
-        
+
         // Setup test directory
         _fileSystem.CreateDirectory(_testPath);
     }
@@ -67,11 +67,11 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "note1.md",
                     Hash = "hash1",
-                    LastChecked = DateTime.UtcNow
-                }
-            }
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
-        
+
         _fileTracking.SaveIndex(expectedIndex, _testPath);
 
         // When
@@ -109,9 +109,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "test.md",
                     Hash = "abc123",
-                    LastChecked = DateTime.UtcNow
-                }
-            }
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
 
         // When
@@ -120,7 +120,7 @@ public class FileTrackingTests : IDisposable
         // Then
         var indexPath = Path.Combine(_testPath, _indexFileName);
         _fileSystem.FileExists(indexPath).ShouldBeTrue();
-        
+
         var savedContent = _fileSystem.GetFileContent(indexPath);
         savedContent.ShouldNotBeNull();
         savedContent.ShouldContain("test.md");
@@ -139,9 +139,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "test.md",
                     Hash = "hash",
-                    LastChecked = DateTime.UtcNow
-                }
-            }
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
 
         // When
@@ -187,9 +187,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "existing.md",
                     Hash = "old-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -220,9 +220,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "deleted.md",
                     Hash = "some-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -249,31 +249,31 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "modified.md",
                     Hash = "old-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
                 },
                 ["deleted.md"] = new FileState
                 {
                     FilePath = "deleted.md",
                     Hash = "deleted-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
                 },
                 ["unchanged.md"] = new FileState
                 {
                     FilePath = "unchanged.md",
                     Hash = "same-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
         // Create files on disk
         CreateRealMarkdownFile("new.md", "New file");
         _hashService.SetHash("/test/journal/new.md", "new-hash");
-        
+
         CreateRealMarkdownFile("modified.md", "Modified content");
         _hashService.SetHash("/test/journal/modified.md", "new-modified-hash");
-        
+
         CreateRealMarkdownFile("unchanged.md", "Same content");
         _hashService.SetHash("/test/journal/unchanged.md", "same-hash");
         // deleted.md is not created, so it's detected as deleted
@@ -284,13 +284,13 @@ public class FileTrackingTests : IDisposable
         // Then
         result.AddedFiles.Count.ShouldBe(1);
         result.AddedFiles.ShouldContain("new.md");
-        
+
         result.ModifiedFiles.Count.ShouldBe(1);
         result.ModifiedFiles.ShouldContain("modified.md");
-        
+
         result.DeletedFiles.Count.ShouldBe(1);
         result.DeletedFiles.ShouldContain("deleted.md");
-        
+
         result.HasChanges.ShouldBeTrue();
     }
 
@@ -306,9 +306,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "unchanged.md",
                     Hash = "same-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -349,7 +349,7 @@ public class FileTrackingTests : IDisposable
         // Given - Create regular markdown file (not index file)
         CreateRealMarkdownFile("regular.md", "Regular note");
         _hashService.SetHash("/test/journal/regular.md", "regular-hash");
-        
+
         // Also create the actual index file through SaveIndex to ensure it exists but shouldn't be tracked
         var index = new JournalIndex();
         _fileTracking.SaveIndex(index, _testPath);
@@ -379,9 +379,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "old.md",
                     Hash = "old-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -417,9 +417,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "file.md",
                     Hash = "original-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -449,7 +449,7 @@ public class FileTrackingTests : IDisposable
         CreateRealMarkdownFile("note1.md", "Content 1");
         CreateRealMarkdownFile("note2.md", "Content 2");
         CreateRealMarkdownFile("note3.md", "Content 3");
-        
+
         _hashService.SetHash("/test/journal/note1.md", "hash1");
         _hashService.SetHash("/test/journal/note2.md", "hash2");
         _hashService.SetHash("/test/journal/note3.md", "hash3");
@@ -480,9 +480,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "old-file.md",
                     Hash = "old-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -564,9 +564,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "existing.md",
                     Hash = "old-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -594,9 +594,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "missing.md",
                     Hash = "some-hash",
-                    LastChecked = DateTime.UtcNow.AddDays(-1)
-                }
-            }
+                    LastChecked = DateTime.UtcNow.AddDays(-1),
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -618,10 +618,25 @@ public class FileTrackingTests : IDisposable
         {
             Files = new Dictionary<string, FileState>
             {
-                ["file1.md"] = new FileState { FilePath = "file1.md", Hash = "hash1", LastChecked = DateTime.UtcNow },
-                ["file2.md"] = new FileState { FilePath = "file2.md", Hash = "hash2", LastChecked = DateTime.UtcNow },
-                ["file3.md"] = new FileState { FilePath = "file3.md", Hash = "hash3", LastChecked = DateTime.UtcNow }
-            }
+                ["file1.md"] = new FileState
+                {
+                    FilePath = "file1.md",
+                    Hash = "hash1",
+                    LastChecked = DateTime.UtcNow,
+                },
+                ["file2.md"] = new FileState
+                {
+                    FilePath = "file2.md",
+                    Hash = "hash2",
+                    LastChecked = DateTime.UtcNow,
+                },
+                ["file3.md"] = new FileState
+                {
+                    FilePath = "file3.md",
+                    Hash = "hash3",
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -655,9 +670,9 @@ public class FileTrackingTests : IDisposable
                 {
                     FilePath = "to-remove.md",
                     Hash = "hash",
-                    LastChecked = DateTime.UtcNow
-                }
-            }
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -677,9 +692,19 @@ public class FileTrackingTests : IDisposable
         {
             Files = new Dictionary<string, FileState>
             {
-                ["keep.md"] = new FileState { FilePath = "keep.md", Hash = "hash1", LastChecked = DateTime.UtcNow },
-                ["remove.md"] = new FileState { FilePath = "remove.md", Hash = "hash2", LastChecked = DateTime.UtcNow }
-            }
+                ["keep.md"] = new FileState
+                {
+                    FilePath = "keep.md",
+                    Hash = "hash1",
+                    LastChecked = DateTime.UtcNow,
+                },
+                ["remove.md"] = new FileState
+                {
+                    FilePath = "remove.md",
+                    Hash = "hash2",
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -701,8 +726,13 @@ public class FileTrackingTests : IDisposable
         {
             Files = new Dictionary<string, FileState>
             {
-                ["existing.md"] = new FileState { FilePath = "existing.md", Hash = "hash", LastChecked = DateTime.UtcNow }
-            }
+                ["existing.md"] = new FileState
+                {
+                    FilePath = "existing.md",
+                    Hash = "hash",
+                    LastChecked = DateTime.UtcNow,
+                },
+            },
         };
         _fileTracking.SaveIndex(oldIndex, _testPath);
 
@@ -744,7 +774,7 @@ public class TestHashService : IHashService
         {
             return hash;
         }
-        
+
         // Return a default hash based on file path for deterministic testing
         return $"hash-{Path.GetFileName(filePath)}";
     }

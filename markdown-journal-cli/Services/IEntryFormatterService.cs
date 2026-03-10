@@ -34,4 +34,12 @@ public interface IEntryFormatterService
     /// <param name="headings">The string array of headings to combine.</param>
     /// <returns>String of combined headings with heading and space Separators.</returns>
     string AddHeadingSeparators(string[] heading);
+
+    /// <summary>
+    /// Returns an array of parsed headings and subheading
+    /// </summary>
+    /// /// <param name="subheadings">The heading string.</param>
+    /// <param name="subheadings">The string of subheadings to parse. must be in Separator format.</param>
+    /// <returns>Array of parsed headings and subheading</returns>
+    public string[] BuildHeadingArray(string? heading, string? subheading);
 }

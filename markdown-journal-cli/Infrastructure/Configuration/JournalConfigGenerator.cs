@@ -19,28 +19,46 @@ public class JournalConfigGenerator(
     IOptions<JournalSettings> journalSettings
 ) : IJournalConfigGenerator
 {
-    private readonly IFileSystem _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-    private readonly ITableOfContentsMarkdownParser _tocParser = tocParser ?? throw new ArgumentNullException(nameof(tocParser));
-    private readonly IFileTracking _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
-    private readonly IEntryFormatterService _entryFormatter = entryFormatter ?? throw new ArgumentNullException(nameof(entryFormatter));
-    private readonly IJournalConfiguration _journalConfiguration = journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+    private readonly ITableOfContentsMarkdownParser _tocParser =
+        tocParser ?? throw new ArgumentNullException(nameof(tocParser));
+    private readonly IFileTracking _fileTracking =
+        fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+    private readonly IEntryFormatterService _entryFormatter =
+        entryFormatter ?? throw new ArgumentNullException(nameof(entryFormatter));
+    private readonly IJournalConfiguration _journalConfiguration =
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     /// <inheritdoc />
-    public JournalConfigGenerationResult? GenerateFromTableOfContents(string directory, string tocFileName, string? journalName = null)
+    public JournalConfigGenerationResult? GenerateFromTableOfContents(
+        string directory,
+        string tocFileName,
+        string? journalName = null
+    )
     {
         if (string.IsNullOrWhiteSpace(directory))
         {
-            throw new ArgumentException("Directory cannot be null or whitespace.", nameof(directory));
+            throw new ArgumentException(
+                "Directory cannot be null or whitespace.",
+                nameof(directory)
+            );
         }
 
         if (string.IsNullOrWhiteSpace(tocFileName))
         {
-            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
+            throw new ArgumentException(
+                "TOC file name cannot be null or whitespace.",
+                nameof(tocFileName)
+            );
         }
 
-        var tocFilePath = Path.Combine(directory, $"{tocFileName}{FileConstants.MarkdownExtension}");
-        
+        var tocFilePath = Path.Combine(
+            directory,
+            $"{tocFileName}{FileConstants.MarkdownExtension}"
+        );
+
         if (!_fileSystem.FileExists(tocFilePath))
         {
             return null;
@@ -63,12 +81,9 @@ public class JournalConfigGenerator(
                 File = $"{tocFileName}{FileConstants.MarkdownExtension}",
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
-                Structure = new Structure
-                {
-                    Topics = Array.Empty<Topic>()
-                },
-                RootEntries = Array.Empty<Entries>()
-            }
+                Structure = new Structure { Topics = Array.Empty<Topic>() },
+                RootEntries = Array.Empty<Entries>(),
+            },
         };
 
         // Delete any existing config and save temp config so we can use AddEntry
@@ -94,40 +109,54 @@ public class JournalConfigGenerator(
         {
             Config = config,
             Source = "toc",
-            FileCount = config.TableOfContents.RootEntries.Length + CountTopicEntries(config.TableOfContents.Structure.Topics)
+            FileCount =
+                config.TableOfContents.RootEntries.Length
+                + CountTopicEntries(config.TableOfContents.Structure.Topics),
         };
     }
 
     /// <inheritdoc />
-    public JournalConfigGenerationResult? GenerateFromTrackingIndex(string directory, string tocFileName, string? journalName = null)
+    public JournalConfigGenerationResult? GenerateFromTrackingIndex(
+        string directory,
+        string tocFileName,
+        string? journalName = null
+    )
     {
         if (string.IsNullOrWhiteSpace(directory))
         {
-            throw new ArgumentException("Directory cannot be null or whitespace.", nameof(directory));
+            throw new ArgumentException(
+                "Directory cannot be null or whitespace.",
+                nameof(directory)
+            );
         }
 
         if (string.IsNullOrWhiteSpace(tocFileName))
         {
-            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
+            throw new ArgumentException(
+                "TOC file name cannot be null or whitespace.",
+                nameof(tocFileName)
+            );
         }
 
         var trackingFilePath = Path.Combine(directory, $".{_journalSettings.AppName}");
-        
+
         if (!_fileSystem.FileExists(trackingFilePath))
         {
             return null;
         }
 
         var index = _fileTracking.LoadIndex(directory);
-        
+
         if (index.Files.Count == 0)
         {
             return null;
         }
 
         // Get all markdown files from tracking index
-        var markdownFiles = index.Files.Keys
-            .Where(f => f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase))
+        var markdownFiles = index
+            .Files.Keys.Where(f =>
+                f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)
+            )
             .ToList();
 
         // Create initial empty config
@@ -139,12 +168,9 @@ public class JournalConfigGenerator(
                 File = $"{tocFileName}{FileConstants.MarkdownExtension}",
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
-                Structure = new Structure
-                {
-                    Topics = Array.Empty<Topic>()
-                },
-                RootEntries = Array.Empty<Entries>()
-            }
+                Structure = new Structure { Topics = Array.Empty<Topic>() },
+                RootEntries = Array.Empty<Entries>(),
+            },
         };
 
         // Delete any existing config and save temp config so we can use AddEntry
@@ -170,25 +196,42 @@ public class JournalConfigGenerator(
         {
             Config = config,
             Source = "tracking",
-            FileCount = config.TableOfContents.RootEntries.Length + CountTopicEntries(config.TableOfContents.Structure.Topics)
+            FileCount =
+                config.TableOfContents.RootEntries.Length
+                + CountTopicEntries(config.TableOfContents.Structure.Topics),
         };
     }
 
     /// <inheritdoc />
-    public JournalConfigGenerationResult GenerateFromDirectory(string directory, string tocFileName, string? journalName = null)
+    public JournalConfigGenerationResult GenerateFromDirectory(
+        string directory,
+        string tocFileName,
+        string? journalName = null
+    )
     {
         if (string.IsNullOrWhiteSpace(directory))
         {
-            throw new ArgumentException("Directory cannot be null or whitespace.", nameof(directory));
+            throw new ArgumentException(
+                "Directory cannot be null or whitespace.",
+                nameof(directory)
+            );
         }
 
         if (string.IsNullOrWhiteSpace(tocFileName))
         {
-            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
+            throw new ArgumentException(
+                "TOC file name cannot be null or whitespace.",
+                nameof(tocFileName)
+            );
         }
 
         // Get all markdown files in directory
-        var markdownFiles = _fileSystem.GetFiles(directory, $"*{FileConstants.MarkdownExtension}", SearchOption.TopDirectoryOnly)
+        var markdownFiles = _fileSystem
+            .GetFiles(
+                directory,
+                $"*{FileConstants.MarkdownExtension}",
+                SearchOption.TopDirectoryOnly
+            )
             .Select(f => Path.GetFileName(f))
             .Where(f => !string.IsNullOrEmpty(f))
             .Cast<string>()
@@ -203,12 +246,9 @@ public class JournalConfigGenerator(
                 File = $"{tocFileName}{FileConstants.MarkdownExtension}",
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
-                Structure = new Structure
-                {
-                    Topics = Array.Empty<Topic>()
-                },
-                RootEntries = Array.Empty<Entries>()
-            }
+                Structure = new Structure { Topics = Array.Empty<Topic>() },
+                RootEntries = Array.Empty<Entries>(),
+            },
         };
 
         // Delete any existing config and save temp config so we can use AddEntry
@@ -234,7 +274,9 @@ public class JournalConfigGenerator(
         {
             Config = config,
             Source = "directory",
-            FileCount = config.TableOfContents.RootEntries.Length + CountTopicEntries(config.TableOfContents.Structure.Topics)
+            FileCount =
+                config.TableOfContents.RootEntries.Length
+                + CountTopicEntries(config.TableOfContents.Structure.Topics),
         };
     }
 
@@ -258,13 +300,11 @@ public class JournalConfigGenerator(
     private string GetJournalNameFromDirectory(string directory)
     {
         // Convert to absolute path if relative
-        var absolutePath = Path.IsPathRooted(directory) 
-            ? directory 
-            : Path.GetFullPath(directory);
-        
+        var absolutePath = Path.IsPathRooted(directory) ? directory : Path.GetFullPath(directory);
+
         // Get the directory name from the absolute path
         var dirName = Path.GetFileName(absolutePath);
-        
+
         return string.IsNullOrEmpty(dirName) ? "MyJournal" : dirName;
     }
 }

@@ -2,21 +2,21 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.JournalTemplates;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Moq;
 using Shouldly;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
-using markdown_journal_cli.Infrastructure.JournalTemplates;
 
 namespace markdown_journal_cli.Tests.Commands;
 
@@ -336,7 +336,9 @@ public class NewCommandTests
         services.AddSingleton<ITemplateManager>(faultyTemplateManager);
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
@@ -611,7 +613,9 @@ public class NewCommandTests
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
@@ -924,7 +928,9 @@ public class NewCommandTests
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
@@ -974,7 +980,9 @@ public class NewCommandTests
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
@@ -1027,7 +1035,9 @@ public class NewCommandTests
         var mockFileTracking = new Mock<IFileTracking>();
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<INewJournalService, NewJournalService>();
 
@@ -1072,7 +1082,9 @@ public class NewCommandTests
         var mockFileTracking = new Mock<IFileTracking>();
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<INewJournalService, NewJournalService>();
 
@@ -1116,7 +1128,9 @@ public class NewCommandTests
         services.AddSingleton(mockTableOfContentsGenerator.Object);
         services.AddSingleton(_journalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
-        mockFileTracking.Setup(x => x.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex { Files = [] });
+        mockFileTracking
+            .Setup(x => x.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
         services.AddSingleton<INewJournalService, NewJournalService>();
 
@@ -1328,7 +1342,7 @@ public class NewCommandTests
         private readonly IFileSystem? _fileSystem;
 
         public List<(string journalDirectory, string journalName)> InitializedJournals { get; } =
-            [];
+        [];
         public bool ShouldThrow { get; set; } = false;
         public Exception? ExceptionToThrow { get; set; }
 

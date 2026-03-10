@@ -11,5 +11,9 @@ public interface ITableOfContentsService
     /// <param name="journalDirectory">The directory containing the journal.</param>
     /// <param name="createdDate">Optional creation date to display at the top of the TOC.</param>
     /// <param name="lastEditedDate">Optional last edited date to display at the top of the TOC.</param>
-    void UpdateTableOfContents(string journalDirectory, DateTime? createdDate = null, DateTime? lastEditedDate = null);
+    void UpdateTableOfContents(
+        string journalDirectory,
+        DateTime? createdDate = null,
+        DateTime? lastEditedDate = null
+    );
 }

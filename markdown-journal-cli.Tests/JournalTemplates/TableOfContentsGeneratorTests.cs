@@ -428,9 +428,7 @@ public class TableOfContentsGeneratorTests
 
         // Act & Assert
         // TestJournalConfiguration throws FileNotFoundException when config doesn't exist
-        Assert.Throws<FileNotFoundException>(
-            () => _generator.UpdateTableOfContents(journalDir)
-        );
+        Assert.Throws<FileNotFoundException>(() => _generator.UpdateTableOfContents(journalDir));
     }
 
     [Fact]
@@ -453,10 +451,7 @@ public class TableOfContentsGeneratorTests
                         new Topic
                         {
                             Name = "cloud computing",
-                            Entries =
-                            [
-                                new() { Name = "Azure Notes", File = "cloud-azure.md" },
-                            ],
+                            Entries = [new() { Name = "Azure Notes", File = "cloud-azure.md" }],
                             Subtopics = null,
                         },
                     ],
@@ -495,10 +490,7 @@ public class TableOfContentsGeneratorTests
                         new Topic
                         {
                             Name = "ARTIFICIAL INTELLIGENCE",
-                            Entries =
-                            [
-                                new() { Name = "AI Resources", File = "ai-resources.md" },
-                            ],
+                            Entries = [new() { Name = "AI Resources", File = "ai-resources.md" }],
                             Subtopics = null,
                         },
                     ],
@@ -537,10 +529,7 @@ public class TableOfContentsGeneratorTests
                         new Topic
                         {
                             Name = "mAchIne LeArNinG",
-                            Entries =
-                            [
-                                new() { Name = "ML Guide", File = "ml-guide.md" },
-                            ],
+                            Entries = [new() { Name = "ML Guide", File = "ml-guide.md" }],
                             Subtopics = null,
                         },
                     ],
@@ -625,10 +614,7 @@ public class TableOfContentsGeneratorTests
                                 new Topic
                                 {
                                     Name = "rust language",
-                                    Entries =
-                                    [
-                                        new() { Name = "Rust Guide", File = "rust.md" },
-                                    ],
+                                    Entries = [new() { Name = "Rust Guide", File = "rust.md" }],
                                     Subtopics = null,
                                 },
                             ],
@@ -759,10 +745,7 @@ public class TableOfContentsGeneratorTests
                         new Topic
                         {
                             Name = "machine learning",
-                            Entries =
-                            [
-                                new() { Name = "ML Guide", File = "ml-guide.md" },
-                            ],
+                            Entries = [new() { Name = "ML Guide", File = "ml-guide.md" }],
                             Subtopics = null,
                         },
                     ],
@@ -801,10 +784,10 @@ public class TableOfContentsGeneratorTests
         _journalConfiguration.Create(journalDir, config);
 
         var originalCreated = new DateTime(2024, 1, 1);
-        
+
         // Create TOC with original created date
         _generator.UpdateTableOfContents(journalDir, createdDate: originalCreated);
-        
+
         // Act - Update without providing created date
         var newLastEdited = new DateTime(2024, 2, 15);
         _generator.UpdateTableOfContents(journalDir, lastEditedDate: newLastEdited);
@@ -834,10 +817,10 @@ public class TableOfContentsGeneratorTests
         _journalConfiguration.Create(journalDir, config);
 
         var originalLastEdited = new DateTime(2024, 1, 15);
-        
+
         // Create TOC with original last edited date
         _generator.UpdateTableOfContents(journalDir, lastEditedDate: originalLastEdited);
-        
+
         // Act - Update without providing last edited date (simulating read-only operations)
         _generator.UpdateTableOfContents(journalDir);
 
@@ -866,10 +849,10 @@ public class TableOfContentsGeneratorTests
 
         var originalCreated = new DateTime(2024, 1, 1);
         var originalEdited = new DateTime(2024, 1, 15);
-        
+
         // Create TOC with original dates
         _generator.UpdateTableOfContents(journalDir, originalCreated, originalEdited);
-        
+
         // Act - Update with new dates (both should be overridden)
         var newCreated = new DateTime(2024, 3, 1);
         var newEdited = new DateTime(2024, 3, 15);
@@ -943,7 +926,11 @@ public class TableOfContentsGeneratorTests
                                     Name = "test file 5",
                                     Entries =
                                     [
-                                        new() { Name = "test file 7", File = "abc-test_2-test_file_5-test_file_7.md" },
+                                        new()
+                                        {
+                                            Name = "test file 7",
+                                            File = "abc-test_2-test_file_5-test_file_7.md",
+                                        },
                                     ],
                                     Subtopics = null,
                                 },
@@ -960,14 +947,16 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Should have parent entry as a link
         Assert.Contains("- [test file 5](abc-test_2-test_file_5.md)", content);
         // Should have child nested under parent (with more indentation)
         Assert.Contains("    - [test file 7](abc-test_2-test_file_5-test_file_7.md)", content);
         // Should NOT render subtopic heading separately
         var lines = (content ?? "").Split('\n');
-        var subtopicHeadingCount = lines.Count(l => l.Trim() == "- test file 5" || l.Trim() == "- Test File 5");
+        var subtopicHeadingCount = lines.Count(l =>
+            l.Trim() == "- test file 5" || l.Trim() == "- Test File 5"
+        );
         Assert.Equal(0, subtopicHeadingCount);
     }
 
@@ -1003,7 +992,11 @@ public class TableOfContentsGeneratorTests
                                     Name = "test file 5",
                                     Entries =
                                     [
-                                        new() { Name = "test file 7", File = "abc-test_2-test_file_5-test_file_7.md" },
+                                        new()
+                                        {
+                                            Name = "test file 7",
+                                            File = "abc-test_2-test_file_5-test_file_7.md",
+                                        },
                                     ],
                                     Subtopics = null,
                                 },
@@ -1020,7 +1013,7 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Parent file should NOT appear
         Assert.DoesNotContain("abc-test_2-test_file_5.md", content);
         // Child should still appear (as a regular subtopic entry)
@@ -1058,7 +1051,11 @@ public class TableOfContentsGeneratorTests
                                     Name = "test 2",
                                     Entries =
                                     [
-                                        new() { Name = "test 2 entry", File = "abc-test_file_1-test_2.md" },
+                                        new()
+                                        {
+                                            Name = "test 2 entry",
+                                            File = "abc-test_file_1-test_2.md",
+                                        },
                                     ],
                                     Subtopics = null,
                                 },
@@ -1075,16 +1072,19 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Both should appear - parent entry and subtopic
         Assert.Contains("[test file uno](abc-test_file_1.md)", content);
         Assert.Contains("test 2", content);
         Assert.Contains("[test 2 entry](abc-test_file_1-test_2.md)", content);
-        
+
         // Since names don't match, they should be separate (not nested as parent-child)
         var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
-        var parentIndex = Array.FindIndex(lines, l => l.Contains("[test file uno](abc-test_file_1.md)"));
-        
+        var parentIndex = Array.FindIndex(
+            lines,
+            l => l.Contains("[test file uno](abc-test_file_1.md)")
+        );
+
         Assert.True(parentIndex >= 0);
         // Parent should not have the subtopic's entries as direct children
     }
@@ -1109,10 +1109,7 @@ public class TableOfContentsGeneratorTests
                         new()
                         {
                             Name = "Level 1",
-                            Entries =
-                            [
-                                new() { Name = "level 2", File = "level_1-level_2.md" },
-                            ],
+                            Entries = [new() { Name = "level 2", File = "level_1-level_2.md" }],
                             Subtopics =
                             [
                                 new()
@@ -1120,7 +1117,11 @@ public class TableOfContentsGeneratorTests
                                     Name = "level 2",
                                     Entries =
                                     [
-                                        new() { Name = "level 3", File = "level_1-level_2-level_3.md" },
+                                        new()
+                                        {
+                                            Name = "level 3",
+                                            File = "level_1-level_2-level_3.md",
+                                        },
                                     ],
                                     Subtopics =
                                     [
@@ -1129,7 +1130,11 @@ public class TableOfContentsGeneratorTests
                                             Name = "level 3",
                                             Entries =
                                             [
-                                                new() { Name = "final", File = "level_1-level_2-level_3-final.md" },
+                                                new()
+                                                {
+                                                    Name = "final",
+                                                    File = "level_1-level_2-level_3-final.md",
+                                                },
                                             ],
                                             Subtopics = null,
                                         },
@@ -1148,23 +1153,29 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // All levels should be nested properly
         Assert.Contains("[level 2](level_1-level_2.md)", content);
         Assert.Contains("[level 3](level_1-level_2-level_3.md)", content);
         Assert.Contains("[final](level_1-level_2-level_3-final.md)", content);
-        
+
         // Verify nesting with indentation
         var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
         var level2Index = Array.FindIndex(lines, l => l.Contains("[level 2](level_1-level_2.md)"));
-        var level3Index = Array.FindIndex(lines, l => l.Contains("[level 3](level_1-level_2-level_3.md)"));
-        var finalIndex = Array.FindIndex(lines, l => l.Contains("[final](level_1-level_2-level_3-final.md)"));
-        
+        var level3Index = Array.FindIndex(
+            lines,
+            l => l.Contains("[level 3](level_1-level_2-level_3.md)")
+        );
+        var finalIndex = Array.FindIndex(
+            lines,
+            l => l.Contains("[final](level_1-level_2-level_3-final.md)")
+        );
+
         // Get indentation levels
         var level2Indent = lines[level2Index].TakeWhile(c => c == ' ').Count();
         var level3Indent = lines[level3Index].TakeWhile(c => c == ' ').Count();
         var finalIndent = lines[finalIndex].TakeWhile(c => c == ' ').Count();
-        
+
         // Each level should be more indented than the previous
         Assert.True(level3Indent > level2Indent);
         Assert.True(finalIndent > level3Indent);
@@ -1190,10 +1201,7 @@ public class TableOfContentsGeneratorTests
                         new()
                         {
                             Name = "Topic",
-                            Entries =
-                            [
-                                new() { Name = "parent", File = "topic-parent.md" },
-                            ],
+                            Entries = [new() { Name = "parent", File = "topic-parent.md" }],
                             Subtopics =
                             [
                                 new()
@@ -1201,9 +1209,21 @@ public class TableOfContentsGeneratorTests
                                     Name = "parent",
                                     Entries =
                                     [
-                                        new() { Name = "child 1", File = "topic-parent-child_1.md" },
-                                        new() { Name = "child 2", File = "topic-parent-child_2.md" },
-                                        new() { Name = "child 3", File = "topic-parent-child_3.md" },
+                                        new()
+                                        {
+                                            Name = "child 1",
+                                            File = "topic-parent-child_1.md",
+                                        },
+                                        new()
+                                        {
+                                            Name = "child 2",
+                                            File = "topic-parent-child_2.md",
+                                        },
+                                        new()
+                                        {
+                                            Name = "child 3",
+                                            File = "topic-parent-child_3.md",
+                                        },
                                     ],
                                     Subtopics = null,
                                 },
@@ -1220,22 +1240,25 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Parent should be a link
         Assert.Contains("[parent](topic-parent.md)", content);
         // All children should be present and nested
         Assert.Contains("[child 1](topic-parent-child_1.md)", content);
         Assert.Contains("[child 2](topic-parent-child_2.md)", content);
         Assert.Contains("[child 3](topic-parent-child_3.md)", content);
-        
+
         // Verify children are more indented than parent
         var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
         var parentIndex = Array.FindIndex(lines, l => l.Contains("[parent](topic-parent.md)"));
-        var child1Index = Array.FindIndex(lines, l => l.Contains("[child 1](topic-parent-child_1.md)"));
-        
+        var child1Index = Array.FindIndex(
+            lines,
+            l => l.Contains("[child 1](topic-parent-child_1.md)")
+        );
+
         var parentIndent = lines[parentIndex].TakeWhile(c => c == ' ').Count();
         var child1Indent = lines[child1Index].TakeWhile(c => c == ' ').Count();
-        
+
         Assert.True(child1Indent > parentIndent);
     }
 
@@ -1268,7 +1291,7 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Should show non-ignored entries
         Assert.Contains("[Introduction](1b-Intro.md)", content);
         Assert.Contains("[Template](1c-Template.md)", content);
@@ -1305,9 +1328,21 @@ public class TableOfContentsGeneratorTests
                                     Name = "Test 2",
                                     Entries =
                                     [
-                                        new() { Name = "test file 5", File = "abc-test_2-test_file_5.md" },
-                                        new() { Name = "test file 6", File = "abc-test_2-test_file_6.md" },
-                                        new() { Name = "test file 7", File = "abc-test_2-test_file_7.md" },
+                                        new()
+                                        {
+                                            Name = "test file 5",
+                                            File = "abc-test_2-test_file_5.md",
+                                        },
+                                        new()
+                                        {
+                                            Name = "test file 6",
+                                            File = "abc-test_2-test_file_6.md",
+                                        },
+                                        new()
+                                        {
+                                            Name = "test file 7",
+                                            File = "abc-test_2-test_file_7.md",
+                                        },
                                     ],
                                     Subtopics = null,
                                 },
@@ -1324,7 +1359,7 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Should NOT show ignored files
         Assert.DoesNotContain("abc-test_2-test_file_5.md", content);
         Assert.DoesNotContain("abc-test_2-test_file_6.md", content);
@@ -1382,20 +1417,20 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // All entries should be present
         Assert.Contains("[entry 1](topic-entry_1.md)", content);
         Assert.Contains("[parent](topic-parent.md)", content);
         Assert.Contains("[entry 2](topic-entry_2.md)", content);
         Assert.Contains("[child](topic-parent-child.md)", content);
-        
+
         // Verify order: entry1, parent with child nested, entry2
         var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
         var entry1Index = Array.FindIndex(lines, l => l.Contains("[entry 1](topic-entry_1.md)"));
         var parentIndex = Array.FindIndex(lines, l => l.Contains("[parent](topic-parent.md)"));
         var childIndex = Array.FindIndex(lines, l => l.Contains("[child](topic-parent-child.md)"));
         var entry2Index = Array.FindIndex(lines, l => l.Contains("[entry 2](topic-entry_2.md)"));
-        
+
         Assert.True(entry1Index < parentIndex);
         Assert.True(parentIndex < childIndex);
         Assert.True(childIndex < entry2Index);
@@ -1421,10 +1456,7 @@ public class TableOfContentsGeneratorTests
                         new()
                         {
                             Name = "abc",
-                            Entries =
-                            [
-                                new() { Name = "abc", File = "abc.md" },
-                            ],
+                            Entries = [new() { Name = "abc", File = "abc.md" }],
                             Subtopics =
                             [
                                 new()
@@ -1432,8 +1464,16 @@ public class TableOfContentsGeneratorTests
                                     Name = "test 2",
                                     Entries =
                                     [
-                                        new() { Name = "test file 1", File = "abc-test_2-test_file_1.md" },
-                                        new() { Name = "test file 10", File = "abc-test_2-test_file_10.md" },
+                                        new()
+                                        {
+                                            Name = "test file 1",
+                                            File = "abc-test_2-test_file_1.md",
+                                        },
+                                        new()
+                                        {
+                                            Name = "test file 10",
+                                            File = "abc-test_2-test_file_10.md",
+                                        },
                                     ],
                                     Subtopics =
                                     [
@@ -1442,7 +1482,11 @@ public class TableOfContentsGeneratorTests
                                             Name = "test file 1",
                                             Entries =
                                             [
-                                                new() { Name = "test file 1", File = "abc-test_2-test_file_1-test_file_1.md" },
+                                                new()
+                                                {
+                                                    Name = "test file 1",
+                                                    File = "abc-test_2-test_file_1-test_file_1.md",
+                                                },
                                             ],
                                             Subtopics = null,
                                         },
@@ -1453,10 +1497,7 @@ public class TableOfContentsGeneratorTests
                         new()
                         {
                             Name = "test 2",
-                            Entries =
-                            [
-                                new() { Name = "test 2", File = "test_2.md" },
-                            ],
+                            Entries = [new() { Name = "test 2", File = "test_2.md" }],
                             Subtopics = null,
                         },
                     ],
@@ -1470,30 +1511,36 @@ public class TableOfContentsGeneratorTests
 
         // Assert
         var content = _fileSystem.GetFileContent($"{journalDir}/1a-TableOfContents.md");
-        
+
         // Should have "abc" as a heading with link
         Assert.Contains("## [Abc](abc.md)", content);
-        
+
         // Should ALSO show the subtopics (capitalized due to CapitalizeTopicHeadings setting)
         Assert.Contains("- Test 2", content);
         Assert.Contains("[test file 1](abc-test_2-test_file_1.md)", content);
         Assert.Contains("[test file 10](abc-test_2-test_file_10.md)", content);
         Assert.Contains("[test file 1](abc-test_2-test_file_1-test_file_1.md)", content);
-        
+
         // Verify structure
         var lines = (content ?? "").Split('\n').Select(l => l.TrimEnd()).ToArray();
-        
+
         // Find the abc heading
         var abcHeadingIndex = Array.FindIndex(lines, l => l.Contains("## [Abc](abc.md)"));
         Assert.True(abcHeadingIndex >= 0, "Should have abc heading");
-        
+
         // Find subtopic "Test 2" - should be after abc heading
         var test2SubtopicIndex = Array.FindIndex(lines, l => l.Contains("- Test 2"));
-        Assert.True(test2SubtopicIndex > abcHeadingIndex, "Test 2 subtopic should appear after abc heading");
-        
+        Assert.True(
+            test2SubtopicIndex > abcHeadingIndex,
+            "Test 2 subtopic should appear after abc heading"
+        );
+
         // Find the separate "test 2" top-level topic
         var test2TopicIndex = Array.FindIndex(lines, l => l.Contains("## [Test 2](test_2.md)"));
-        Assert.True(test2TopicIndex > test2SubtopicIndex, "Test 2 topic should appear after abc section");
+        Assert.True(
+            test2TopicIndex > test2SubtopicIndex,
+            "Test 2 topic should appear after abc section"
+        );
     }
 
     #endregion
@@ -1517,10 +1564,10 @@ public class TableOfContentsGeneratorTests
                 [
                     new() { Name = "Introduction", File = "1b-Intro.md" },
                     new() { Name = "Newtoc", File = "newtoc.md" }, // TOC file shouldn't appear
-                    new() { Name = "Other", File = "other.md" }
+                    new() { Name = "Other", File = "other.md" },
                 ],
-                Structure = new Structure { Topics = [] }
-            }
+                Structure = new Structure { Topics = [] },
+            },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -1558,22 +1605,19 @@ public class TableOfContentsGeneratorTests
                             Name = "newtoc",
                             Entries =
                             [
-                                new() { Name = "Newtoc", File = "newtoc.md" } // Should be filtered
+                                new() { Name = "Newtoc", File = "newtoc.md" }, // Should be filtered
                             ],
-                            Subtopics = null
+                            Subtopics = null,
                         },
                         new Topic
                         {
                             Name = "other",
-                            Entries =
-                            [
-                                new() { Name = "Other", File = "other.md" }
-                            ],
-                            Subtopics = null
-                        }
-                    ]
-                }
-            }
+                            Entries = [new() { Name = "Other", File = "other.md" }],
+                            Subtopics = null,
+                        },
+                    ],
+                },
+            },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -1607,10 +1651,10 @@ public class TableOfContentsGeneratorTests
                 RootEntries =
                 [
                     new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Newtoc", File = "NewTOC.md" } // Different casing
+                    new() { Name = "Newtoc", File = "NewTOC.md" }, // Different casing
                 ],
-                Structure = new Structure { Topics = [] }
-            }
+                Structure = new Structure { Topics = [] },
+            },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -1641,10 +1685,10 @@ public class TableOfContentsGeneratorTests
                 [
                     new() { Name = "Introduction", File = "1b-Intro.md" },
                     new() { Name = "TOC", File = "toc.md" },
-                    new() { Name = "Draft", File = "draft.md" }
+                    new() { Name = "Draft", File = "draft.md" },
                 ],
-                Structure = new Structure { Topics = [] }
-            }
+                Structure = new Structure { Topics = [] },
+            },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -1661,4 +1705,3 @@ public class TableOfContentsGeneratorTests
 
     #endregion
 }
-

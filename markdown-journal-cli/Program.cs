@@ -43,11 +43,12 @@ public static class Program
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
         host.Services.AddSingleton<INewJournalService, NewJournalService>();
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
-        host.Services.AddSingleton<IHashService, HashService>(); 
+        host.Services.AddSingleton<IHashService, HashService>();
         host.Services.AddSingleton<IFileTracking, FileTracking>();
         host.Services.AddSingleton<ITableOfContentsService, TableOfContentsService>();
         host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
         host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
+        host.Services.AddSingleton<IJournalEntryService, JournalEntryService>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
@@ -72,7 +73,17 @@ public static class Program
             config.SetApplicationName(settings.AppName);
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
-            config.AddExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
+            config.AddExample(
+                "add",
+                "--path",
+                "Source/Repos/TestJournal",
+                "entry",
+                "Meeting_Notes",
+                "--heading",
+                "Work",
+                "--subheading",
+                "Team-Standup"
+            );
             config.AddExample("update", "--path", "Source/Repos/TestJournal", "journal");
 
             // New
@@ -84,7 +95,17 @@ public static class Program
                 {
                     add.SetDescription("Creates a new specified file to an existing journal.");
                     add.AddCommand<AddEntry>("entry")
-                    .WithExample("add", "--path", "Source/Repos/TestJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup" );
+                        .WithExample(
+                            "add",
+                            "--path",
+                            "Source/Repos/TestJournal",
+                            "entry",
+                            "Meeting_Notes",
+                            "--heading",
+                            "Work",
+                            "--subheading",
+                            "Team-Standup"
+                        );
                     add.AddCommand<AddJournalrc>("config");
                     add.AddCommand<AddTableOfContents>("toc");
                     add.AddCommand<AddFileTracking>("tracking");
@@ -96,8 +117,9 @@ public static class Program
                 update =>
                 {
                     update.SetDescription("Updates various aspects of an existing journal.");
-                    update.AddCommand<UpdateCommand>("journal")
-                    .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");
+                    update
+                        .AddCommand<UpdateCommand>("journal")
+                        .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");
                 }
             );
         });

@@ -471,9 +471,7 @@ public class FileSystemTests : IDisposable
         Directory.CreateDirectory(dirPath);
 
         // When & Then
-        Should.Throw<Exception>(() =>
-            _fileSystem.GetFileContent(dirPath)
-        );
+        Should.Throw<Exception>(() => _fileSystem.GetFileContent(dirPath));
     }
 
     [Fact]

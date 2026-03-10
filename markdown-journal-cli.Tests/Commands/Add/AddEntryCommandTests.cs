@@ -79,47 +79,69 @@ public class AddEntryCommandTests
         _app.Configure(config =>
         {
             config.SetApplicationName(_journalSettings.Value.AppName);
-            config.AddBranch<AddSettings>("add", add =>
-            {
-                add.AddCommand<AddEntry>("entry");
-            });
+            config.AddBranch<AddSettings>(
+                "add",
+                add =>
+                {
+                    add.AddCommand<AddEntry>("entry");
+                }
+            );
         });
     }
 
     private void SetupDefaultMockBehaviors()
     {
         // Default: .journalrc and .md-journal files exist
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(true);
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Returns(true);
-        
+
         // Default: entry markdown files don't exist yet
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.EndsWith(".md") && !s.Contains("TableOfContents"))))
+        _mockFileSystem
+            .Setup(fs =>
+                fs.FileExists(
+                    It.Is<string>(s => s.EndsWith(".md") && !s.Contains("TableOfContents"))
+                )
+            )
             .Returns(false);
 
         // Default entry formatter behaviors
-        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators(It.IsAny<string>()))
+        _mockEntryFormatter
+            .Setup(ef => ef.RemoveSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input?.Replace(" ", "").Replace("_", "") ?? "");
-        
-        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(It.IsAny<string>()))
+
+        _mockEntryFormatter
+            .Setup(ef => ef.AddSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input?.Replace(" ", "_") ?? "");
-        
-        _mockEntryFormatter.Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
+
+        _mockEntryFormatter
+            .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns((string[] parts) => string.Join("-", parts));
-        
-        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString(It.IsAny<string>()))
-            .Returns((string input) => input?.Split('-', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .ToArray() ?? Array.Empty<string>());
+
+        _mockEntryFormatter
+            .Setup(ef => ef.SeperateSubheadingString(It.IsAny<string>()))
+            .Returns(
+                (string input) =>
+                    input
+                        ?.Split('-', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .ToArray() ?? Array.Empty<string>()
+            );
 
         // Default template returns proper journal entry format
-        _mockTemplateManager.Setup(tm => tm.GenerateFromTemplate("journal-entry", It.IsAny<Dictionary<string, object>>()))
-            .Returns((string templateName, Dictionary<string, object>? parameters) =>
-            {
-                var title = parameters?["title"]?.ToString() ?? "Title";
-                var date = DateTime.Now.ToString("M/d/yyyy");
-                return $@"[Back to Table of Contents](1a-TableOfContents.md)
+        _mockTemplateManager
+            .Setup(tm =>
+                tm.GenerateFromTemplate("journal-entry", It.IsAny<Dictionary<string, object>>())
+            )
+            .Returns(
+                (string templateName, Dictionary<string, object>? parameters) =>
+                {
+                    var title = parameters?["title"]?.ToString() ?? "Title";
+                    var date = DateTime.Now.ToString("M/d/yyyy");
+                    return $@"[Back to Table of Contents](1a-TableOfContents.md)
 
 Created: {date}
 Last Edited: {date}
@@ -130,29 +152,38 @@ body goes here.
 
 [Make sure to add link to any reference here](add-link)
 ";
-            });
+                }
+            );
 
         // Default: File system operations succeed
-        _mockFileSystem.Setup(fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()));
+        _mockFileSystem.Setup(fs =>
+            fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())
+        );
 
         // Default: AddEntry succeeds
-        _mockJournalConfiguration.Setup(jc => jc.AddEntry(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string[]>(),
-            It.IsAny<int?>(),
-            It.IsAny<bool>(),
-            It.IsAny<bool>()));
+        _mockJournalConfiguration.Setup(jc =>
+            jc.AddEntry(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>()
+            )
+        );
 
         // Default: File tracking succeeds
         _mockFileTracking.Setup(ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()));
 
         // Default: TOC update succeeds
-        _mockTocGenerator.Setup(tg => tg.UpdateTableOfContents(
-            It.IsAny<string>(),
-            It.IsAny<DateTime?>(),
-            It.IsAny<DateTime?>()));
+        _mockTocGenerator.Setup(tg =>
+            tg.UpdateTableOfContents(
+                It.IsAny<string>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>()
+            )
+        );
     }
 
     #region Positive Cases
@@ -165,10 +196,10 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
         _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(".", It.IsAny<string>()), Times.Once);
     }
 
@@ -180,17 +211,18 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     [Fact]
     public void Should_Create_Entry_With_Subheading()
     {
         // Arrange
-        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString("AI-ML"))
+        _mockEntryFormatter
+            .Setup(ef => ef.SeperateSubheadingString("AI-ML"))
             .Returns(new[] { "AI", "ML" });
 
         // Act
@@ -204,18 +236,21 @@ body goes here.
     public void Should_Create_Entry_With_Heading_And_Subheading()
     {
         // Arrange
-        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString("AI-ML"))
+        _mockEntryFormatter
+            .Setup(ef => ef.SeperateSubheadingString("AI-ML"))
             .Returns(new[] { "AI", "ML" });
 
         // Act
-        var result = _app.Run(["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "-p", "."]);
+        var result = _app.Run(
+            ["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "-p", "."]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -226,9 +261,14 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockTemplateManager.Verify(tm => tm.GenerateFromTemplate(
-            "journal-entry",
-            It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")), Times.Once);
+        _mockTemplateManager.Verify(
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")
+                ),
+            Times.Once
+        );
     }
 
     #endregion
@@ -247,10 +287,10 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error:");
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Never);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
     }
 
     [Fact]
@@ -265,17 +305,18 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error:");
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Never);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
     }
 
     [Fact]
     public void Should_Return_Error_When_Entry_Already_Exists()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.EndsWith(It.IsAny<string>()))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.EndsWith(It.IsAny<string>()))))
             .Returns(true);
 
         // Act
@@ -333,14 +374,18 @@ body goes here.
     public void Should_Handle_Exception_From_JournalConfiguration()
     {
         // Arrange
-        _mockJournalConfiguration.Setup(jc => jc.AddEntry(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string[]>(),
-            It.IsAny<int?>(),
-            It.IsAny<bool>(),
-            It.IsAny<bool>()))
+        _mockJournalConfiguration
+            .Setup(jc =>
+                jc.AddEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                )
+            )
             .Throws(new InvalidOperationException("Configuration error"));
 
         // Act
@@ -364,10 +409,10 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -388,21 +433,24 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     [Fact]
     public void Should_Handle_Multiple_Subheadings_In_Chain()
     {
         // Arrange
-        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString("Level1-Level2-Level3-Level4"))
+        _mockEntryFormatter
+            .Setup(ef => ef.SeperateSubheadingString("Level1-Level2-Level3-Level4"))
             .Returns(new[] { "Level1", "Level2", "Level3", "Level4" });
 
         // Act
-        var result = _app.Run(["add", "entry", "MyEntry", "--sh", "Level1-Level2-Level3-Level4", "-p", "."]);
+        var result = _app.Run(
+            ["add", "entry", "MyEntry", "--sh", "Level1-Level2-Level3-Level4", "-p", "."]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -412,7 +460,8 @@ body goes here.
     public void Should_Handle_Subheading_Only_Without_Heading()
     {
         // Arrange
-        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString("SubOnly"))
+        _mockEntryFormatter
+            .Setup(ef => ef.SeperateSubheadingString("SubOnly"))
             .Returns(new[] { "SubOnly" });
 
         // Act
@@ -433,10 +482,10 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -447,10 +496,10 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     #endregion
@@ -465,17 +514,25 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
-            It.IsAny<string>(),
-            It.IsAny<DateTime?>(),
-            It.IsAny<DateTime?>()), Times.Once);
+        _mockTocGenerator.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Once
+        );
     }
 
     [Fact]
     public void Should_Not_Update_Configuration_If_File_Creation_Fails()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _mockFileSystem
+            .Setup(fs =>
+                fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())
+            )
             .Throws(new IOException("Disk full"));
 
         // Act
@@ -483,9 +540,10 @@ body goes here.
 
         // Assert
         result.ExitCode.ShouldBe(1);
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Never);
+        _mockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
     }
 
     #endregion
@@ -501,19 +559,25 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(0);
         // File should still be created
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
         // File should still be tracked
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
         // But TOC should NOT be updated
-        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
-            It.IsAny<string>(),
-            It.IsAny<DateTime?>(),
-            It.IsAny<DateTime?>()), Times.Never);
+        _mockTocGenerator.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Never
+        );
     }
 
     [Fact]
@@ -525,14 +589,19 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(0);
         // Should call AddEntry with ignoreFile = true
-        _mockJournalConfiguration.Verify(jc => jc.AddEntry(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string[]>(),
-            It.IsAny<int?>(),
-            It.IsAny<bool>(),
-            true), Times.Once);
+        _mockJournalConfiguration.Verify(
+            jc =>
+                jc.AddEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    true
+                ),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -544,14 +613,19 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(0);
         // Should call AddEntry with ignoreFile = false (default)
-        _mockJournalConfiguration.Verify(jc => jc.AddEntry(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string[]>(),
-            It.IsAny<int?>(),
-            It.IsAny<bool>(),
-            false), Times.Once);
+        _mockJournalConfiguration.Verify(
+            jc =>
+                jc.AddEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    false
+                ),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -563,62 +637,92 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(0);
         // TOC should be updated when ignore flag is not set
-        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
-            It.IsAny<string>(),
-            It.IsAny<DateTime?>(),
-            It.IsAny<DateTime?>()), Times.Once);
+        _mockTocGenerator.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Once
+        );
     }
 
     [Fact]
     public void Should_Handle_IgnoreFile_With_Heading_And_Subheading()
     {
         // Arrange
-        _mockEntryFormatter.Setup(ef => ef.SeperateSubheadingString("AI-ML"))
+        _mockEntryFormatter
+            .Setup(ef => ef.SeperateSubheadingString("AI-ML"))
             .Returns(new[] { "AI", "ML" });
 
         // Act
-        var result = _app.Run(["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "--ignore", "-p", "."]);
+        var result = _app.Run(
+            ["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "--ignore", "-p", "."]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);
         // File should be created
-        _mockFileSystem.Verify(fs => fs.CreateMarkdownFile(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
         // Should be added to configuration with ignoreFile = true
-        _mockJournalConfiguration.Verify(jc => jc.AddEntry(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string[]>(),
-            It.IsAny<int?>(),
-            It.IsAny<bool>(),
-            true), Times.Once);
+        _mockJournalConfiguration.Verify(
+            jc =>
+                jc.AddEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    true
+                ),
+            Times.Once
+        );
         // TOC should NOT be updated
-        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
-            It.IsAny<string>(),
-            It.IsAny<DateTime?>(),
-            It.IsAny<DateTime?>()), Times.Never);
+        _mockTocGenerator.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Never
+        );
     }
 
     [Fact]
     public void Should_Handle_IgnoreFile_With_Custom_Title()
     {
         // Act
-        var result = _app.Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "--ignore", "-p", "."]);
+        var result = _app.Run(
+            ["add", "entry", "my_file_name", "-t", "My Custom Title", "--ignore", "-p", "."]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);
         // Should use custom title even with ignore flag
-        _mockTemplateManager.Verify(tm => tm.GenerateFromTemplate(
-            "journal-entry",
-            It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")), Times.Once);
+        _mockTemplateManager.Verify(
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")
+                ),
+            Times.Once
+        );
         // TOC should NOT be updated
-        _mockTocGenerator.Verify(toc => toc.UpdateTableOfContents(
-            It.IsAny<string>(),
-            It.IsAny<DateTime?>(),
-            It.IsAny<DateTime?>()), Times.Never);
+        _mockTocGenerator.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Never
+        );
     }
 
     [Fact]
@@ -630,9 +734,10 @@ body goes here.
         // Assert
         result.ExitCode.ShouldBe(0);
         // File tracking should still occur even when ignoring in TOC
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _mockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     #endregion

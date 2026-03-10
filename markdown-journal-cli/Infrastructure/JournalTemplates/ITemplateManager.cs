@@ -1,4 +1,3 @@
-
 namespace markdown_journal_cli.Infrastructure.JournalTemplates;
 
 /// <summary>

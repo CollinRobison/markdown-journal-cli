@@ -147,23 +147,31 @@ public class TestFileSystem : IFileSystem
     public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {
         var pattern = searchPattern.Replace("*", "").Replace("?", "");
-        
+
         // Normalize the path (remove trailing separator)
-        var normalizedPath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        
-        var files = _files.Keys
-            .Where(f => f.StartsWith(normalizedPath + Path.DirectorySeparatorChar) && f.EndsWith(pattern))
+        var normalizedPath = path.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar
+        );
+
+        var files = _files
+            .Keys.Where(f =>
+                f.StartsWith(normalizedPath + Path.DirectorySeparatorChar) && f.EndsWith(pattern)
+            )
             .ToArray();
 
         if (searchOption == SearchOption.TopDirectoryOnly)
         {
             // Only include files directly in the path, not in subdirectories
             var pathPrefix = normalizedPath + Path.DirectorySeparatorChar;
-            files = files.Where(f =>
-            {
-                var relativePath = f.Substring(pathPrefix.Length);
-                return !relativePath.Contains(Path.DirectorySeparatorChar) && !relativePath.Contains(Path.AltDirectorySeparatorChar);
-            }).ToArray();
+            files = files
+                .Where(f =>
+                {
+                    var relativePath = f.Substring(pathPrefix.Length);
+                    return !relativePath.Contains(Path.DirectorySeparatorChar)
+                        && !relativePath.Contains(Path.AltDirectorySeparatorChar);
+                })
+                .ToArray();
         }
 
         return files;

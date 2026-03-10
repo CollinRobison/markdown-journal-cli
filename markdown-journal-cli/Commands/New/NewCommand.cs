@@ -57,10 +57,7 @@ public sealed class NewCommand(
             {
                 return ValidationResult.Error("Journal name contains invalid characters");
             }
-            if (
-                !string.IsNullOrWhiteSpace(JournalName)
-                && JournalName.Contains(' ')
-            )
+            if (!string.IsNullOrWhiteSpace(JournalName) && JournalName.Contains(' '))
             {
                 return ValidationResult.Error("Journal name cannot contain spaces");
             }

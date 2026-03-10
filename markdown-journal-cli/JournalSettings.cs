@@ -34,7 +34,7 @@ public class JournalSettings
     public string JournalEntryTemplateTitle { get; set; } = "Journal Entry Template";
 
     [Required]
-    public string AllJournalsFileName {get; set;} = "1h-All-My-Journals";
+    public string AllJournalsFileName { get; set; } = "1h-All-My-Journals";
 
     [Required]
     public string AllJournalsTitle { get; set; } = "All My Journals";

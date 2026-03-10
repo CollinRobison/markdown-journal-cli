@@ -69,7 +69,14 @@ public interface IJournalConfiguration
     /// <param name="file">The filename to add to the structure.</param>
     /// <param name="maxDepth">Maximum nesting depth allowed. Use null for unlimited depth.</param>
     /// <param name="sortAlphabetically">Whether to sort topics alphabetically (true) or maintain insertion order (false).</param>
-    void AddTopicEntry(string directory, string[] topicPath, string entryName, string file, int? maxDepth = null, bool sortAlphabetically = true);
+    void AddTopicEntry(
+        string directory,
+        string[] topicPath,
+        string entryName,
+        string file,
+        int? maxDepth = null,
+        bool sortAlphabetically = true
+    );
 
     /// <summary>
     /// Adds an entry to the journal configuration, automatically determining whether it should be
@@ -82,7 +89,15 @@ public interface IJournalConfiguration
     /// <param name="topicPath">Array of topic names forming the hierarchy. If null or empty, parses from filename (e.g., "Learning-Rust" becomes ["Learning", "Rust"]).</param>
     /// <param name="maxDepth">Maximum nesting depth allowed for topic entries. Use null for unlimited depth.</param>
     /// <param name="sortAlphabetically">Whether to sort topics alphabetically (true) or maintain insertion order (false).</param>
-    void AddEntry(string directory, string name, string file, string[]? topicPath = null, int? maxDepth = null, bool sortAlphabetically = true, bool ignoreFile = false);
+    void AddEntry(
+        string directory,
+        string name,
+        string file,
+        string[]? topicPath = null,
+        int? maxDepth = null,
+        bool sortAlphabetically = true,
+        bool ignoreFile = false
+    );
 
     /// <summary>
     /// Updates the display name of an entry identified by its file name.

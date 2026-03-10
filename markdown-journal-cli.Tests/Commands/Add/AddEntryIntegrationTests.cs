@@ -53,17 +53,23 @@ public class AddEntryIntegrationTests : IDisposable
                 JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
                 JournalEntryTemplateTitle = "Journal Entry Template",
                 TitleSpaceSeparator = "_",
-                HeadingSeparator = "-"
+                HeadingSeparator = "-",
             }
         );
 
         // Use real services
-        _fileSystem = new FileSystem(Microsoft.Extensions.Logging.Abstractions.NullLogger<FileSystem>.Instance);
+        _fileSystem = new FileSystem(
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<FileSystem>.Instance
+        );
         _templateManager = new TemplateManager(_journalSettings);
         _entryFormatter = new EntryFormatterService(_journalSettings);
         var hashService = new HashService();
         _fileTracking = new FileTracking(_fileSystem, _journalSettings, hashService);
-        _journalConfiguration = new JournalConfiguration(_fileSystem, _journalSettings, NullLogger<JournalConfiguration>.Instance);
+        _journalConfiguration = new JournalConfiguration(
+            _fileSystem,
+            _journalSettings,
+            NullLogger<JournalConfiguration>.Instance
+        );
         _tocGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
@@ -108,21 +114,21 @@ public class AddEntryIntegrationTests : IDisposable
     {
         // Create .journalrc file with proper structure
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var journalrcContent = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            journalName = "TestJournal",
-            tableOfContents = new
+        var journalrcContent = System.Text.Json.JsonSerializer.Serialize(
+            new
             {
-                file = "1a-TableOfContents.md",
-                extensions = new[] { ".md" },
-                ignoreFiles = Array.Empty<string>(),
-                structure = new
+                journalName = "TestJournal",
+                tableOfContents = new
                 {
-                    topics = Array.Empty<object>()
+                    file = "1a-TableOfContents.md",
+                    extensions = new[] { ".md" },
+                    ignoreFiles = Array.Empty<string>(),
+                    structure = new { topics = Array.Empty<object>() },
+                    rootEntries = Array.Empty<object>(),
                 },
-                rootEntries = Array.Empty<object>()
-            }
-        }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            },
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }
+        );
         File.WriteAllText(journalrcPath, journalrcContent);
 
         // Create tracking index file
@@ -131,7 +137,8 @@ public class AddEntryIntegrationTests : IDisposable
 
         // Create table of contents file
         var tocPath = Path.Combine(_testDirectory, "1a-TableOfContents.md");
-        var tocContent = $@"[Back to All My Journals](1h-All_My_Journals.md)
+        var tocContent =
+            $@"[Back to All My Journals](1h-All_My_Journals.md)
 
 Created: {DateTime.Now:M/d/yyyy}
 Last Edited: {DateTime.Now:M/d/yyyy}
@@ -155,14 +162,18 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         var stopwatch = Stopwatch.StartNew();
 
         // Act
-        var result = _app.Run(["add-entry", "PerfTest25", "--sh", subheadingString, "-p", _testDirectory]);
+        var result = _app.Run(
+            ["add-entry", "PerfTest25", "--sh", subheadingString, "-p", _testDirectory]
+        );
 
         stopwatch.Stop();
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(1000,
-            $"Entry creation took {stopwatch.ElapsedMilliseconds}ms, expected < 1000ms");
+        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(
+            1000,
+            $"Entry creation took {stopwatch.ElapsedMilliseconds}ms, expected < 1000ms"
+        );
 
         // Verify file was actually created
         var expectedFileName = $"{subheadingString}-PerfTest25.md";
@@ -180,14 +191,27 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         var stopwatch = Stopwatch.StartNew();
 
         // Act
-        var result = _app.Run(["add-entry", "PerfTest25H", "--he", "Main", "--sh", subheadingString, "-p", _testDirectory]);
+        var result = _app.Run(
+            [
+                "add-entry",
+                "PerfTest25H",
+                "--he",
+                "Main",
+                "--sh",
+                subheadingString,
+                "-p",
+                _testDirectory,
+            ]
+        );
 
         stopwatch.Stop();
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(1000,
-            $"Entry creation with heading and 25 subheadings took {stopwatch.ElapsedMilliseconds}ms, expected < 1000ms");
+        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(
+            1000,
+            $"Entry creation with heading and 25 subheadings took {stopwatch.ElapsedMilliseconds}ms, expected < 1000ms"
+        );
 
         // Verify file was created with correct structure
         var expectedFileName = $"Main-{subheadingString}-PerfTest25H.md";
@@ -203,14 +227,18 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Create_Entry_And_Update_All_Journal_Files()
     {
         // Act
-        var result = _app.Run(new[] { "add-entry", "IntegrationTest", "--he", "Tech", "-p", _testDirectory });
+        var result = _app.Run(
+            new[] { "add-entry", "IntegrationTest", "--he", "Tech", "-p", _testDirectory }
+        );
 
         // Assert - Show actual output if failed
         if (result.ExitCode != 0)
         {
-            throw new Exception($"Command failed with exit code {result.ExitCode}. Output: {result.Output}");
+            throw new Exception(
+                $"Command failed with exit code {result.ExitCode}. Output: {result.Output}"
+            );
         }
-        
+
         result.ExitCode.ShouldBe(0);
 
         // Verify markdown file was created
@@ -242,9 +270,15 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Handle_Multiple_Entries_With_Same_Heading()
     {
         // Act - Create multiple entries under same heading
-        var result1 = _app.Run(["add-entry", "Entry1", "--he", "CommonHeading", "-p", _testDirectory]);
-        var result2 = _app.Run(["add-entry", "Entry2", "--he", "CommonHeading", "-p", _testDirectory]);
-        var result3 = _app.Run(["add-entry", "Entry3", "--he", "CommonHeading", "-p", _testDirectory]);
+        var result1 = _app.Run(
+            ["add-entry", "Entry1", "--he", "CommonHeading", "-p", _testDirectory]
+        );
+        var result2 = _app.Run(
+            ["add-entry", "Entry2", "--he", "CommonHeading", "-p", _testDirectory]
+        );
+        var result3 = _app.Run(
+            ["add-entry", "Entry3", "--he", "CommonHeading", "-p", _testDirectory]
+        );
 
         // Assert
         result1.ExitCode.ShouldBe(0);
@@ -267,7 +301,18 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Create_Entry_With_Complex_Hierarchy()
     {
         // Act - Create entry with heading and nested subheadings
-        var result = _app.Run(["add-entry", "ComplexEntry", "--he", "Category", "--sh", "Sub1-Sub2-Sub3", "-p", _testDirectory]);
+        var result = _app.Run(
+            [
+                "add-entry",
+                "ComplexEntry",
+                "--he",
+                "Category",
+                "--sh",
+                "Sub1-Sub2-Sub3",
+                "-p",
+                _testDirectory,
+            ]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -288,7 +333,9 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Properly_Handle_Special_Characters_In_Filenames()
     {
         // Act - Create entry with underscores and spaces
-        var result = _app.Run(["add-entry", "My Special Entry", "--he", "Tech News", "-p", _testDirectory]);
+        var result = _app.Run(
+            ["add-entry", "My Special Entry", "--he", "Tech News", "-p", _testDirectory]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -307,7 +354,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         // Arrange - Read initial TOC
         var tocPath = Path.Combine(_testDirectory, "1a-TableOfContents.md");
         var initialContent = File.ReadAllText(tocPath);
-        
+
         // Wait a moment to ensure timestamp difference
         Thread.Sleep(100);
 
@@ -327,7 +374,9 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Create_Valid_Markdown_With_Custom_Title()
     {
         // Act
-        var result = _app.Run(["add-entry", "file_name", "-t", "My Custom Title", "-p", _testDirectory]);
+        var result = _app.Run(
+            ["add-entry", "file_name", "-t", "My Custom Title", "-p", _testDirectory]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(0);

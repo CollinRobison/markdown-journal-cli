@@ -26,7 +26,8 @@ public class TableOfContentsMarkdownParserTests
     public void ParseTableOfContents_ExtractsAllLinks()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 - [Introduction](1b-Intro.md)
 - [Template](1c-Template.md)";
 
@@ -35,10 +36,10 @@ public class TableOfContentsMarkdownParserTests
 
         // Assert
         Assert.Equal(2, entries.Length);
-        
+
         Assert.Equal("Introduction", entries[0].Name);
         Assert.Equal("1b-Intro.md", entries[0].File);
-        
+
         Assert.Equal("Template", entries[1].Name);
         Assert.Equal("1c-Template.md", entries[1].File);
     }
@@ -47,7 +48,8 @@ public class TableOfContentsMarkdownParserTests
     public void ParseTableOfContents_ExtractsLinksFromTopics()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 ## Work
 - [Meeting Notes](work-meeting_notes.md)
 - [Project Plan](work-project_plan.md)";
@@ -57,10 +59,10 @@ public class TableOfContentsMarkdownParserTests
 
         // Assert
         Assert.Equal(2, entries.Length);
-        
+
         Assert.Equal("Meeting Notes", entries[0].Name);
         Assert.Equal("work-meeting_notes.md", entries[0].File);
-        
+
         Assert.Equal("Project Plan", entries[1].Name);
         Assert.Equal("work-project_plan.md", entries[1].File);
     }
@@ -69,7 +71,8 @@ public class TableOfContentsMarkdownParserTests
     public void ParseTableOfContents_ExtractsLinksFromNestedStructure()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 ## Work
   - Backend
     - [API Design](work-backend-api_design.md)
@@ -82,13 +85,13 @@ public class TableOfContentsMarkdownParserTests
 
         // Assert
         Assert.Equal(3, entries.Length);
-        
+
         Assert.Equal("API Design", entries[0].Name);
         Assert.Equal("work-backend-api_design.md", entries[0].File);
-        
+
         Assert.Equal("Database", entries[1].Name);
         Assert.Equal("work-backend-database.md", entries[1].File);
-        
+
         Assert.Equal("UI Components", entries[2].Name);
         Assert.Equal("work-frontend-ui_components.md", entries[2].File);
     }
@@ -97,7 +100,8 @@ public class TableOfContentsMarkdownParserTests
     public void ParseTableOfContents_ExtractsLinksFromHeadings()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 ## [Work Notes](work-notes.md)
 - [Entry](work-entry.md)";
 
@@ -106,10 +110,10 @@ public class TableOfContentsMarkdownParserTests
 
         // Assert
         Assert.Equal(2, entries.Length);
-        
+
         Assert.Equal("Work Notes", entries[0].Name);
         Assert.Equal("work-notes.md", entries[0].File);
-        
+
         Assert.Equal("Entry", entries[1].Name);
         Assert.Equal("work-entry.md", entries[1].File);
     }
@@ -118,7 +122,8 @@ public class TableOfContentsMarkdownParserTests
     public void ParseTableOfContents_IgnoresBlankLines()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 
 - [Introduction](intro.md)
 
@@ -142,7 +147,8 @@ public class TableOfContentsMarkdownParserTests
     public void ParseTableOfContents_IgnoresMetadata()
     {
         // Arrange
-        var content = @"Created: 1/1/2026
+        var content =
+            @"Created: 1/1/2026
 Last Edited: 1/15/2026
 
 # Table of Contents
@@ -160,7 +166,8 @@ Last Edited: 1/15/2026
     public void ParseTableOfContents_IgnoresPlainTextItems()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 - Plain text without link
 - [Entry With Link](entry.md)
 ## Topic
@@ -180,7 +187,8 @@ Last Edited: 1/15/2026
     public void ParseTableOfContents_PreservesSpecialCharacters()
     {
         // Arrange - Note: nested brackets in link text may not work with simple regex
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 - [Entry With (Parens)](special-parens.md)
 - [Entry With ""Quotes""](special-quotes.md)";
 
@@ -189,7 +197,7 @@ Last Edited: 1/15/2026
 
         // Assert
         Assert.Equal(2, entries.Length);
-        
+
         Assert.Equal("Entry With (Parens)", entries[0].Name);
         Assert.Equal("Entry With \"Quotes\"", entries[1].Name);
     }
@@ -198,7 +206,8 @@ Last Edited: 1/15/2026
     public void ParseTableOfContents_HandlesDuplicateNames()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 - [Entry](duplicate-v1.md)
 - [Entry](duplicate-v2.md)
 - [Entry](duplicate-v3.md)";
@@ -208,7 +217,7 @@ Last Edited: 1/15/2026
 
         // Assert
         Assert.Equal(3, entries.Length);
-        
+
         Assert.Equal("Entry", entries[0].Name);
         Assert.Equal("duplicate-v1.md", entries[0].File);
         Assert.Equal("Entry", entries[1].Name);
@@ -221,7 +230,8 @@ Last Edited: 1/15/2026
     public void ParseTableOfContents_OnlyExtractsMarkdownFiles()
     {
         // Arrange
-        var content = @"# Table of Contents
+        var content =
+            @"# Table of Contents
 - [Markdown Entry](entry.md)
 - [Text File](entry.txt)
 - [Another MD](another.md)";
@@ -239,7 +249,8 @@ Last Edited: 1/15/2026
     public void ParseTableOfContents_ComplexMixedStructure_ExtractsAllLinks()
     {
         // Arrange
-        var content = @"Created: 1/1/2026
+        var content =
+            @"Created: 1/1/2026
 Last Edited: 1/15/2026
 
 # Table of Contents
@@ -266,7 +277,7 @@ Last Edited: 1/15/2026
 
         // Assert
         Assert.Equal(8, entries.Length); // All markdown links
-        
+
         // Verify all files are present
         var files = entries.Select(e => e.File).ToArray();
         Assert.Contains("1b-root1.md", files);
