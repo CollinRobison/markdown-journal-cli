@@ -6,6 +6,7 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -47,7 +48,8 @@ public class JournalInitializerTests
             _testTemplateManager,
             _testJournalConfiguration,
             _mockFileTracking.Object,
-            _journalSettings
+            _journalSettings,
+            NullLogger<NewJournalService>.Instance
         );
     }
 
@@ -211,7 +213,8 @@ public class JournalInitializerTests
                 _testTemplateManager,
                 _testJournalConfiguration,
                 _mockFileTracking.Object,
-                _journalSettings
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
             )
         );
         Assert.Equal("fileSystem", exception.ParamName);
@@ -227,7 +230,8 @@ public class JournalInitializerTests
                 null!,
                 _testJournalConfiguration,
                 _mockFileTracking.Object,
-                _journalSettings
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
             )
         );
         Assert.Equal("templateManager", exception.ParamName);
@@ -243,7 +247,8 @@ public class JournalInitializerTests
                 _testTemplateManager,
                 null!,
                 _mockFileTracking.Object,
-                _journalSettings
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
             )
         );
         Assert.Equal("journalConfiguration", exception.ParamName);

@@ -52,7 +52,8 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         _tocGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
-            _journalSettings
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
         );
 
         _console = new TestConsole();

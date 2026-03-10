@@ -10,6 +10,8 @@ using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.JournalTemplates;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
@@ -58,6 +60,7 @@ public class NewCommandTests
         _journalInitializer = new TestJournalInitializer(_fileSystem);
 
         var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
         services.AddSingleton<IFileSystem>(_fileSystem);
         services.AddSingleton<INewJournalService>(_journalInitializer);
         services.AddSingleton(_journalSettings);
@@ -804,7 +807,8 @@ public class NewCommandTests
             testTemplateManager,
             testJournalConfig,
             mockFileTracking.Object,
-            customSettings
+            customSettings,
+            NullLogger<NewJournalService>.Instance
         );
 
         var services = new ServiceCollection();
@@ -1294,6 +1298,11 @@ public class NewCommandTests
         }
 
         var registrar = new TypeRegistrar();
+
+        // Register null logging so type-registered services (e.g. NewJournalService) that
+        // depend on ILogger<T> can resolve correctly inside the TypeRegistrar's ServiceProvider.
+        registrar.RegisterInstance(typeof(ILoggerFactory), NullLoggerFactory.Instance);
+        registrar.Register(typeof(ILogger<>), typeof(Logger<>));
 
         foreach (var service in services)
         {

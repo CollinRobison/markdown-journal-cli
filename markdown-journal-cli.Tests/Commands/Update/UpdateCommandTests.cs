@@ -54,7 +54,8 @@ public class UpdateCommandTests
         _tableOfContentsGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
-            _journalSettings
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
         );
 
         _fileSystem.CreateDirectory(_testPath);
@@ -612,7 +613,7 @@ public class UpdateCommandTests
             customSettings,
             NullLogger<JournalConfiguration>.Instance
         );
-        var customTocGen = new TableOfContentsService(_fileSystem, customConfig, customSettings);
+        var customTocGen = new TableOfContentsService(_fileSystem, customConfig, customSettings, NullLogger<TableOfContentsService>.Instance);
         var command = new UpdateCommand(
             _console,
             _fileSystem,

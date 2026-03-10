@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -29,7 +30,8 @@ public class TableOfContentsGeneratorTests
         _generator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
-            _journalSettings
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
         );
     }
 
@@ -659,7 +661,8 @@ public class TableOfContentsGeneratorTests
         var generatorWithoutCaps = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
-            settingsWithoutCaps
+            settingsWithoutCaps,
+            NullLogger<TableOfContentsService>.Instance
         );
 
         var config = new JournalConfig
@@ -729,7 +732,8 @@ public class TableOfContentsGeneratorTests
         var generatorWithCaps = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
-            settingsWithCaps
+            settingsWithCaps,
+            NullLogger<TableOfContentsService>.Instance
         );
 
         var config = new JournalConfig

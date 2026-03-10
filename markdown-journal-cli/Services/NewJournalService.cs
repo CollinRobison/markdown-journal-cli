@@ -3,6 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services;
@@ -16,6 +17,7 @@ public class NewJournalService : INewJournalService
     private readonly ITemplateManager _templateManager;
     private readonly IJournalConfiguration _journalConfiguration;
     private readonly IFileTracking _fileTracking;
+    private readonly ILogger<NewJournalService> _logger;
     private readonly JournalSettings _journalSettings;
 
     /// <summary>
@@ -24,13 +26,15 @@ public class NewJournalService : INewJournalService
     /// <param name="fileSystem">The file system service for creating directories and files.</param>
     /// <param name="templateManager">The template manager for generating content from templates.</param>
     /// <param name="journalConfiguration">The configuration service for creating journalrc files.</param>
+    /// <param name="logger">The logger for diagnostic output.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     public NewJournalService(
         IFileSystem fileSystem,
         ITemplateManager templateManager,
         IJournalConfiguration journalConfiguration,
         IFileTracking fileTracking,
-        IOptions<JournalSettings> journalSettings
+        IOptions<JournalSettings> journalSettings,
+        ILogger<NewJournalService> logger
     )
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -39,6 +43,7 @@ public class NewJournalService : INewJournalService
         _journalConfiguration =
             journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
         _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _journalSettings = journalSettings.Value;
     }
 
@@ -61,6 +66,8 @@ public class NewJournalService : INewJournalService
             );
         }
 
+        _logger.LogDebug("Initializing new journal '{JournalName}' at '{JournalDirectory}'", journalName, journalDirectory);
+
         // Create the journal directory
         _fileSystem.CreateDirectory(journalDirectory);
 
@@ -75,6 +82,8 @@ public class NewJournalService : INewJournalService
 
         // create file tracking
         CreateFileTrackingIndex(journalDirectory);
+
+        _logger.LogDebug("Journal '{JournalName}' initialized successfully at '{JournalDirectory}'", journalName, journalDirectory);
     }
 
     private void CreateTableOfContents(string journalDirectory)

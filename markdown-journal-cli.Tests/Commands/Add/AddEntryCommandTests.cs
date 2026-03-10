@@ -7,9 +7,12 @@ using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 
@@ -54,7 +57,19 @@ public class AddEntryCommandTests
 
         SetupDefaultMockBehaviors();
 
+        var journalEntryService = new JournalEntryService(
+            _mockFileSystem.Object,
+            _mockJournalConfiguration.Object,
+            _journalSettings,
+            _mockEntryFormatter.Object,
+            _mockTemplateManager.Object,
+            _mockFileTracking.Object,
+            _mockTocGenerator.Object,
+            NullLogger<JournalEntryService>.Instance
+        );
+
         var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(_console);
         services.AddSingleton(_console);
         services.AddSingleton(_mockFileSystem.Object);
         services.AddSingleton(_mockTemplateManager.Object);
@@ -63,6 +78,7 @@ public class AddEntryCommandTests
         services.AddSingleton(_mockFileTracking.Object);
         services.AddSingleton(_mockTocGenerator.Object);
         services.AddSingleton(_journalSettings);
+        services.AddSingleton<IJournalEntryService>(journalEntryService);
         services.AddSingleton<AddEntry>();
 
         var registrar = new TypeRegistrar();
@@ -111,7 +127,7 @@ public class AddEntryCommandTests
         // Default entry formatter behaviors
         _mockEntryFormatter
             .Setup(ef => ef.RemoveSpaceSeparators(It.IsAny<string>()))
-            .Returns((string input) => input?.Replace(" ", "").Replace("_", "") ?? "");
+            .Returns((string input) => input?.Replace("_", " ").Trim() ?? "");
 
         _mockEntryFormatter
             .Setup(ef => ef.AddSpaceSeparators(It.IsAny<string>()))
@@ -121,14 +137,21 @@ public class AddEntryCommandTests
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns((string[] parts) => string.Join("-", parts));
 
+        // BuildHeadingArray is called by JournalEntryService to produce the topic path for journalrc
         _mockEntryFormatter
-            .Setup(ef => ef.SeperateSubheadingString(It.IsAny<string>()))
+            .Setup(ef => ef.BuildHeadingArray(It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(
-                (string input) =>
-                    input
-                        ?.Split('-', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(s => s.Trim())
-                        .ToArray() ?? Array.Empty<string>()
+                (string? heading, string? subheading) =>
+                {
+                    if (heading == null && subheading == null)
+                        return Array.Empty<string>();
+                    var parts = new List<string>();
+                    if (heading != null)
+                        parts.Add(heading.Replace(" ", "_"));
+                    if (subheading != null)
+                        parts.AddRange(subheading.Split('-', StringSplitOptions.RemoveEmptyEntries));
+                    return parts.ToArray();
+                }
             );
 
         // Default template returns proper journal entry format
@@ -260,12 +283,14 @@ body goes here.
         var result = _app.Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "-p", "."]);
 
         // Assert
+        // RemoveSpaceSeparators replaces underscores with spaces; "My Custom Title" has no underscores
+        // so the title passed to the template is "My Custom Title"
         result.ExitCode.ShouldBe(0);
         _mockTemplateManager.Verify(
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
-                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")
+                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "My Custom Title")
                 ),
             Times.Once
         );
@@ -709,7 +734,7 @@ body goes here.
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
-                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "MyCustomTitle")
+                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "My Custom Title")
                 ),
             Times.Once
         );

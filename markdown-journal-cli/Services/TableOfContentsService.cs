@@ -2,6 +2,7 @@ using System.Text;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services;
@@ -12,13 +13,16 @@ namespace markdown_journal_cli.Services;
 public class TableOfContentsService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
-    IOptions<JournalSettings> journalSettings
+    IOptions<JournalSettings> journalSettings,
+    ILogger<TableOfContentsService> logger
 ) : ITableOfContentsService
 {
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     private readonly IJournalConfiguration _journalConfiguration =
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    private readonly ILogger<TableOfContentsService> _logger =
+        logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     /// <inheritdoc />
@@ -36,6 +40,8 @@ public class TableOfContentsService(
             );
         }
 
+        _logger.LogDebug("Updating table of contents for journal at '{JournalDirectory}'", journalDirectory);
+
         var config =
             _journalConfiguration.Read(journalDirectory)
             ?? throw new InvalidOperationException(
@@ -43,7 +49,6 @@ public class TableOfContentsService(
             );
 
         var tocFile = config.TableOfContents.File;
-        // If dates aren't provided, try to preserve existing dates from the current TOC
         var tocFilePath = Path.Combine(journalDirectory, tocFile);
         if (_fileSystem.FileExists(tocFilePath))
         {
@@ -53,13 +58,18 @@ public class TableOfContentsService(
             );
 
             // Use existing dates if new ones aren't provided
-            createdDate ??= existingCreated;
+            if (createdDate == null && existingCreated != null)
+            {
+                _logger.LogDebug("Preserving existing created date from TOC");
+                createdDate = existingCreated;
+            }
             lastEditedDate ??= existingEdited;
         }
 
         var tocContent = GenerateTableOfContents(config, createdDate, lastEditedDate);
 
         _fileSystem.UpdateFile(journalDirectory, tocFilePath, tocContent);
+        _logger.LogDebug("Table of contents updated at '{TocFilePath}'", tocFilePath);
     }
 
     private string GenerateTableOfContents(
