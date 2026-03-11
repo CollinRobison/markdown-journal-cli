@@ -42,6 +42,11 @@ public sealed class AddEntry(
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
         }
+          catch (TrackingIndexNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            return 1;
+        }
         catch (Exception ex)
         {
             _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");
