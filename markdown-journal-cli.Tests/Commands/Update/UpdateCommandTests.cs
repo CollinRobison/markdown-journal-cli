@@ -23,6 +23,7 @@ public class UpdateCommandTests
     private readonly FileTracking _fileTracking;
     private readonly JournalConfiguration _journalConfiguration;
     private readonly TableOfContentsService _tableOfContentsGenerator;
+    private readonly JournalUpdateService _journalUpdateService;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly string _testPath;
 
@@ -59,6 +60,15 @@ public class UpdateCommandTests
             NullLogger<TableOfContentsService>.Instance
         );
 
+        _journalUpdateService = new JournalUpdateService(
+            _console,
+            _fileSystem,
+            _journalConfiguration,
+            _fileTracking,
+            _tableOfContentsGenerator,
+            _journalSettings
+        );
+
         _fileSystem.CreateDirectory(_testPath);
         SetupJournalConfig();
     }
@@ -68,9 +78,8 @@ public class UpdateCommandTests
         return new UpdateCommand(
             _console,
             _fileSystem,
+            _journalUpdateService,
             _fileTracking,
-            _journalConfiguration,
-            _tableOfContentsGenerator,
             _journalSettings
         );
     }
@@ -615,12 +624,19 @@ public class UpdateCommandTests
             NullLogger<JournalConfiguration>.Instance
         );
         var customTocGen = new TableOfContentsService(_fileSystem, customConfig, customSettings, NullLogger<TableOfContentsService>.Instance);
+        var customUpdateService = new JournalUpdateService(
+            _console,
+            _fileSystem,
+            customConfig,
+            tracking,
+            customTocGen,
+            customSettings
+        );
         var command = new UpdateCommand(
             _console,
             _fileSystem,
+            customUpdateService,
             tracking,
-            customConfig,
-            customTocGen,
             customSettings
         );
         var settings = new UpdateJournalSettings { FilePath = _testPath };

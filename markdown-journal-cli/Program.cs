@@ -49,6 +49,7 @@ public static class Program
         host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
         host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
         host.Services.AddSingleton<IJournalEntryService, JournalEntryService>();
+        host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
