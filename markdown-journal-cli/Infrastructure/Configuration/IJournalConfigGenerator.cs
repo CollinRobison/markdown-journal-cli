@@ -24,7 +24,11 @@ public interface IJournalConfigGenerator
     /// <param name="tocFileName">The table of contents filename (without extension).</param>
     /// <param name="journalName">Optional journal name. If not provided, uses directory name.</param>
     /// <returns>Configuration result if TOC file exists and is valid, null otherwise.</returns>
-    JournalConfigGenerationResult? GenerateFromTableOfContents(string directory, string tocFileName, string? journalName = null);
+    JournalConfigGenerationResult? GenerateFromTableOfContents(
+        string directory,
+        string tocFileName,
+        string? journalName = null
+    );
 
     /// <summary>
     /// Generates a journal configuration from the file tracking index.
@@ -33,7 +37,11 @@ public interface IJournalConfigGenerator
     /// <param name="tocFileName">The table of contents filename to exclude from entries.</param>
     /// <param name="journalName">Optional journal name. If not provided, uses directory name.</param>
     /// <returns>Configuration result if tracking file exists, null otherwise.</returns>
-    JournalConfigGenerationResult? GenerateFromTrackingIndex(string directory, string tocFileName, string? journalName = null);
+    JournalConfigGenerationResult? GenerateFromTrackingIndex(
+        string directory,
+        string tocFileName,
+        string? journalName = null
+    );
 
     /// <summary>
     /// Generates a journal configuration by scanning all markdown files in the directory.
@@ -42,5 +50,9 @@ public interface IJournalConfigGenerator
     /// <param name="tocFileName">The table of contents filename to exclude from entries.</param>
     /// <param name="journalName">Optional journal name. If not provided, uses directory name.</param>
     /// <returns>Configuration result with all discovered markdown files.</returns>
-    JournalConfigGenerationResult GenerateFromDirectory(string directory, string tocFileName, string? journalName = null);
+    JournalConfigGenerationResult GenerateFromDirectory(
+        string directory,
+        string tocFileName,
+        string? journalName = null
+    );
 }

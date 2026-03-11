@@ -4,8 +4,8 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.JournalTemplates;
-using markdown_journal_cli.Tests.Infrastructure;
+using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -23,7 +23,7 @@ public class AddTableOfContentsCommandTests
     private readonly TestFileSystem _fileSystem;
     private readonly TestConsole _console;
     private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
-    private readonly Mock<ITableOfContentsGenerator> _mockTocGenerator;
+    private readonly Mock<ITableOfContentsService> _mockTocGenerator;
     private readonly JournalSettings _journalSettings;
     private readonly AddTableOfContents _command;
 
@@ -32,11 +32,11 @@ public class AddTableOfContentsCommandTests
         _fileSystem = new TestFileSystem();
         _console = new TestConsole();
         _mockJournalConfiguration = new Mock<IJournalConfiguration>();
-        _mockTocGenerator = new Mock<ITableOfContentsGenerator>();
+        _mockTocGenerator = new Mock<ITableOfContentsService>();
         _journalSettings = new JournalSettings
         {
             JournalConfigFileName = ".journalrc",
-            TableOfContentsFileName = "TOC"
+            TableOfContentsFileName = "TOC",
         };
 
         _command = new AddTableOfContents(
@@ -56,13 +56,18 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal";
         var tocFile = $"{_journalSettings.TableOfContentsFileName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = tocFile, Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = tocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
@@ -76,7 +81,10 @@ public class AddTableOfContentsCommandTests
         _console.Output.ShouldContain("Success");
         _console.Output.ShouldContain("Created");
         _console.Output.ShouldContain(tocFile);
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
+        _mockTocGenerator.Verify(
+            x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -85,18 +93,18 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal";
         var oldTocFile = "old-toc.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents 
-            { 
+            TableOfContents = new TableOfContents
+            {
                 File = oldTocFile,
                 Structure = new Structure { Topics = [] },
-                RootEntries = []
-            }
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
@@ -109,14 +117,17 @@ public class AddTableOfContentsCommandTests
         result.ShouldBe(0);
         _console.Output.ShouldContain("Success");
         _console.Output.ShouldContain("Created");
-        
+
         // Verify config was updated
         _mockJournalConfiguration.Verify(
-            x => x.Update(directory, It.IsAny<Action<JournalConfig>>()), 
+            x => x.Update(directory, It.IsAny<Action<JournalConfig>>()),
             Times.Once
         );
-        
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
+
+        _mockTocGenerator.Verify(
+            x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -126,20 +137,25 @@ public class AddTableOfContentsCommandTests
         var directory = "/test/journal";
         var customTocName = "CustomTableOfContents";
         var customTocFile = $"{customTocName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = "TOC.md", Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = "TOC.md",
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
-        var settings = new AddTableOfContentsSettings 
-        { 
+        var settings = new AddTableOfContentsSettings
+        {
             FilePath = directory,
-            TableOfContentsName = customTocName
+            TableOfContentsName = customTocName,
         };
 
         // Act
@@ -148,14 +164,17 @@ public class AddTableOfContentsCommandTests
         // Assert
         result.ShouldBe(0);
         _console.Output.ShouldContain(customTocFile);
-        
+
         // Verify config was updated with custom name
         _mockJournalConfiguration.Verify(
-            x => x.Update(directory, It.IsAny<Action<JournalConfig>>()), 
+            x => x.Update(directory, It.IsAny<Action<JournalConfig>>()),
             Times.Once
         );
-        
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
+
+        _mockTocGenerator.Verify(
+            x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -164,13 +183,18 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal";
         var tocFile = $"{_journalSettings.TableOfContentsFileName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = tocFile, Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = tocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
@@ -181,14 +205,17 @@ public class AddTableOfContentsCommandTests
 
         // Assert
         result.ShouldBe(0);
-        
+
         // Verify config was NOT updated
         _mockJournalConfiguration.Verify(
-            x => x.Update(It.IsAny<string>(), It.IsAny<Action<JournalConfig>>()), 
+            x => x.Update(It.IsAny<string>(), It.IsAny<Action<JournalConfig>>()),
             Times.Never
         );
-        
-        _mockTocGenerator.Verify(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Once);
+
+        _mockTocGenerator.Verify(
+            x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()),
+            Times.Once
+        );
     }
 
     #endregion
@@ -201,14 +228,19 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal";
         var tocFile = $"{_journalSettings.TableOfContentsFileName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
         _fileSystem.CreateFile(directory, tocFile, "# Existing TOC");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = tocFile, Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = tocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
@@ -221,16 +253,21 @@ public class AddTableOfContentsCommandTests
         result.ShouldBe(0);
         _console.Output.ShouldContain("Warning");
         _console.Output.ShouldContain("already exists");
-        
+
         // Verify TOC generator was NOT called
         _mockTocGenerator.Verify(
-            x => x.UpdateTableOfContents(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()), 
+            x =>
+                x.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
             Times.Never
         );
-        
+
         // Verify config was NOT updated
         _mockJournalConfiguration.Verify(
-            x => x.Update(It.IsAny<string>(), It.IsAny<Action<JournalConfig>>()), 
+            x => x.Update(It.IsAny<string>(), It.IsAny<Action<JournalConfig>>()),
             Times.Never
         );
     }
@@ -251,9 +288,14 @@ public class AddTableOfContentsCommandTests
         result.ShouldBe(1);
         _console.Output.ShouldContain("Error");
         _console.Output.ShouldContain("journalrc");
-        
+
         _mockTocGenerator.Verify(
-            x => x.UpdateTableOfContents(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()), 
+            x =>
+                x.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
             Times.Never
         );
     }
@@ -263,7 +305,7 @@ public class AddTableOfContentsCommandTests
     {
         // Arrange
         var directory = "/test/journal";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
@@ -278,9 +320,14 @@ public class AddTableOfContentsCommandTests
         result.ShouldBe(1);
         _console.Output.ShouldContain("Error");
         _console.Output.ShouldContain("Failed to read journal configuration");
-        
+
         _mockTocGenerator.Verify(
-            x => x.UpdateTableOfContents(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()), 
+            x =>
+                x.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
             Times.Never
         );
     }
@@ -291,17 +338,24 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal";
         var tocFile = $"{_journalSettings.TableOfContentsFileName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = tocFile, Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = tocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
         _mockTocGenerator
-            .Setup(x => x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Setup(x =>
+                x.UpdateTableOfContents(directory, It.IsAny<DateTime>(), It.IsAny<DateTime>())
+            )
             .Throws(new InvalidOperationException("TOC generation failed"));
 
         var settings = new AddTableOfContentsSettings { FilePath = directory };
@@ -325,13 +379,18 @@ public class AddTableOfContentsCommandTests
         // Arrange
         var directory = "/test/journal/";
         var tocFile = $"{_journalSettings.TableOfContentsFileName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = tocFile, Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = tocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
@@ -352,21 +411,26 @@ public class AddTableOfContentsCommandTests
         var directory = "/test/journal";
         var customTocName = "MyCustomTOC";
         var customTocFile = $"{customTocName}.md";
-        
+
         _fileSystem.CreateDirectory(directory);
         _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
         _fileSystem.CreateFile(directory, customTocFile, "# Custom TOC");
 
         var config = new JournalConfig
         {
-            TableOfContents = new TableOfContents { File = "TOC.md", Structure = new Structure { Topics = [] }, RootEntries = [] }
+            TableOfContents = new TableOfContents
+            {
+                File = "TOC.md",
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
         };
         _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
 
-        var settings = new AddTableOfContentsSettings 
-        { 
+        var settings = new AddTableOfContentsSettings
+        {
             FilePath = directory,
-            TableOfContentsName = customTocName
+            TableOfContentsName = customTocName,
         };
 
         // Act
@@ -377,9 +441,14 @@ public class AddTableOfContentsCommandTests
         _console.Output.ShouldContain("Warning");
         _console.Output.ShouldContain("already exists");
         _console.Output.ShouldContain(customTocFile);
-        
+
         _mockTocGenerator.Verify(
-            x => x.UpdateTableOfContents(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()), 
+            x =>
+                x.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
             Times.Never
         );
     }

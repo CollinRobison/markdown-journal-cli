@@ -19,7 +19,6 @@ public class TableOfContents
 
     [JsonPropertyName("rootEntries")]
     public required Entries[] RootEntries { get; set; }
-
 }
 
 public class Topic
@@ -39,6 +38,7 @@ public class Structure
     [JsonPropertyName("topics")]
     public required Topic[] Topics { get; set; }
 }
+
 public class Entries
 {
     [JsonPropertyName("name")]

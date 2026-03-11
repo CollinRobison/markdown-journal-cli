@@ -18,4 +18,3 @@ public class HashService : IHashService
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
-

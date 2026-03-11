@@ -11,15 +11,15 @@ public class FileState
 
 public class JournalIndex
 {
-    public Dictionary<string, FileState> Files {get; set;} = [];
+    public Dictionary<string, FileState> Files { get; set; } = [];
 }
 
 public class ChangeDetectionResult
 {
-    public List<string> AddedFiles {get; set;} = []; 
-    public List<string> ModifiedFiles {get; set;} = []; 
-    public List<string> DeletedFiles {get; set;} = []; 
+    public List<string> AddedFiles { get; set; } = [];
+    public List<string> ModifiedFiles { get; set; } = [];
+    public List<string> DeletedFiles { get; set; } = [];
 
-    public bool HasChanges => AddedFiles.Count != 0 || ModifiedFiles.Count != 0 || DeletedFiles.Count != 0;
+    public bool HasChanges =>
+        AddedFiles.Count != 0 || ModifiedFiles.Count != 0 || DeletedFiles.Count != 0;
 }
-

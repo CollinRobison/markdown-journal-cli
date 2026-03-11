@@ -33,11 +33,7 @@ public class AddFileTrackingCommandTests
         _mockFileTracking = new Mock<IFileTracking>();
 
         _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                AppName = "md-journal",
-                JournalConfigFileName = ".journalrc",
-            }
+            new JournalSettings { AppName = "md-journal", JournalConfigFileName = ".journalrc" }
         );
 
         SetupDefaultMockBehaviors();
@@ -60,21 +56,26 @@ public class AddFileTrackingCommandTests
         _app.Configure(config =>
         {
             config.SetApplicationName(_journalSettings.Value.AppName);
-            config.AddBranch<AddSettings>("add", add =>
-            {
-                add.AddCommand<AddFileTracking>("tracking");
-            });
+            config.AddBranch<AddSettings>(
+                "add",
+                add =>
+                {
+                    add.AddCommand<AddFileTracking>("tracking");
+                }
+            );
         });
     }
 
     private void SetupDefaultMockBehaviors()
     {
         // Default: .journalrc exists
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(true);
-        
+
         // Default: tracking file doesn't exist yet
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Returns(false);
     }
 
@@ -100,7 +101,8 @@ public class AddFileTrackingCommandTests
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(false);
 
         // Act
@@ -121,7 +123,8 @@ public class AddFileTrackingCommandTests
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(false);
 
         // Act
@@ -138,7 +141,8 @@ public class AddFileTrackingCommandTests
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Returns(true);
 
         // Act
@@ -155,7 +159,8 @@ public class AddFileTrackingCommandTests
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileTracking.Setup(ft => ft.LoadIndex(It.IsAny<string>()))
+        _mockFileTracking
+            .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
             .Throws(new InvalidOperationException("Unexpected error"));
 
         // Act
@@ -190,10 +195,12 @@ public class AddFileTrackingCommandTests
         // Arrange
         var testPath = "/test/journal";
         var callOrder = new List<string>();
-        
-        _mockFileTracking.Setup(ft => ft.LoadIndex(It.IsAny<string>()))
+
+        _mockFileTracking
+            .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
             .Callback(() => callOrder.Add("LoadIndex"));
-        _mockFileTracking.Setup(ft => ft.UpdateIndex(It.IsAny<string>()))
+        _mockFileTracking
+            .Setup(ft => ft.UpdateIndex(It.IsAny<string>()))
             .Callback(() => callOrder.Add("UpdateIndex"));
 
         // Act
@@ -210,11 +217,13 @@ public class AddFileTrackingCommandTests
         // Arrange
         var testPath = "/test/journal";
         var checkOrder = new List<string>();
-        
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
+
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Callback(() => checkOrder.Add("journalrc"))
             .Returns(true);
-        _mockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Callback(() => checkOrder.Add("tracking"))
             .Returns(false);
 

@@ -1,6 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services;
@@ -51,6 +51,18 @@ public partial class EntryFormatterService(IOptions<JournalSettings> journalSett
 
         // Join the filtered sections with the heading separator
         return string.Join(_journalSettings.HeadingSeparator, filteredSections);
+    }
+
+    public string[] BuildHeadingArray(string? heading, string? subheading)
+    {
+        string[] headings = (
+            heading != null ? [RemoveSpaceSeparators(heading)] : Array.Empty<string>()
+        )
+            .Concat(subheading != null ? SeperateSubheadingString(subheading) : [])
+            .Where(h => !string.IsNullOrEmpty(h))
+            .ToArray();
+
+        return headings;
     }
 
     private Regex MatchTitleSeparatorRegex()

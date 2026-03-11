@@ -22,11 +22,11 @@ public static class MarkdownMetadataParser
         DateTime? lastEditedDate = null;
 
         var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        
+
         foreach (var line in lines.Take(6)) // Only check first few lines
         {
             var trimmedLine = line.Trim();
-            
+
             if (trimmedLine.StartsWith("Created:", StringComparison.OrdinalIgnoreCase))
             {
                 var dateStr = trimmedLine.Substring("Created:".Length).Trim();
@@ -56,14 +56,18 @@ public static class MarkdownMetadataParser
     /// <summary>
     /// Updates the "Last Edited:" date line in markdown content.
     /// If the line exists in the metadata header (first few lines before any heading), it is replaced.
-    /// If no "Last Edited:" line is found, one is inserted after the "Created:" line, 
+    /// If no "Last Edited:" line is found, one is inserted after the "Created:" line,
     /// or at the top of the file if neither exists.
     /// </summary>
     /// <param name="content">The markdown file content.</param>
     /// <param name="date">The date to set as the last edited date.</param>
     /// <param name="dateFormat">The date format string (e.g. "MM/dd/yyyy"). Defaults to "MM/dd/yyyy".</param>
     /// <returns>The updated markdown content with the new last edited date.</returns>
-    public static string UpdateLastEditedDate(string content, DateTime date, string dateFormat = "MM/dd/yyyy")
+    public static string UpdateLastEditedDate(
+        string content,
+        DateTime date,
+        string dateFormat = "MM/dd/yyyy"
+    )
     {
         if (string.IsNullOrEmpty(content))
         {
@@ -72,7 +76,7 @@ public static class MarkdownMetadataParser
 
         // Detect the newline style used in the content (CRLF or LF)
         var newline = content.Contains("\r\n") ? "\r\n" : "\n";
-        
+
         var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
         var dateString = $"Last Edited: {date.ToString(dateFormat)}";
         int createdLineIndex = -1;
@@ -82,10 +86,12 @@ public static class MarkdownMetadataParser
         for (int i = 0; i < lines.Length && nonEmptyCount < 6; i++)
         {
             var trimmed = lines[i].Trim();
-            if (string.IsNullOrEmpty(trimmed)) continue;
+            if (string.IsNullOrEmpty(trimmed))
+                continue;
             nonEmptyCount++;
 
-            if (trimmed.StartsWith('#')) break;
+            if (trimmed.StartsWith('#'))
+                break;
 
             if (trimmed.StartsWith("Last Edited:", StringComparison.OrdinalIgnoreCase))
             {

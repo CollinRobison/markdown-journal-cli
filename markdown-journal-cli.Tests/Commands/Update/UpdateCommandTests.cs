@@ -3,8 +3,9 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
-using markdown_journal_cli.JournalTemplates;
-using markdown_journal_cli.Tests.Infrastructure;
+using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
+using markdown_journal_cli.Tests.Infrastructure.Tracking;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -21,7 +22,8 @@ public class UpdateCommandTests
     private readonly TestHashService _hashService;
     private readonly FileTracking _fileTracking;
     private readonly JournalConfiguration _journalConfiguration;
-    private readonly TableOfContentsGenerator _tableOfContentsGenerator;
+    private readonly TableOfContentsService _tableOfContentsGenerator;
+    private readonly JournalUpdateService _journalUpdateService;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly string _testPath;
 
@@ -39,15 +41,11 @@ public class UpdateCommandTests
                 JournalConfigFileName = ".journalrc",
                 TableOfContentsFileName = "1a-TableOfContents",
                 TableOfContentsTitle = "Table of Contents",
-                DateFormat = "MM/dd/yyyy"
+                DateFormat = "MM/dd/yyyy",
             }
         );
 
-        _fileTracking = new FileTracking(
-            _fileSystem,
-            _journalSettings,
-            _hashService
-        );
+        _fileTracking = new FileTracking(_fileSystem, _journalSettings, _hashService);
 
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
@@ -55,9 +53,19 @@ public class UpdateCommandTests
             NullLogger<JournalConfiguration>.Instance
         );
 
-        _tableOfContentsGenerator = new TableOfContentsGenerator(
+        _tableOfContentsGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
+        );
+
+        _journalUpdateService = new JournalUpdateService(
+            _console,
+            _fileSystem,
+            _journalConfiguration,
+            _fileTracking,
+            _tableOfContentsGenerator,
             _journalSettings
         );
 
@@ -70,9 +78,8 @@ public class UpdateCommandTests
         return new UpdateCommand(
             _console,
             _fileSystem,
+            _journalUpdateService,
             _fileTracking,
-            _journalConfiguration,
-            _tableOfContentsGenerator,
             _journalSettings
         );
     }
@@ -89,7 +96,11 @@ public class UpdateCommandTests
     {
         // Arrange — create a file and build the index so there are no diffs
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
 
@@ -113,7 +124,11 @@ public class UpdateCommandTests
     {
         // Arrange — create file and index with hash-a, then change hash to hash-b
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
 
@@ -141,7 +156,11 @@ public class UpdateCommandTests
     {
         // Arrange
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
@@ -164,7 +183,11 @@ public class UpdateCommandTests
     {
         // Arrange
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
@@ -188,7 +211,11 @@ public class UpdateCommandTests
     {
         // Arrange
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
@@ -215,7 +242,11 @@ public class UpdateCommandTests
     {
         // Arrange — create file and index with hash-a, then change hash to hash-b
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
 
@@ -236,7 +267,7 @@ public class UpdateCommandTests
         updatedContent.ShouldContain("Last Edited: 01/01/2024");
         updatedContent.ShouldContain("Created: 01/01/2024");
         _console.Output.ShouldContain("Updated:");
-        
+
         // But tracking index should be updated - verify no changes on next check
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
         changeResults.HasChanges.ShouldBeFalse();
@@ -247,14 +278,23 @@ public class UpdateCommandTests
     {
         // Arrange
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
 
         var command = CreateCommand();
         // Both flags set - tracking should override date
-        var settings = new UpdateJournalSettings { FilePath = _testPath, DateFlag = true, Tracking = true };
+        var settings = new UpdateJournalSettings
+        {
+            FilePath = _testPath,
+            DateFlag = true,
+            Tracking = true,
+        };
 
         // Act
         var result = command.Execute(CreateCommandContext(), settings);
@@ -272,9 +312,13 @@ public class UpdateCommandTests
     {
         // Arrange — start with empty index, add a file
         _fileTracking.UpdateIndex(_testPath);
-        
+
         var filePath = Path.Combine(_testPath, "new-note.md");
-        _fileSystem.CreateFile(_testPath, "new-note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "new-note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note"
+        );
         _hashService.SetHash(filePath, "hash-new");
 
         var command = CreateCommand();
@@ -286,7 +330,7 @@ public class UpdateCommandTests
         // Assert
         result.ShouldBe(0);
         _console.Output.ShouldContain("Tracked:");
-        
+
         // Verify file is now tracked
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
         changeResults.HasChanges.ShouldBeFalse();
@@ -297,10 +341,14 @@ public class UpdateCommandTests
     {
         // Arrange — create file, index it, then delete it
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
-        
+
         // Delete the file
         _fileSystem.DeleteFile(filePath);
 
@@ -313,7 +361,7 @@ public class UpdateCommandTests
         // Assert
         result.ShouldBe(0);
         _console.Output.ShouldContain("Removed:");
-        
+
         // Verify file is removed from tracking
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
         changeResults.HasChanges.ShouldBeFalse();
@@ -324,9 +372,13 @@ public class UpdateCommandTests
     {
         // Arrange — add a new file
         _fileTracking.UpdateIndex(_testPath);
-        
+
         var filePath = Path.Combine(_testPath, "new-note.md");
-        _fileSystem.CreateFile(_testPath, "new-note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "new-note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note"
+        );
         _hashService.SetHash(filePath, "hash-new");
 
         var command = CreateCommand();
@@ -339,12 +391,14 @@ public class UpdateCommandTests
         result.ShouldBe(0);
         // Config should NOT be updated when only tracking flag is set
         _console.Output.ShouldNotContain("Config added:");
-        
+
         // Verify config doesn't have the new entry
         var config = _journalConfiguration.Read(_testPath);
         config.ShouldNotBeNull();
-        var allEntries = config.TableOfContents.RootEntries
-            .Concat(config.TableOfContents.Structure.Topics.SelectMany(t => t.Entries))
+        var allEntries = config
+            .TableOfContents.RootEntries.Concat(
+                config.TableOfContents.Structure.Topics.SelectMany(t => t.Entries)
+            )
             .ToList();
         allEntries.ShouldNotContain(e => e.File == "new-note.md");
     }
@@ -354,14 +408,20 @@ public class UpdateCommandTests
     {
         // Arrange
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
 
         // Get initial TOC state
         var tocPath = Path.Combine(_testPath, "1a-TableOfContents.md");
-        var initialTocContent = _fileSystem.FileExists(tocPath) ? _fileSystem.GetFileContent(tocPath) : null;
+        var initialTocContent = _fileSystem.FileExists(tocPath)
+            ? _fileSystem.GetFileContent(tocPath)
+            : null;
 
         var command = CreateCommand();
         var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
@@ -372,9 +432,11 @@ public class UpdateCommandTests
         // Assert
         result.ShouldBe(0);
         _console.Output.ShouldNotContain("Table of contents updated");
-        
+
         // TOC should be unchanged (or not exist if it didn't before)
-        var finalTocContent = _fileSystem.FileExists(tocPath) ? _fileSystem.GetFileContent(tocPath) : null;
+        var finalTocContent = _fileSystem.FileExists(tocPath)
+            ? _fileSystem.GetFileContent(tocPath)
+            : null;
         finalTocContent.ShouldBe(initialTocContent);
     }
 
@@ -386,9 +448,21 @@ public class UpdateCommandTests
         var file2 = Path.Combine(_testPath, "note2.md");
         var file3 = Path.Combine(_testPath, "note3.md");
 
-        _fileSystem.CreateFile(_testPath, "note1.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 1");
-        _fileSystem.CreateFile(_testPath, "note2.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 2");
-        _fileSystem.CreateFile(_testPath, "note3.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 3");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note1.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 1"
+        );
+        _fileSystem.CreateFile(
+            _testPath,
+            "note2.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 2"
+        );
+        _fileSystem.CreateFile(
+            _testPath,
+            "note3.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 3"
+        );
 
         _hashService.SetHash(file1, "hash-a");
         _hashService.SetHash(file2, "hash-b");
@@ -408,7 +482,7 @@ public class UpdateCommandTests
 
         // Assert
         result.ShouldBe(0);
-        
+
         // None of the files should have updated dates
         var content1 = _fileSystem.GetFileContent(file1);
         content1.ShouldContain("Last Edited: 01/01/2024");
@@ -418,7 +492,7 @@ public class UpdateCommandTests
 
         var content3 = _fileSystem.GetFileContent(file3);
         content3.ShouldContain("Last Edited: 01/01/2024");
-        
+
         // But tracking should be updated
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
         changeResults.HasChanges.ShouldBeFalse();
@@ -436,9 +510,21 @@ public class UpdateCommandTests
         var file2 = Path.Combine(_testPath, "note2.md");
         var file3 = Path.Combine(_testPath, "note3.md");
 
-        _fileSystem.CreateFile(_testPath, "note1.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 1");
-        _fileSystem.CreateFile(_testPath, "note2.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 2");
-        _fileSystem.CreateFile(_testPath, "note3.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 3");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note1.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 1"
+        );
+        _fileSystem.CreateFile(
+            _testPath,
+            "note2.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 2"
+        );
+        _fileSystem.CreateFile(
+            _testPath,
+            "note3.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note 3"
+        );
 
         _hashService.SetHash(file1, "hash-a");
         _hashService.SetHash(file2, "hash-b");
@@ -481,7 +567,11 @@ public class UpdateCommandTests
     {
         // Arrange
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
 
@@ -513,20 +603,47 @@ public class UpdateCommandTests
                 JournalConfigFileName = ".journalrc",
                 TableOfContentsFileName = "1a-TableOfContents",
                 TableOfContentsTitle = "Table of Contents",
-                DateFormat = "yyyy-MM-dd"
+                DateFormat = "yyyy-MM-dd",
             }
         );
         var tracking = new FileTracking(_fileSystem, customSettings, _hashService);
 
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         tracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
 
-        var customConfig = new JournalConfiguration(_fileSystem, customSettings, NullLogger<JournalConfiguration>.Instance);
-        var customTocGen = new TableOfContentsGenerator(_fileSystem, customConfig, customSettings);
-        var command = new UpdateCommand(_console, _fileSystem, tracking, customConfig, customTocGen, customSettings);
+        var customConfig = new JournalConfiguration(
+            _fileSystem,
+            customSettings,
+            NullLogger<JournalConfiguration>.Instance
+        );
+        var customTocGen = new TableOfContentsService(
+            _fileSystem,
+            customConfig,
+            customSettings,
+            NullLogger<TableOfContentsService>.Instance
+        );
+        var customUpdateService = new JournalUpdateService(
+            _console,
+            _fileSystem,
+            customConfig,
+            tracking,
+            customTocGen,
+            customSettings
+        );
+        var command = new UpdateCommand(
+            _console,
+            _fileSystem,
+            customUpdateService,
+            tracking,
+            customSettings
+        );
         var settings = new UpdateJournalSettings { FilePath = _testPath };
 
         // Act
@@ -550,7 +667,11 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath); // empty index
 
         var filePath = Path.Combine(_testPath, "new-note.md");
-        _fileSystem.CreateFile(_testPath, "new-note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "new-note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Note"
+        );
         _hashService.SetHash(filePath, "hash-new");
 
         var command = CreateCommand();
@@ -579,7 +700,11 @@ public class UpdateCommandTests
     {
         // Arrange — create a file, index it, then delete it
         var filePath = Path.Combine(_testPath, "doomed.md");
-        _fileSystem.CreateFile(_testPath, "doomed.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Doomed");
+        _fileSystem.CreateFile(
+            _testPath,
+            "doomed.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Doomed"
+        );
         _hashService.SetHash(filePath, "hash-doomed");
         _fileTracking.UpdateIndex(_testPath);
 
@@ -608,8 +733,16 @@ public class UpdateCommandTests
         var modifiedFile = Path.Combine(_testPath, "modified.md");
         var deletedFile = Path.Combine(_testPath, "deleted.md");
 
-        _fileSystem.CreateFile(_testPath, "modified.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Modified");
-        _fileSystem.CreateFile(_testPath, "deleted.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Deleted");
+        _fileSystem.CreateFile(
+            _testPath,
+            "modified.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Modified"
+        );
+        _fileSystem.CreateFile(
+            _testPath,
+            "deleted.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Deleted"
+        );
         _hashService.SetHash(modifiedFile, "hash-m");
         _hashService.SetHash(deletedFile, "hash-d");
         _fileTracking.UpdateIndex(_testPath);
@@ -684,16 +817,18 @@ public class UpdateCommandTests
         var config = new markdown_journal_cli.Infrastructure.Configuration.Models.JournalConfig
         {
             JournalName = "Test Journal",
-            TableOfContents = new markdown_journal_cli.Infrastructure.Configuration.Models.TableOfContents
-            {
-                File = "1a-TableOfContents.md",
-                Extensions = [".md"],
-                Structure = new markdown_journal_cli.Infrastructure.Configuration.Models.Structure
+            TableOfContents =
+                new markdown_journal_cli.Infrastructure.Configuration.Models.TableOfContents
                 {
-                    Topics = []
+                    File = "1a-TableOfContents.md",
+                    Extensions = [".md"],
+                    Structure =
+                        new markdown_journal_cli.Infrastructure.Configuration.Models.Structure
+                        {
+                            Topics = [],
+                        },
+                    RootEntries = [],
                 },
-                RootEntries = []
-            }
         };
         _journalConfiguration.Create(_testPath, config);
     }
@@ -719,8 +854,9 @@ public class UpdateCommandTests
         result.ShouldBe(0);
         var config = _journalConfiguration.Read(_testPath);
         config.ShouldNotBeNull();
-        var learningTopic = config.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var learningTopic = config.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         learningTopic.ShouldNotBeNull();
         learningTopic.Entries.Any(e => e.File == "Learning-Rust.md").ShouldBeTrue();
     }
@@ -752,8 +888,11 @@ public class UpdateCommandTests
         result.ShouldBe(0);
         var config = _journalConfiguration.Read(_testPath);
         config.ShouldNotBeNull();
-        config.TableOfContents.Structure.Topics
-            .Any(t => t.Entries.Any(e => e.File == "Learning-Rust.md")).ShouldBeFalse();
+        config
+            .TableOfContents.Structure.Topics.Any(t =>
+                t.Entries.Any(e => e.File == "Learning-Rust.md")
+            )
+            .ShouldBeFalse();
         _console.Output.ShouldContain("Config removed");
     }
 
@@ -800,8 +939,9 @@ public class UpdateCommandTests
         // Assert — config should have the new file since all updates run
         var config = _journalConfiguration.Read(_testPath);
         config.ShouldNotBeNull();
-        var topic = config.TableOfContents.Structure.Topics
-            .FirstOrDefault(t => t.Name == "Learning");
+        var topic = config.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
         topic.ShouldNotBeNull();
         topic.Entries.Any(e => e.File == "Learning-Go.md").ShouldBeTrue();
     }
@@ -873,7 +1013,11 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath);
 
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
@@ -897,7 +1041,11 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath);
 
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
@@ -945,8 +1093,11 @@ public class UpdateCommandTests
     {
         // Arrange — create a TOC with a created date, then trigger update
         var tocPath = Path.Combine(_testPath, "1a-TableOfContents.md");
-        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md",
-            "Created: 06/15/2024\nLast Edited: 06/15/2024\n\n# Table of Contents\n");
+        _fileSystem.CreateFile(
+            _testPath,
+            "1a-TableOfContents.md",
+            "Created: 06/15/2024\nLast Edited: 06/15/2024\n\n# Table of Contents\n"
+        );
 
         _fileTracking.UpdateIndex(_testPath);
 
@@ -969,7 +1120,7 @@ public class UpdateCommandTests
     }
 
     #endregion
- 
+
     #region Error Handling
 
     [Fact]
@@ -1068,7 +1219,11 @@ public class UpdateCommandTests
     {
         // Arrange — tracking exists but no .journalrc
         var filePath = Path.Combine(_testPath, "note.md");
-        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Note"
+        );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(filePath, "hash-b");
@@ -1114,7 +1269,7 @@ public class UpdateCommandTests
         config.ShouldNotBeNull();
         config.TableOfContents.RootEntries.ShouldBeEmpty();
         config.TableOfContents.Structure.Topics.ShouldBeEmpty();
-        
+
         // Output should not show TOC file being added
         _console.Output.ShouldNotContain("Config added: 1a-TableOfContents.md");
     }
@@ -1151,10 +1306,13 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath);
 
         // Manually change the TOC file in the config after creation to simulate a custom name
-        _journalConfiguration.Update(_testPath, c =>
-        {
-            c.TableOfContents.File = "custom-toc.md";
-        });
+        _journalConfiguration.Update(
+            _testPath,
+            c =>
+            {
+                c.TableOfContents.File = "custom-toc.md";
+            }
+        );
 
         // Create the custom TOC file
         var tocFilePath = Path.Combine(_testPath, "custom-toc.md");

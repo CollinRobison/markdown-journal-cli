@@ -10,7 +10,10 @@ namespace markdown_journal_cli.Infrastructure.Configuration;
 public class TableOfContentsMarkdownParser : ITableOfContentsMarkdownParser
 {
     // Matches markdown links: [text](file.md)
-    private static readonly Regex LinkPattern = new(@"\[([^\]]+)\]\(([^)]+)\)", RegexOptions.Compiled);
+    private static readonly Regex LinkPattern = new(
+        @"\[([^\]]+)\]\(([^)]+)\)",
+        RegexOptions.Compiled
+    );
 
     /// <inheritdoc />
     public Entries[] ParseTableOfContents(string tocContent)
@@ -28,7 +31,7 @@ public class TableOfContentsMarkdownParser : ITableOfContentsMarkdownParser
         {
             var name = match.Groups[1].Value.Trim();
             var file = match.Groups[2].Value.Trim();
-            
+
             // Only include .md files
             if (file.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase))
             {

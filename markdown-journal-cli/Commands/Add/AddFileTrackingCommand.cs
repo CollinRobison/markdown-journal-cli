@@ -6,10 +6,11 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
+
 namespace markdown_journal_cli.Commands.Add;
 
 [Description("Creates a new file tracking index file")]
-public sealed class AddFileTracking  ( 
+public sealed class AddFileTracking(
     IAnsiConsole console,
     IFileSystem fileSystem,
     IFileTracking fileTracking,
@@ -21,7 +22,7 @@ public sealed class AddFileTracking  (
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
-    private readonly IFileTracking _fileTracking = 
+    private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;
@@ -31,7 +32,7 @@ public sealed class AddFileTracking  (
         var journalrc = Path.Combine(settings.FilePath, _journalSettings.JournalConfigFileName);
         var trackingFile = $".{_journalSettings.AppName}";
         var trackingFilePath = Path.Combine(settings.FilePath, trackingFile);
-        
+
         try
         {
             // Verify a journal exists in directory by checking if journalrc exists
@@ -43,20 +44,26 @@ public sealed class AddFileTracking  (
             // Check if tracking file already exists
             if (_fileSystem.FileExists(trackingFilePath))
             {
-                _console.MarkupLine($"[yellow]Warning:[/] Tracking file '{trackingFile}' already exists at '{settings.FilePath}'");
+                _console.MarkupLine(
+                    $"[yellow]Warning:[/] Tracking file '{trackingFile}' already exists at '{settings.FilePath}'"
+                );
                 return 0;
             }
 
             // Create file tracking file with all md files in directory
             _fileTracking.LoadIndex(settings.FilePath);
             _fileTracking.UpdateIndex(settings.FilePath);
-            
-            _console.MarkupLine($"[green]Success:[/] Created tracking file '{trackingFile}' at '{settings.FilePath}'");
+
+            _console.MarkupLine(
+                $"[green]Success:[/] Created tracking file '{trackingFile}' at '{settings.FilePath}'"
+            );
             return 0;
         }
         catch (JournalrcNotFoundException ex)
         {
-            _console.MarkupLine($"[red]Error:[/] {ex.Message} this file is needed to be considered a journal.");
+            _console.MarkupLine(
+                $"[red]Error:[/] {ex.Message} this file is needed to be considered a journal."
+            );
             return 1;
         }
         catch (Exception ex)

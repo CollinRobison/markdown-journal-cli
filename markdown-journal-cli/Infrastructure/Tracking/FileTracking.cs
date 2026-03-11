@@ -6,7 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Infrastructure.Tracking;
 
-public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> journalSettings, IHashService hashService) : IFileTracking
+public class FileTracking(
+    IFileSystem fileSystem,
+    IOptions<JournalSettings> journalSettings,
+    IHashService hashService
+) : IFileTracking
 {
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
@@ -24,6 +28,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
         var json = _fileSystem.GetFileContent(indexPath);
         return JsonSerializer.Deserialize<JournalIndex>(json) ?? new JournalIndex();
     }
+
     public void SaveIndex(JournalIndex index, string path)
     {
         var json = JsonSerializer.Serialize(index, opts);
@@ -37,9 +42,13 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
     /// <returns>all markdown files in the journal directory (excluding metadata directory).</returns>
     private HashSet<string> GetCurrentMarkdownFiles(string path)
     {
-        return [.. _fileSystem.GetFiles(path, $"*{FileConstants.MarkdownExtension}", SearchOption.AllDirectories)
-            .Where(f => !f.Contains(_indexFileName))
-            .Select(f => Path.GetRelativePath(path, f))];
+        return
+        [
+            .. _fileSystem
+                .GetFiles(path, $"*{FileConstants.MarkdownExtension}", SearchOption.AllDirectories)
+                .Where(f => !f.Contains(_indexFileName))
+                .Select(f => Path.GetRelativePath(path, f)),
+        ];
     }
 
     public ChangeDetectionResult DetectChanges(string path)
@@ -62,7 +71,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
             {
                 FilePath = relativeFilePath,
                 Hash = currentHash,
-                LastChecked = DateTime.UtcNow
+                LastChecked = DateTime.UtcNow,
             };
 
             // Determine if added or modified
@@ -101,7 +110,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
 
         foreach (var relativeFilePath in currentFiles)
         {
-            var fullPath = Path. Combine(path, relativeFilePath);
+            var fullPath = Path.Combine(path, relativeFilePath);
             var currentHash = _hashService.ComputeFileHash(fullPath);
 
             if (!oldIndex.Files.TryGetValue(relativeFilePath, out FileState? value))
@@ -139,7 +148,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
             {
                 FilePath = relativeFilePath,
                 Hash = currentHash,
-                LastChecked = DateTime.UtcNow
+                LastChecked = DateTime.UtcNow,
             };
         }
 
@@ -158,7 +167,7 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
             {
                 FilePath = relativeFilePath,
                 Hash = hash,
-                LastChecked = DateTime.UtcNow
+                LastChecked = DateTime.UtcNow,
             };
         }
         else
@@ -176,6 +185,4 @@ public class FileTracking(IFileSystem fileSystem, IOptions<JournalSettings> jour
         index.Files.Remove(relativeFilePath);
         SaveIndex(index, path);
     }
-
-    
 }

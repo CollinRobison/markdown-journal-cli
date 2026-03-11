@@ -2,7 +2,7 @@ using System.Text.Json;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.JournalTemplates;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shouldly;
@@ -20,7 +20,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     private readonly string _testDirectory;
     private readonly IFileSystem _fileSystem;
     private readonly IJournalConfiguration _journalConfiguration;
-    private readonly ITableOfContentsGenerator _tocGenerator;
+    private readonly ITableOfContentsService _tocGenerator;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly AddTableOfContents _command;
     private readonly TestConsole _console;
@@ -38,7 +38,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
                 JournalConfigFileName = ".journalrc",
                 DefaultJournalName = "TestJournal",
                 TableOfContentsFileName = "TOC",
-                TableOfContentsTitle = "Table of Contents"
+                TableOfContentsTitle = "Table of Contents",
             }
         );
 
@@ -49,10 +49,11 @@ public class AddTableOfContentsIntegrationTests : IDisposable
             _journalSettings,
             NullLogger<JournalConfiguration>.Instance
         );
-        _tocGenerator = new TableOfContentsGenerator(
+        _tocGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
-            _journalSettings
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
         );
 
         _console = new TestConsole();
@@ -118,7 +119,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         var journalrcContent = File.ReadAllText(journalrcPath);
         var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(journalrcContent);
-        
+
         config.ShouldNotBeNull();
         var tocConfig = config["tableOfContents"].GetProperty("file").GetString();
         tocConfig.ShouldBe("TOC.md");
@@ -133,7 +134,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     {
         // Arrange
         InitializeTestJournal();
-        
+
         var tocPath = Path.Combine(_testDirectory, "TOC.md");
         var existingContent = "# Existing TOC Content\n- Entry 1\n- Entry 2";
         File.WriteAllText(tocPath, existingContent);
@@ -160,10 +161,10 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         InitializeTestJournal();
 
         var customName = "MyCustomTableOfContents";
-        var settings = new AddTableOfContentsSettings 
-        { 
+        var settings = new AddTableOfContentsSettings
+        {
             FilePath = _testDirectory,
-            TableOfContentsName = customName
+            TableOfContentsName = customName,
         };
 
         // Act
@@ -182,7 +183,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
         var journalrcContent = File.ReadAllText(journalrcPath);
         var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(journalrcContent);
-        
+
         var tocConfig = config!["tableOfContents"].GetProperty("file").GetString();
         tocConfig.ShouldBe($"{customName}.md");
     }
@@ -255,21 +256,21 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     {
         // Create .journalrc file with proper structure
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var journalrcContent = JsonSerializer.Serialize(new
-        {
-            journalName = "TestJournal",
-            tableOfContents = new
+        var journalrcContent = JsonSerializer.Serialize(
+            new
             {
-                file = "TOC.md",
-                extensions = new[] { ".md" },
-                ignoreFiles = Array.Empty<string>(),
-                structure = new
+                journalName = "TestJournal",
+                tableOfContents = new
                 {
-                    topics = Array.Empty<object>()
+                    file = "TOC.md",
+                    extensions = new[] { ".md" },
+                    ignoreFiles = Array.Empty<string>(),
+                    structure = new { topics = Array.Empty<object>() },
+                    rootEntries = Array.Empty<object>(),
                 },
-                rootEntries = Array.Empty<object>()
-            }
-        }, new JsonSerializerOptions { WriteIndented = true });
+            },
+            new JsonSerializerOptions { WriteIndented = true }
+        );
         File.WriteAllText(journalrcPath, journalrcContent);
     }
 
@@ -277,21 +278,21 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     {
         // Create .journalrc file with different TOC name
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var journalrcContent = JsonSerializer.Serialize(new
-        {
-            journalName = "TestJournal",
-            tableOfContents = new
+        var journalrcContent = JsonSerializer.Serialize(
+            new
             {
-                file = $"{oldTocName}.md",
-                extensions = new[] { ".md" },
-                ignoreFiles = Array.Empty<string>(),
-                structure = new
+                journalName = "TestJournal",
+                tableOfContents = new
                 {
-                    topics = Array.Empty<object>()
+                    file = $"{oldTocName}.md",
+                    extensions = new[] { ".md" },
+                    ignoreFiles = Array.Empty<string>(),
+                    structure = new { topics = Array.Empty<object>() },
+                    rootEntries = Array.Empty<object>(),
                 },
-                rootEntries = Array.Empty<object>()
-            }
-        }, new JsonSerializerOptions { WriteIndented = true });
+            },
+            new JsonSerializerOptions { WriteIndented = true }
+        );
         File.WriteAllText(journalrcPath, journalrcContent);
     }
 
@@ -299,25 +300,25 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     {
         // Create .journalrc file with entries
         var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var journalrcContent = JsonSerializer.Serialize(new
-        {
-            journalName = "TestJournal",
-            tableOfContents = new
+        var journalrcContent = JsonSerializer.Serialize(
+            new
             {
-                file = "TOC.md",
-                extensions = new[] { ".md" },
-                ignoreFiles = Array.Empty<string>(),
-                structure = new
+                journalName = "TestJournal",
+                tableOfContents = new
                 {
-                    topics = Array.Empty<object>()
+                    file = "TOC.md",
+                    extensions = new[] { ".md" },
+                    ignoreFiles = Array.Empty<string>(),
+                    structure = new { topics = Array.Empty<object>() },
+                    rootEntries = new[]
+                    {
+                        new { name = "Entry1", file = "entry1.md" },
+                        new { name = "Entry2", file = "entry2.md" },
+                    },
                 },
-                rootEntries = new[]
-                {
-                    new { name = "Entry1", file = "entry1.md" },
-                    new { name = "Entry2", file = "entry2.md" }
-                }
-            }
-        }, new JsonSerializerOptions { WriteIndented = true });
+            },
+            new JsonSerializerOptions { WriteIndented = true }
+        );
         File.WriteAllText(journalrcPath, journalrcContent);
 
         // Create the actual entry files

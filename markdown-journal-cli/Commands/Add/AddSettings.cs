@@ -51,10 +51,8 @@ public class AddEntrySettings : AddSettings
 
     //ignoreFiles - add this file to the ignoreFiles list in the .journalrc
     [CommandOption("--ignore")]
-    [Description(
-        "This flag makes it so the new entry won't appear in the table of contents."
-    )]
-    public bool IgnoreFile {get; set;}
+    [Description("This flag makes it so the new entry won't appear in the table of contents.")]
+    public bool IgnoreFile { get; set; }
 
     //template - Add this option later. For right now just use the basic template.
 
@@ -92,10 +90,8 @@ public class AddEntrySettings : AddSettings
 public class AddFileTrackingSettings : AddSettings
 {
     [CommandOption("--ignoreconfig || --ic")]
-    [Description(
-        "This flag removes the check for the journal configuration file."
-    )]
-    public bool IgnoreJournalConfig {get; set;}
+    [Description("This flag removes the check for the journal configuration file.")]
+    public bool IgnoreJournalConfig { get; set; }
 }
 
 public class AddTableOfContentsSettings : AddSettings
@@ -108,7 +104,7 @@ public class AddTableOfContentsSettings : AddSettings
 }
 
 public class AddJournalrcSettings : AddSettings
-{   
+{
     [CommandOption("--toc|--tableofcontents")]
     [Description(
         "The name of the table of contents file to parse (without .md extension). If not specified, uses the default name."
@@ -116,8 +112,6 @@ public class AddJournalrcSettings : AddSettings
     public string? TableOfContentsFile { get; set; }
 
     [CommandOption("-n|--name|--journalname")]
-    [Description(
-        "The name of the journal. If not specified, uses the directory name."
-    )]
+    [Description("The name of the journal. If not specified, uses the directory name.")]
     public string? JournalName { get; set; }
 }

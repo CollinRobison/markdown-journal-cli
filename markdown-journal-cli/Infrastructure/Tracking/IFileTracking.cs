@@ -17,16 +17,16 @@ public interface IFileTracking
     /// </summary>
     /// <param name="path">the journal directory path.</param>
     /// <param name="index">The Index file to save to.</param>
-    public void SaveIndex(JournalIndex index, string path); 
+    public void SaveIndex(JournalIndex index, string path);
 
-     /// <summary>
+    /// <summary>
     /// Detect all changes:  added, modified, and deleted files.
     /// Updates the index automatically.
     /// </summary>
     /// <param name="path">the journal directory path.</param>
     /// <returns>Added, modified, and deleted files results</returns>
     public ChangeDetectionResult DetectChanges(string path);
-    
+
     /// <summary>
     /// Detect changes without updating the index (dry run).
     /// </summary>
@@ -43,7 +43,7 @@ public interface IFileTracking
 
     /// <summary>
     /// Update the index for a specific file.
-    /// Useful after creating or updating a single file. 
+    /// Useful after creating or updating a single file.
     /// </summary>
     /// <param name="path">the journal directory path.</param>
     /// <param name="relativeFilePath">the relative file path of file to update in index.</param>
