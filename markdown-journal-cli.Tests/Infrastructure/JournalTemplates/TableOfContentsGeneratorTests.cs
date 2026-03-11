@@ -1,11 +1,11 @@
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Services;
-using markdown_journal_cli.Tests.Infrastructure;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.JournalTemplates;
+namespace markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
 
 public class TableOfContentsGeneratorTests
 {

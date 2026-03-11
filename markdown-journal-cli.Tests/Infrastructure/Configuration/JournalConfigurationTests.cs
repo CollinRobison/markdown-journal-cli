@@ -1,4 +1,5 @@
 using System.Text.Json;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.Configuration;
 
 /// <summary>
 /// Unit tests for the <see cref="JournalConfiguration"/> class.

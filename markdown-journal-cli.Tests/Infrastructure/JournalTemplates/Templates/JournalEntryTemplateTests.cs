@@ -1,7 +1,7 @@
 using markdown_journal_cli.Infrastructure.JournalTemplates.Templates;
 using Shouldly;
 
-namespace markdown_journal_cli.Tests.JournalTemplates.Templates;
+namespace markdown_journal_cli.Tests.Infrastructure.JournalTemplates.Templates;
 
 /// <summary>
 /// Unit tests for the <see cref="JournalEntryTemplate"/> class, covering template generation

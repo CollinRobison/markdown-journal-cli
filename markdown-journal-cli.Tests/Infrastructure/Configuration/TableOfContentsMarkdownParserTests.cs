@@ -1,7 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.Configuration;
 
 public class TableOfContentsMarkdownParserTests
 {

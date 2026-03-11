@@ -1,9 +1,9 @@
-using markdown_journal_cli.Infrastructure.FileSystem;
+using JournalFileSystem = markdown_journal_cli.Infrastructure.FileSystem.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.FileSystem;
 
 /// <summary>
 /// Unit tests for the <see cref="FileSystem"/> class, covering file and directory operations.
@@ -11,12 +11,12 @@ namespace markdown_journal_cli.Tests.Infrastructure;
 /// </summary>
 public class FileSystemTests : IDisposable
 {
-    private readonly FileSystem _fileSystem;
+    private readonly JournalFileSystem _fileSystem;
     private readonly string _tempDirectory;
 
     public FileSystemTests()
     {
-        _fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
+        _fileSystem = new JournalFileSystem(NullLogger<JournalFileSystem>.Instance);
         _tempDirectory = Path.Combine(Path.GetTempPath(), $"FileSystemTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempDirectory);
     }

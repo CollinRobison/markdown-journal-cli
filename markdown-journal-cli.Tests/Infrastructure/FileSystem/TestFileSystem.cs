@@ -1,6 +1,6 @@
 using markdown_journal_cli.Infrastructure.FileSystem;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.FileSystem;
 
 /// <summary>
 /// In-memory test double for <see cref="IFileSystem"/> used by unit tests.

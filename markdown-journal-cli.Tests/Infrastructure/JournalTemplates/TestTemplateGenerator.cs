@@ -1,6 +1,6 @@
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
 
 /// <summary>
 /// A simple test double for <see cref="ITemplateGenerator"/> that returns a fixed output string.

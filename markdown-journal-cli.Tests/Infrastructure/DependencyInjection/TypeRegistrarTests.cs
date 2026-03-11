@@ -5,7 +5,7 @@ using Shouldly;
 using Spectre.Console.Cli;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.DependencyInjection;
 
 /// <summary>
 /// Unit tests for the <see cref="TypeRegistrar"/> and <see cref="TypeResolver"/> classes,

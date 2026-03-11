@@ -6,8 +6,9 @@ using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Services;
-using markdown_journal_cli.Tests.Infrastructure;
-using markdown_journal_cli.Tests.JournalTemplates;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
+using markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.Commands;
+namespace markdown_journal_cli.Tests.Commands.New;
 
 /// <summary>
 /// Unit tests for the <see cref="NewCommand"/> class, covering journal creation functionality,

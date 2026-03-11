@@ -1,11 +1,12 @@
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.Tracking;
 
 /// <summary>
 /// Unit tests for the <see cref="FileTracking"/> class, covering change detection,

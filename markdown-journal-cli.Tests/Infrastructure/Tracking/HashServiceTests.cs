@@ -2,7 +2,7 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using Shouldly;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.Tracking;
 
 /// <summary>
 /// Unit tests for the <see cref="HashService"/> class, covering file hash computation.

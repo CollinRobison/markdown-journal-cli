@@ -1,11 +1,11 @@
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Services;
-using markdown_journal_cli.Tests.Infrastructure;
+
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
-namespace markdown_journal_cli.Tests.JournalTemplates;
+namespace markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
 
 /// <summary>
 /// Unit tests for the <see cref="TemplateManager"/> class, covering template registration

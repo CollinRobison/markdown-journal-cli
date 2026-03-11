@@ -1,6 +1,6 @@
 using markdown_journal_cli.Infrastructure.FileSystem;
 
-namespace markdown_journal_cli.Tests.Infrastructure;
+namespace markdown_journal_cli.Tests.Infrastructure.FileSystem;
 
 public class MarkdownMetadataParserTests
 {
