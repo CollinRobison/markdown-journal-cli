@@ -29,10 +29,10 @@ public class JournalUpdateService(
     private readonly ITableOfContentsService _tableOfContentsService =
         tableOfContentsService ?? throw new ArgumentNullException(nameof(tableOfContentsService));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
-    
+
     public void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults)
     {
-         // Get the TOC filename to exclude it from being added as an entry
+        // Get the TOC filename to exclude it from being added as an entry
         var config = _journalConfiguration.Read(journalPath);
         var tocFile = config?.TableOfContents.File;
 
@@ -70,7 +70,7 @@ public class JournalUpdateService(
 
     public void UpdateTableOfContents(string journalPath)
     {
-       _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+        _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
 
         // Track the TOC file so it doesn't show as "added" on next run
         var config = _journalConfiguration.Read(journalPath);
@@ -82,7 +82,11 @@ public class JournalUpdateService(
         _console.MarkupLine($"[green]Table of contents updated.[/]");
     }
 
-    public void UpdateLastEditedDatesAndTracking(string journalPath, ChangeDetectionResult fileResults, bool trackingOnly)
+    public void UpdateLastEditedDatesAndTracking(
+        string journalPath,
+        ChangeDetectionResult fileResults,
+        bool trackingOnly
+    )
     {
         // Update "Last Edited:" for modified files and re-hash
         foreach (var relativePath in fileResults.ModifiedFiles)

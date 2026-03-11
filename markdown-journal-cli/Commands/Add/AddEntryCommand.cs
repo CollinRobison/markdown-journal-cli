@@ -13,23 +13,27 @@ using Spectre.Console.Cli;
 namespace markdown_journal_cli.Commands.Add;
 
 [Description("Creates a new journal entry")]
-public sealed class AddEntry(
-    IAnsiConsole console, 
-    IJournalEntryService journalEntryService
-) : Command<AddEntrySettings>
+public sealed class AddEntry(IAnsiConsole console, IJournalEntryService journalEntryService)
+    : Command<AddEntrySettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
-    
+
     private readonly IJournalEntryService _journalEntryService =
         journalEntryService ?? throw new ArgumentNullException(nameof(journalEntryService));
 
     public override int Execute(CommandContext context, AddEntrySettings settings)
     {
-        
         try
         {
-            _journalEntryService.AddEntry(settings.FilePath, settings.IgnoreFile, settings.EntryName, settings.Heading, settings.Subheading, settings.EntryTitle);
+            _journalEntryService.AddEntry(
+                settings.FilePath,
+                settings.IgnoreFile,
+                settings.EntryName,
+                settings.Heading,
+                settings.Subheading,
+                settings.EntryTitle
+            );
             return 0;
         }
         catch (JournalrcNotFoundException ex)
@@ -42,7 +46,7 @@ public sealed class AddEntry(
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
         }
-          catch (TrackingIndexNotFoundException ex)
+        catch (TrackingIndexNotFoundException ex)
         {
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
@@ -55,4 +59,4 @@ public sealed class AddEntry(
     }
 }
 
-// Future TODO: allow add entry to include all aspects of a file including body, sources, etc. from the command line. 
+// Future TODO: allow add entry to include all aspects of a file including body, sources, etc. from the command line.

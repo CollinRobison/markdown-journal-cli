@@ -1,7 +1,7 @@
-using JournalFileSystem = markdown_journal_cli.Infrastructure.FileSystem.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;
+using JournalFileSystem = markdown_journal_cli.Infrastructure.FileSystem.FileSystem;
 
 namespace markdown_journal_cli.Tests.Infrastructure.FileSystem;
 

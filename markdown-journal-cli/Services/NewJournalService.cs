@@ -66,7 +66,11 @@ public class NewJournalService : INewJournalService
             );
         }
 
-        _logger.LogDebug("Initializing new journal '{JournalName}' at '{JournalDirectory}'", journalName, journalDirectory);
+        _logger.LogDebug(
+            "Initializing new journal '{JournalName}' at '{JournalDirectory}'",
+            journalName,
+            journalDirectory
+        );
 
         // Create the journal directory
         _fileSystem.CreateDirectory(journalDirectory);
@@ -83,7 +87,11 @@ public class NewJournalService : INewJournalService
         // create file tracking
         CreateFileTrackingIndex(journalDirectory);
 
-        _logger.LogDebug("Journal '{JournalName}' initialized successfully at '{JournalDirectory}'", journalName, journalDirectory);
+        _logger.LogDebug(
+            "Journal '{JournalName}' initialized successfully at '{JournalDirectory}'",
+            journalName,
+            journalDirectory
+        );
     }
 
     private void CreateTableOfContents(string journalDirectory)

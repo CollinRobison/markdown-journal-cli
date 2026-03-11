@@ -623,7 +623,12 @@ public class UpdateCommandTests
             customSettings,
             NullLogger<JournalConfiguration>.Instance
         );
-        var customTocGen = new TableOfContentsService(_fileSystem, customConfig, customSettings, NullLogger<TableOfContentsService>.Instance);
+        var customTocGen = new TableOfContentsService(
+            _fileSystem,
+            customConfig,
+            customSettings,
+            NullLogger<TableOfContentsService>.Instance
+        );
         var customUpdateService = new JournalUpdateService(
             _console,
             _fileSystem,

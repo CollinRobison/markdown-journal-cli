@@ -17,8 +17,8 @@ public class JournalEntryService(
     ITemplateManager templateManager,
     IFileTracking fileTracking,
     ITableOfContentsService tableOfContentsService,
-    ILogger<JournalEntryService> logger)
-    : IJournalEntryService
+    ILogger<JournalEntryService> logger
+) : IJournalEntryService
 {
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -45,7 +45,11 @@ public class JournalEntryService(
         string? entryTitleUnformatted
     )
     {
-        _logger.LogDebug("Adding entry '{EntryName}' to journal at '{FilePath}'", entryName, filePath);
+        _logger.LogDebug(
+            "Adding entry '{EntryName}' to journal at '{FilePath}'",
+            entryName,
+            filePath
+        );
 
         var journalrc = $"{filePath}/{_journalSettings.JournalConfigFileName}";
         var trackingFileName = $".{_journalSettings.AppName}";
@@ -58,21 +62,27 @@ public class JournalEntryService(
         }
         if (!_fileSystem.FileExists(trackingFilePath))
         {
-            _logger.LogWarning("Tracking index '{TrackingFileName}' not found at '{FilePath}'", trackingFileName, filePath);
+            _logger.LogWarning(
+                "Tracking index '{TrackingFileName}' not found at '{FilePath}'",
+                trackingFileName,
+                filePath
+            );
             throw new TrackingIndexNotFoundException(filePath, trackingFileName);
         }
 
         // title for use in table of contents and entry file
-        var entryTitle = _entryFormatter.RemoveSpaceSeparators(
-            entryTitleUnformatted ?? entryName
-        );
+        var entryTitle = _entryFormatter.RemoveSpaceSeparators(entryTitleUnformatted ?? entryName);
 
         var fileNameFormatted = FileNameFormatted(entryName, heading, subheading);
 
         var entryFilePath = $"{filePath}/{fileNameFormatted}";
         if (_fileSystem.FileExists(entryFilePath))
         {
-            _logger.LogWarning("Entry '{FileName}' already exists at '{EntryFilePath}'", fileNameFormatted, entryFilePath);
+            _logger.LogWarning(
+                "Entry '{FileName}' already exists at '{EntryFilePath}'",
+                fileNameFormatted,
+                entryFilePath
+            );
             throw new JournalEntryAlreadyExistsException(fileNameFormatted, entryFilePath);
         }
 
@@ -82,7 +92,11 @@ public class JournalEntryService(
             ["addSourceBlock"] = true,
         };
 
-        _logger.LogDebug("Creating markdown file '{FileName}' in '{FilePath}'", fileNameFormatted, filePath);
+        _logger.LogDebug(
+            "Creating markdown file '{FileName}' in '{FilePath}'",
+            fileNameFormatted,
+            filePath
+        );
         _fileSystem.CreateMarkdownFile(
             filePath,
             fileNameFormatted,
@@ -109,7 +123,11 @@ public class JournalEntryService(
             _tableOfContentsService.UpdateTableOfContents(filePath, lastEditedDate: DateTime.Now);
         }
 
-        _logger.LogDebug("Successfully added entry '{EntryName}' to journal at '{FilePath}'", entryName, filePath);
+        _logger.LogDebug(
+            "Successfully added entry '{EntryName}' to journal at '{FilePath}'",
+            entryName,
+            filePath
+        );
     }
 
     private string FileNameFormatted(string entryName, string? heading, string? subheading)
@@ -118,8 +136,7 @@ public class JournalEntryService(
         var entryNameFormatted = _entryFormatter.AddSpaceSeparators(entryName);
 
         // heading for use in file name
-        var headingFormatted =
-            heading != null ? _entryFormatter.AddSpaceSeparators(heading) : null;
+        var headingFormatted = heading != null ? _entryFormatter.AddSpaceSeparators(heading) : null;
 
         var fileName = new[] { headingFormatted, subheading, entryNameFormatted }
             .Where(x => x != null)
@@ -130,6 +147,5 @@ public class JournalEntryService(
         var fileNameFormatted =
             $"{_entryFormatter.AddHeadingSeparators(fileName)}{FileConstants.MarkdownExtension}";
         return fileNameFormatted;
-        
     }
 }

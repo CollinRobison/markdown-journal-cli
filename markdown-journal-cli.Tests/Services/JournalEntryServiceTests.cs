@@ -38,12 +38,14 @@ public class JournalEntryServiceTests
         _mockFileTracking = new Mock<IFileTracking>();
         _mockTocService = new Mock<ITableOfContentsService>();
 
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            TableOfContentsFileName = "1a-TableOfContents",
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+            }
+        );
 
         SetupDefaultMockBehaviors();
 
@@ -88,7 +90,9 @@ public class JournalEntryServiceTests
             .Returns(Array.Empty<string>());
 
         _mockTemplateManager
-            .Setup(tm => tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>()))
+            .Setup(tm =>
+                tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>())
+            )
             .Returns("# Entry Content");
     }
 
@@ -98,7 +102,14 @@ public class JournalEntryServiceTests
     public void AddEntry_WithEntryNameOnly_CreatesFileAndUpdatesAllIndexes()
     {
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert
         _mockFileSystem.Verify(
@@ -106,11 +117,31 @@ public class JournalEntryServiceTests
             Times.Once
         );
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(JournalPath, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<bool>()),
+            jc =>
+                jc.AddEntry(
+                    JournalPath,
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                ),
             Times.Once
         );
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, It.IsAny<string>()), Times.Once);
-        _mockTocService.Verify(toc => toc.UpdateTableOfContents(JournalPath, It.IsAny<DateTime?>(), It.IsAny<DateTime?>()), Times.Once);
+        _mockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(JournalPath, It.IsAny<string>()),
+            Times.Once
+        );
+        _mockTocService.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    JournalPath,
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -122,19 +153,27 @@ public class JournalEntryServiceTests
             .Returns(new[] { "Tech" });
 
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: "Tech", subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: "Tech",
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                JournalPath,
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.Is<string[]>(arr => arr != null && arr.Length == 1 && arr[0] == "Tech"),
-                It.IsAny<int?>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()
-            ),
+            jc =>
+                jc.AddEntry(
+                    JournalPath,
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<string[]>(arr => arr != null && arr.Length == 1 && arr[0] == "Tech"),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                ),
             Times.Once
         );
     }
@@ -148,19 +187,29 @@ public class JournalEntryServiceTests
             .Returns(new[] { "AI", "ML" });
 
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: null, subheading: "AI-ML", entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: null,
+            subheading: "AI-ML",
+            entryTitleUnformatted: null
+        );
 
         // Assert
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                JournalPath,
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.Is<string[]>(arr => arr != null && arr.Length == 2 && arr[0] == "AI" && arr[1] == "ML"),
-                It.IsAny<int?>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()
-            ),
+            jc =>
+                jc.AddEntry(
+                    JournalPath,
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<string[]>(arr =>
+                        arr != null && arr.Length == 2 && arr[0] == "AI" && arr[1] == "ML"
+                    ),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                ),
             Times.Once
         );
     }
@@ -174,19 +223,27 @@ public class JournalEntryServiceTests
             .Returns(new[] { "Tech", "AI", "ML" });
 
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: "Tech", subheading: "AI-ML", entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: "Tech",
+            subheading: "AI-ML",
+            entryTitleUnformatted: null
+        );
 
         // Assert
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                JournalPath,
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.Is<string[]>(arr => arr != null && arr.Length == 3),
-                It.IsAny<int?>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()
-            ),
+            jc =>
+                jc.AddEntry(
+                    JournalPath,
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<string[]>(arr => arr != null && arr.Length == 3),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                ),
             Times.Once
         );
     }
@@ -195,14 +252,24 @@ public class JournalEntryServiceTests
     public void AddEntry_WithCustomTitle_UsesCustomTitleInTemplate()
     {
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "my_file", heading: null, subheading: null, entryTitleUnformatted: "My Custom Title");
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "my_file",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: "My Custom Title"
+        );
 
         // Assert
         _mockTemplateManager.Verify(
-            tm => tm.GenerateFromTemplate(
-                "journal-entry",
-                It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "My Custom Title")
-            ),
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d =>
+                        d["title"].ToString() == "My Custom Title"
+                    )
+                ),
             Times.Once
         );
     }
@@ -211,13 +278,17 @@ public class JournalEntryServiceTests
     public void AddEntry_WithNullTitle_FallsBackToEntryName()
     {
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert: RemoveSpaceSeparators is called with entryName as fallback
-        _mockEntryFormatter.Verify(
-            ef => ef.RemoveSpaceSeparators("MyEntry"),
-            Times.Once
-        );
+        _mockEntryFormatter.Verify(ef => ef.RemoveSpaceSeparators("MyEntry"), Times.Once);
     }
 
     [Fact]
@@ -229,19 +300,27 @@ public class JournalEntryServiceTests
             .Returns(Array.Empty<string>());
 
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert: null topicPath passed when headings array is empty
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                JournalPath,
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                null,
-                It.IsAny<int?>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()
-            ),
+            jc =>
+                jc.AddEntry(
+                    JournalPath,
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    null,
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                ),
             Times.Once
         );
     }
@@ -254,11 +333,23 @@ public class JournalEntryServiceTests
     public void AddEntry_WithIgnoreFileTrue_SkipsTableOfContentsUpdate()
     {
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: true, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: true,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert
         _mockTocService.Verify(
-            toc => toc.UpdateTableOfContents(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()),
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
             Times.Never
         );
     }
@@ -267,7 +358,14 @@ public class JournalEntryServiceTests
     public void AddEntry_WithIgnoreFileFalse_UpdatesTableOfContents()
     {
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert
         _mockTocService.Verify(
@@ -280,10 +378,20 @@ public class JournalEntryServiceTests
     public void AddEntry_WithIgnoreFileTrue_StillUpdatesTrackingIndex()
     {
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: true, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: true,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert: tracking is always updated regardless of ignoreFile
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, It.IsAny<string>()), Times.Once);
+        _mockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(JournalPath, It.IsAny<string>()),
+            Times.Once
+        );
     }
 
     #endregion
@@ -309,7 +417,11 @@ public class JournalEntryServiceTests
         _mockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
 
         // Act
-        try { _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", null, null, null); } catch { }
+        try
+        {
+            _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", null, null, null);
+        }
+        catch { }
 
         // Assert
         _mockFileSystem.Verify(
@@ -353,12 +465,28 @@ public class JournalEntryServiceTests
             .Returns(true);
 
         // Act
-        try { _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", null, null, null); } catch { }
+        try
+        {
+            _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", null, null, null);
+        }
+        catch { }
 
         // Assert
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _mockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<bool>()),
+            jc =>
+                jc.AddEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                ),
             Times.Never
         );
     }
@@ -372,15 +500,26 @@ public class JournalEntryServiceTests
     {
         // Arrange: AddSpaceSeparators turns spaces into underscores
         _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators("MyEntry")).Returns("MyEntry");
-        _mockEntryFormatter.Setup(ef => ef.AddHeadingSeparators(new[] { "MyEntry" })).Returns("MyEntry");
+        _mockEntryFormatter
+            .Setup(ef => ef.AddHeadingSeparators(new[] { "MyEntry" }))
+            .Returns("MyEntry");
 
         string? capturedFileName = null;
         _mockFileSystem
-            .Setup(fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(fs =>
+                fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())
+            )
             .Callback<string, string, string>((_, name, _) => capturedFileName = name);
 
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: null, subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: null,
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert
         capturedFileName.ShouldNotBeNull();
@@ -397,15 +536,26 @@ public class JournalEntryServiceTests
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.Is<string[]>(a => a.Contains("Tech"))))
             .Returns("Tech-MyEntry");
-        _mockEntryFormatter.Setup(ef => ef.BuildHeadingArray("Tech", null)).Returns(new[] { "Tech" });
+        _mockEntryFormatter
+            .Setup(ef => ef.BuildHeadingArray("Tech", null))
+            .Returns(new[] { "Tech" });
 
         string? capturedFileName = null;
         _mockFileSystem
-            .Setup(fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(fs =>
+                fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())
+            )
             .Callback<string, string, string>((_, name, _) => capturedFileName = name);
 
         // Act
-        _service.AddEntry(JournalPath, ignoreFile: false, "MyEntry", heading: "Tech", subheading: null, entryTitleUnformatted: null);
+        _service.AddEntry(
+            JournalPath,
+            ignoreFile: false,
+            "MyEntry",
+            heading: "Tech",
+            subheading: null,
+            entryTitleUnformatted: null
+        );
 
         // Assert
         capturedFileName.ShouldNotBeNull();

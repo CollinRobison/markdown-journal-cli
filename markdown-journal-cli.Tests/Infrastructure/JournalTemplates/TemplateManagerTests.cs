@@ -1,6 +1,5 @@
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Services;
-
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;

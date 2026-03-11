@@ -56,19 +56,13 @@ public partial class EntryFormatterService(IOptions<JournalSettings> journalSett
     public string[] BuildHeadingArray(string? heading, string? subheading)
     {
         string[] headings = (
-            heading != null
-                ? [RemoveSpaceSeparators(heading)]
-                : Array.Empty<string>()
+            heading != null ? [RemoveSpaceSeparators(heading)] : Array.Empty<string>()
         )
-            .Concat(
-                subheading != null
-                    ? SeperateSubheadingString(subheading)
-                    : []
-            )
+            .Concat(subheading != null ? SeperateSubheadingString(subheading) : [])
             .Where(h => !string.IsNullOrEmpty(h))
             .ToArray();
 
-        return headings; 
+        return headings;
     }
 
     private Regex MatchTitleSeparatorRegex()

@@ -1,7 +1,7 @@
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;

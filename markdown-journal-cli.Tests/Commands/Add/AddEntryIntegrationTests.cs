@@ -136,7 +136,8 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         string? heading = null,
         string? subheading = null,
         string? title = null,
-        bool ignoreFile = false)
+        bool ignoreFile = false
+    )
     {
         var settings = new AddEntrySettings
         {
@@ -273,7 +274,11 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Create_Entry_With_Complex_Hierarchy()
     {
         // Act - Create entry with heading and nested subheadings
-        var exitCode = RunCommand("ComplexEntry", heading: "Category", subheading: "Sub1-Sub2-Sub3");
+        var exitCode = RunCommand(
+            "ComplexEntry",
+            heading: "Category",
+            subheading: "Sub1-Sub2-Sub3"
+        );
 
         // Assert
         exitCode.ShouldBe(0);

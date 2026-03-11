@@ -256,10 +256,7 @@ public class JournalUpdateServiceTests
     public void UpdateJournalConfig_IsCaseInsensitive_WhenMatchingTocFile()
     {
         // Arrange — pass the TOC filename with different casing
-        var fileResults = new ChangeDetectionResult
-        {
-            AddedFiles = ["1A-TABLEOFCONTENTS.MD"],
-        };
+        var fileResults = new ChangeDetectionResult { AddedFiles = ["1A-TABLEOFCONTENTS.MD"] };
 
         // Act
         _service.UpdateJournalConfig(_testPath, fileResults);
@@ -327,7 +324,11 @@ public class JournalUpdateServiceTests
         // Arrange
         const string relativePath = "note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "Created: 01/01/2025\n# My Note\n\nContent here.");
+        _fileSystem.CreateFile(
+            _testPath,
+            relativePath,
+            "Created: 01/01/2025\n# My Note\n\nContent here."
+        );
         _hashService.SetHash(absolutePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(absolutePath, "hash-b");
@@ -496,7 +497,11 @@ public class JournalUpdateServiceTests
         // Arrange
         const string relativePath = "bare-note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "# Bare Note\n\nJust content, no metadata.");
+        _fileSystem.CreateFile(
+            _testPath,
+            relativePath,
+            "# Bare Note\n\nJust content, no metadata."
+        );
         _hashService.SetHash(absolutePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
         _hashService.SetHash(absolutePath, "hash-b");

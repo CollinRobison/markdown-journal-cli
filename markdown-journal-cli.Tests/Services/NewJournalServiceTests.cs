@@ -33,19 +33,23 @@ public class NewJournalServiceTests
         _mockJournalConfiguration = new Mock<IJournalConfiguration>();
         _mockFileTracking = new Mock<IFileTracking>();
 
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            TableOfContentsFileName = "1a-TableOfContents",
-            IntroductionFileName = "1b-Intro",
-            IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All-My-Journals",
-            AllJournalsTitle = "All My Journals",
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                TableOfContentsFileName = "1a-TableOfContents",
+                IntroductionFileName = "1b-Intro",
+                IntroductionTitle = "Introduction",
+                JournalEntryTemplateFileName = "1c-Journal-Entry-Template",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                AllJournalsFileName = "1h-All-My-Journals",
+                AllJournalsTitle = "All My Journals",
+            }
+        );
 
         _mockTemplateManager
-            .Setup(tm => tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>()))
+            .Setup(tm =>
+                tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>())
+            )
             .Returns("generated content");
 
         _service = new NewJournalService(
@@ -63,66 +67,76 @@ public class NewJournalServiceTests
     [Fact]
     public void Constructor_NullFileSystem_ThrowsArgumentNullException()
     {
-        Should.Throw<ArgumentNullException>(() => new NewJournalService(
-            null!,
-            _mockTemplateManager.Object,
-            _mockJournalConfiguration.Object,
-            _mockFileTracking.Object,
-            _journalSettings,
-            NullLogger<NewJournalService>.Instance
-        ));
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                null!,
+                _mockTemplateManager.Object,
+                _mockJournalConfiguration.Object,
+                _mockFileTracking.Object,
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
+            )
+        );
     }
 
     [Fact]
     public void Constructor_NullTemplateManager_ThrowsArgumentNullException()
     {
-        Should.Throw<ArgumentNullException>(() => new NewJournalService(
-            _mockFileSystem.Object,
-            null!,
-            _mockJournalConfiguration.Object,
-            _mockFileTracking.Object,
-            _journalSettings,
-            NullLogger<NewJournalService>.Instance
-        ));
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                _mockFileSystem.Object,
+                null!,
+                _mockJournalConfiguration.Object,
+                _mockFileTracking.Object,
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
+            )
+        );
     }
 
     [Fact]
     public void Constructor_NullJournalConfiguration_ThrowsArgumentNullException()
     {
-        Should.Throw<ArgumentNullException>(() => new NewJournalService(
-            _mockFileSystem.Object,
-            _mockTemplateManager.Object,
-            null!,
-            _mockFileTracking.Object,
-            _journalSettings,
-            NullLogger<NewJournalService>.Instance
-        ));
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                _mockFileSystem.Object,
+                _mockTemplateManager.Object,
+                null!,
+                _mockFileTracking.Object,
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
+            )
+        );
     }
 
     [Fact]
     public void Constructor_NullFileTracking_ThrowsArgumentNullException()
     {
-        Should.Throw<ArgumentNullException>(() => new NewJournalService(
-            _mockFileSystem.Object,
-            _mockTemplateManager.Object,
-            _mockJournalConfiguration.Object,
-            null!,
-            _journalSettings,
-            NullLogger<NewJournalService>.Instance
-        ));
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                _mockFileSystem.Object,
+                _mockTemplateManager.Object,
+                _mockJournalConfiguration.Object,
+                null!,
+                _journalSettings,
+                NullLogger<NewJournalService>.Instance
+            )
+        );
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Should.Throw<ArgumentNullException>(() => new NewJournalService(
-            _mockFileSystem.Object,
-            _mockTemplateManager.Object,
-            _mockJournalConfiguration.Object,
-            _mockFileTracking.Object,
-            _journalSettings,
-            null!
-        ));
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                _mockFileSystem.Object,
+                _mockTemplateManager.Object,
+                _mockJournalConfiguration.Object,
+                _mockFileTracking.Object,
+                _journalSettings,
+                null!
+            )
+        );
     }
 
     #endregion
@@ -202,7 +216,12 @@ public class NewJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName);
 
         _mockFileSystem.Verify(
-            fs => fs.CreateMarkdownFile(JournalDirectory, "1c-Journal-Entry-Template", It.IsAny<string>()),
+            fs =>
+                fs.CreateMarkdownFile(
+                    JournalDirectory,
+                    "1c-Journal-Entry-Template",
+                    It.IsAny<string>()
+                ),
             Times.Once
         );
     }
@@ -239,13 +258,15 @@ public class NewJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName);
 
         _mockTemplateManager.Verify(
-            tm => tm.GenerateFromTemplate(
-                "journal-entry",
-                It.Is<Dictionary<string, object>>(d =>
-                    d != null
-                    && d.ContainsKey("title") && d["title"].ToString() == "Introduction"
-                )
-            ),
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d =>
+                        d != null
+                        && d.ContainsKey("title")
+                        && d["title"].ToString() == "Introduction"
+                    )
+                ),
             Times.Once
         );
     }
@@ -256,14 +277,17 @@ public class NewJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName);
 
         _mockTemplateManager.Verify(
-            tm => tm.GenerateFromTemplate(
-                "journal-entry",
-                It.Is<Dictionary<string, object>>(d =>
-                    d != null
-                    && d.ContainsKey("addSourceBlock") && d["addSourceBlock"].Equals(false)
-                    && d.ContainsKey("title") && d["title"].ToString() == "Introduction"
-                )
-            ),
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d =>
+                        d != null
+                        && d.ContainsKey("addSourceBlock")
+                        && d["addSourceBlock"].Equals(false)
+                        && d.ContainsKey("title")
+                        && d["title"].ToString() == "Introduction"
+                    )
+                ),
             Times.Once
         );
     }
@@ -274,13 +298,15 @@ public class NewJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName);
 
         _mockTemplateManager.Verify(
-            tm => tm.GenerateFromTemplate(
-                "journal-entry",
-                It.Is<Dictionary<string, object>>(d =>
-                    d != null
-                    && d.ContainsKey("title") && d["title"].ToString() == "Journals List"
-                )
-            ),
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d =>
+                        d != null
+                        && d.ContainsKey("title")
+                        && d["title"].ToString() == "Journals List"
+                    )
+                ),
             Times.Once
         );
     }
@@ -291,14 +317,17 @@ public class NewJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName);
 
         _mockTemplateManager.Verify(
-            tm => tm.GenerateFromTemplate(
-                "journal-entry",
-                It.Is<Dictionary<string, object>>(d =>
-                    d != null
-                    && d.ContainsKey("addSourceBlock") && d["addSourceBlock"].Equals(false)
-                    && d.ContainsKey("title") && d["title"].ToString() == "Journals List"
-                )
-            ),
+            tm =>
+                tm.GenerateFromTemplate(
+                    "journal-entry",
+                    It.Is<Dictionary<string, object>>(d =>
+                        d != null
+                        && d.ContainsKey("addSourceBlock")
+                        && d["addSourceBlock"].Equals(false)
+                        && d.ContainsKey("title")
+                        && d["title"].ToString() == "Journals List"
+                    )
+                ),
             Times.Once
         );
     }

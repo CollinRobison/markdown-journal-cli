@@ -149,7 +149,9 @@ public class AddEntryCommandTests
                     if (heading != null)
                         parts.Add(heading.Replace(" ", "_"));
                     if (subheading != null)
-                        parts.AddRange(subheading.Split('-', StringSplitOptions.RemoveEmptyEntries));
+                        parts.AddRange(
+                            subheading.Split('-', StringSplitOptions.RemoveEmptyEntries)
+                        );
                     return parts.ToArray();
                 }
             );
@@ -290,7 +292,9 @@ body goes here.
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
-                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "My Custom Title")
+                    It.Is<Dictionary<string, object>>(d =>
+                        d["title"].ToString() == "My Custom Title"
+                    )
                 ),
             Times.Once
         );
@@ -734,7 +738,9 @@ body goes here.
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
-                    It.Is<Dictionary<string, object>>(d => d["title"].ToString() == "My Custom Title")
+                    It.Is<Dictionary<string, object>>(d =>
+                        d["title"].ToString() == "My Custom Title"
+                    )
                 ),
             Times.Once
         );

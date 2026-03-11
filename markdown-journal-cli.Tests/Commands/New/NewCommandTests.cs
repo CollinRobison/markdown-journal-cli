@@ -8,7 +8,6 @@ using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

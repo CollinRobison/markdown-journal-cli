@@ -29,7 +29,7 @@ public sealed class UpdateCommand(
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
-    private readonly IJournalUpdateService _journalUpdateService = 
+    private readonly IJournalUpdateService _journalUpdateService =
         journalUpdateService ?? throw new ArgumentNullException(nameof(journalUpdateService));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
@@ -73,7 +73,11 @@ public sealed class UpdateCommand(
 
             if (all || settings.DateFlag || settings.Tracking)
             {
-               _journalUpdateService.UpdateLastEditedDatesAndTracking(settings.FilePath, fileResults, settings.Tracking);
+                _journalUpdateService.UpdateLastEditedDatesAndTracking(
+                    settings.FilePath,
+                    fileResults,
+                    settings.Tracking
+                );
             }
 
             if (all || settings.ConfigFlag)

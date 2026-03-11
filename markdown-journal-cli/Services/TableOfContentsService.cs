@@ -40,7 +40,10 @@ public class TableOfContentsService(
             );
         }
 
-        _logger.LogDebug("Updating table of contents for journal at '{JournalDirectory}'", journalDirectory);
+        _logger.LogDebug(
+            "Updating table of contents for journal at '{JournalDirectory}'",
+            journalDirectory
+        );
 
         var config =
             _journalConfiguration.Read(journalDirectory)
