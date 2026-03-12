@@ -292,7 +292,7 @@ mdjournal --version
 
 mdjournal init [name] # Initializes an existing markdown directory as a journal (adds journalrc, file tracking, and toc)
 
-mdjournal update file --ignore # Updates file-specific settings like adding to ignore list
+mdjournal update file --ignore # Updates file-specific settings like adding to ignore list maybe combine rename into this one --name --title or something like that
 
 mdjournal update toc --rename <name> # Renames the TOC file and updates all references
 
