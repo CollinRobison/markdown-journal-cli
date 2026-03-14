@@ -112,7 +112,7 @@ public class JournalFileUpdateService(
         // 7. Regenerate table of contents
         _tableOfContentsService.UpdateTableOfContents(directory, lastEditedDate: DateTime.Now);
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Successfully updated entry '{CurrentFile}' to '{TargetFile}'",
             currentFile,
             targetFile
