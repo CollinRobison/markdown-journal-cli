@@ -143,10 +143,12 @@ public class TableOfContentsServiceTests
     [Fact]
     public void UpdateTableOfContents_CallsUpdateFileWithCorrectPaths()
     {
+        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
+        
         _service.UpdateTableOfContents(JournalDirectory);
 
         _mockFileSystem.Verify(
-            fs => fs.UpdateFile(JournalDirectory, TocFilePath, It.IsAny<string>()),
+            fs => fs.UpdateFile(JournalDirectory, TocFile, It.IsAny<string>()),
             Times.Once
         );
     }
@@ -154,6 +156,7 @@ public class TableOfContentsServiceTests
     [Fact]
     public void UpdateTableOfContents_WhenTocFileExists_ReadsExistingContent()
     {
+        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
         _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         _mockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))
@@ -196,6 +199,7 @@ public class TableOfContentsServiceTests
     [Fact]
     public void UpdateTableOfContents_ExistingTocHasCreatedDate_PreservesCreatedDateWhenNotProvided()
     {
+        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
         _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         _mockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))

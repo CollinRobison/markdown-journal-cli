@@ -102,9 +102,12 @@ public class JournalUpdateService(
                     _journalSettings.DateFormat
                 );
 
-                var directory = Path.GetDirectoryName(absolutePath) ?? journalPath;
-                var fileName = Path.GetFileName(absolutePath);
-                _fileSystem.UpdateFile(directory, fileName, updatedContent);
+                var directory = _fileSystem.GetDirectoryName(absolutePath) ?? journalPath;
+                var fileName = _fileSystem.GetFileName(absolutePath);
+                if (fileName != null)
+                {
+                    _fileSystem.UpdateFile(directory, fileName, updatedContent);
+                }
             }
             _fileTracking.UpdateFileInIndex(journalPath, relativePath);
 

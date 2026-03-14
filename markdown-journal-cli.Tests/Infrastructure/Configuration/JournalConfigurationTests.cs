@@ -1858,10 +1858,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        // Should be added to root entries
-        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
-        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-Introduction.md");
-        // And to ignore files
+        // Should NOT be added to root entries (only to ignore list)
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(0);
+        // Should be added to ignore files
         updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
         updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
         updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("1a-Introduction.md");
@@ -1930,14 +1929,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        // Should be added to topic structure
-        var learningTopic = updatedConfig.TableOfContents.Structure.Topics.FirstOrDefault(t =>
-            t.Name == "Learning"
-        );
-        learningTopic.ShouldNotBeNull();
-        learningTopic.Entries.Length.ShouldBe(1);
-        learningTopic.Entries[0].File.ShouldBe("Learning-Rust.md");
-        // And to ignore files
+        // Should NOT be added to topic structure (only to ignore list)
+        updatedConfig.TableOfContents.Structure.Topics.Length.ShouldBe(0);
+        // Should be added to ignore files
         updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
         updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
         updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("Learning-Rust.md");
@@ -1970,10 +1964,9 @@ public class JournalConfigurationTests
         var updatedConfig = JsonSerializer.Deserialize<JournalConfig>(updatedContent);
 
         updatedConfig.ShouldNotBeNull();
-        // Should be added to root entries
-        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(1);
-        updatedConfig.TableOfContents.RootEntries[0].File.ShouldBe("1a-Introduction.md");
-        // But should NOT duplicate in ignore files
+        // Should NOT be added to root entries (only to ignore list)
+        updatedConfig.TableOfContents.RootEntries.Length.ShouldBe(0);
+        // Should NOT duplicate in ignore files
         updatedConfig.TableOfContents.IgnoreFiles.ShouldNotBeNull();
         updatedConfig.TableOfContents.IgnoreFiles.Length.ShouldBe(1);
         updatedConfig.TableOfContents.IgnoreFiles[0].ShouldBe("1a-Introduction.md");
@@ -2616,4 +2609,370 @@ public class JournalConfigurationTests
     }
 
     #endregion
+
+    #region FindEntry Tests
+
+    [Fact]
+    public void FindEntry_ShouldReturnRootEntry_WhenFileIsInRootEntries()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries =
+        [
+            new Entries { Name = "Home", File = "1a-home.md" },
+            new Entries { Name = "Introduction", File = "1b-intro.md" },
+        ];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        var (entry, topicPath) = _journalConfiguration.FindEntry(_testDirectory, "1a-home.md");
+
+        // Assert
+        entry.ShouldNotBeNull();
+        entry.Name.ShouldBe("Home");
+        entry.File.ShouldBe("1a-home.md");
+        topicPath.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void FindEntry_ShouldReturnTopicEntry_WhenFileIsInTopic()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics =
+        [
+            new Topic
+            {
+                Name = "Learning",
+                Entries = [new Entries { Name = "Rust", File = "learning-rust.md" }],
+                Subtopics = null,
+            },
+        ];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        var (entry, topicPath) = _journalConfiguration.FindEntry(
+            _testDirectory,
+            "learning-rust.md"
+        );
+
+        // Assert
+        entry.ShouldNotBeNull();
+        entry.Name.ShouldBe("Rust");
+        entry.File.ShouldBe("learning-rust.md");
+        topicPath.Length.ShouldBe(1);
+        topicPath[0].ShouldBe("Learning");
+    }
+
+    [Fact]
+    public void FindEntry_ShouldReturnNestedEntry_WhenFileIsInSubtopic()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics =
+        [
+            new Topic
+            {
+                Name = "Projects",
+                Entries = [],
+                Subtopics =
+                [
+                    new Topic
+                    {
+                        Name = "2024",
+                        Entries = [new Entries { Name = "CLI Tool", File = "cli-tool.md" }],
+                        Subtopics = null,
+                    },
+                ],
+            },
+        ];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        var (entry, topicPath) = _journalConfiguration.FindEntry(_testDirectory, "cli-tool.md");
+
+        // Assert
+        entry.ShouldNotBeNull();
+        entry.Name.ShouldBe("CLI Tool");
+        entry.File.ShouldBe("cli-tool.md");
+        topicPath.Length.ShouldBe(2);
+        topicPath[0].ShouldBe("Projects");
+        topicPath[1].ShouldBe("2024");
+    }
+
+    [Fact]
+    public void FindEntry_ShouldBeCaseInsensitive()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [new Entries { Name = "Home", File = "1a-home.md" }];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        var (entry, topicPath) = _journalConfiguration.FindEntry(_testDirectory, "1A-HOME.MD");
+
+        // Assert
+        entry.ShouldNotBeNull();
+        entry.Name.ShouldBe("Home");
+        entry.File.ShouldBe("1a-home.md");
+    }
+
+    [Fact]
+    public void FindEntry_ShouldReturnNull_WhenFileNotFound()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        var (entry, topicPath) = _journalConfiguration.FindEntry(
+            _testDirectory,
+            "nonexistent.md"
+        );
+
+        // Assert
+        entry.ShouldBeNull();
+        topicPath.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void FindEntry_ShouldReturnNull_WhenConfigDoesNotExist()
+    {
+        // Act
+        var (entry, topicPath) = _journalConfiguration.FindEntry(_testDirectory, "any-file.md");
+
+        // Assert
+        entry.ShouldBeNull();
+        topicPath.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    #region UpdateFileReferences Tests
+
+    [Fact]
+    public void UpdateFileReferences_ShouldUpdateRootEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries =
+        [
+            new Entries { Name = "Home", File = "old-name.md" },
+            new Entries { Name = "Other", File = "other.md" },
+        ];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        _journalConfiguration.UpdateFileReferences(
+            _testDirectory,
+            "old-name.md",
+            "new-name.md"
+        );
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries.Length.ShouldBe(2);
+        updated.TableOfContents.RootEntries[0].File.ShouldBe("new-name.md");
+        updated.TableOfContents.RootEntries[1].File.ShouldBe("other.md");
+    }
+
+    [Fact]
+    public void UpdateFileReferences_ShouldUpdateTopicEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics =
+        [
+            new Topic
+            {
+                Name = "Learning",
+                Entries =
+                [
+                    new Entries { Name = "Rust", File = "old-rust.md" },
+                    new Entries { Name = "Python", File = "python.md" },
+                ],
+                Subtopics = null,
+            },
+        ];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        _journalConfiguration.UpdateFileReferences(_testDirectory, "old-rust.md", "new-rust.md");
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        var learningTopic = updated.TableOfContents.Structure.Topics.First(t =>
+            t.Name == "Learning"
+        );
+        learningTopic.Entries.Length.ShouldBe(2);
+        learningTopic.Entries[0].File.ShouldBe("new-rust.md");
+        learningTopic.Entries[1].File.ShouldBe("python.md");
+    }
+
+    [Fact]
+    public void UpdateFileReferences_ShouldUpdateNestedEntry()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.Structure.Topics =
+        [
+            new Topic
+            {
+                Name = "Projects",
+                Entries = [],
+                Subtopics =
+                [
+                    new Topic
+                    {
+                        Name = "2024",
+                        Entries = [new Entries { Name = "CLI", File = "old-cli.md" }],
+                        Subtopics = null,
+                    },
+                ],
+            },
+        ];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        _journalConfiguration.UpdateFileReferences(_testDirectory, "old-cli.md", "new-cli.md");
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        var projectsTopic = updated.TableOfContents.Structure.Topics.First(t =>
+            t.Name == "Projects"
+        );
+        var subtopic = projectsTopic.Subtopics![0];
+        subtopic.Entries[0].File.ShouldBe("new-cli.md");
+    }
+
+    [Fact]
+    public void UpdateFileReferences_ShouldUpdateIgnoreList()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.IgnoreFiles = ["old-ignored.md", "other-ignored.md"];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        _journalConfiguration.UpdateFileReferences(
+            _testDirectory,
+            "old-ignored.md",
+            "new-ignored.md"
+        );
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.IgnoreFiles.ShouldNotBeNull();
+        updated.TableOfContents.IgnoreFiles.Length.ShouldBe(2);
+        updated.TableOfContents.IgnoreFiles.ShouldContain("new-ignored.md");
+        updated.TableOfContents.IgnoreFiles.ShouldContain("other-ignored.md");
+    }
+
+    [Fact]
+    public void UpdateFileReferences_ShouldUpdateAllOccurrences()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [new Entries { Name = "Root", File = "file.md" }];
+        config.TableOfContents.Structure.Topics =
+        [
+            new Topic
+            {
+                Name = "Topic",
+                Entries = [new Entries { Name = "Entry", File = "file.md" }],
+                Subtopics = null,
+            },
+        ];
+        config.TableOfContents.IgnoreFiles = ["file.md"];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        _journalConfiguration.UpdateFileReferences(_testDirectory, "file.md", "renamed.md");
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries[0].File.ShouldBe("renamed.md");
+        updated.TableOfContents.Structure.Topics[0].Entries[0].File.ShouldBe("renamed.md");
+        updated.TableOfContents.IgnoreFiles![0].ShouldBe("renamed.md");
+    }
+
+    [Fact]
+    public void UpdateFileReferences_ShouldBeCaseInsensitive()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        config.TableOfContents.RootEntries = [new Entries { Name = "Home", File = "FILE.md" }];
+        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        _fileSystem.CreateFile(
+            _testDirectory,
+            ".journalrc",
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })
+        );
+
+        // Act
+        _journalConfiguration.UpdateFileReferences(_testDirectory, "file.MD", "renamed.md");
+
+        // Assert
+        var updated = _journalConfiguration.Read(_testDirectory);
+        updated.ShouldNotBeNull();
+        updated.TableOfContents.RootEntries[0].File.ShouldBe("renamed.md");
+    }
+
+    #endregion
 }
+

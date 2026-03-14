@@ -185,4 +185,10 @@ public class FileTracking(
         index.Files.Remove(relativeFilePath);
         SaveIndex(index, path);
     }
+
+    public void RenameFileInIndex(string path, string oldRelativeFilePath, string newRelativeFilePath)
+    {
+        RemoveFileFromIndex(path, oldRelativeFilePath);
+        UpdateFileInIndex(path, newRelativeFilePath);
+    }
 }

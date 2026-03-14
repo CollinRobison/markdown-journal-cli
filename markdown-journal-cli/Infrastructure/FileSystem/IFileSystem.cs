@@ -120,6 +120,15 @@ public interface IFileSystem
     void DeleteFile(string filePath);
 
     /// <summary>
+    /// Renames or moves a file from <paramref name="oldPath"/> to <paramref name="newPath"/>.
+    /// </summary>
+    /// <param name="oldPath">The current full path of the file.</param>
+    /// <param name="newPath">The destination full path for the file.</param>
+    /// <exception cref="FileNotFoundException">Thrown when <paramref name="oldPath"/> does not exist.</exception>
+    /// <exception cref="IOException">Thrown when a file already exists at <paramref name="newPath"/> or an I/O error occurs.</exception>
+    void RenameFile(string oldPath, string newPath);
+
+    /// <summary>
     /// Reads all text content from the specified file.
     /// </summary>
     /// <param name="filePath">The full path to the file to read.</param>
@@ -138,6 +147,27 @@ public interface IFileSystem
     /// <exception cref="PathTooLongException">Thrown when the specified path exceeds the system-defined maximum length.</exception>
     /// <exception cref="System.Security.SecurityException">Thrown when the caller does not have the required permission.</exception>
     string GetFileContent(string filePath);
+
+    /// <summary>
+    /// Gets the file name without the extension from the specified path.
+    /// </summary>
+    /// <param name="path">The file path.</param>
+    /// <returns>The file name without extension, or null if the path is null.</returns>
+    string? GetFileNameWithoutExtension(string? path);
+
+    /// <summary>
+    /// Gets the directory name from the specified path.
+    /// </summary>
+    /// <param name="path">The file or directory path.</param>
+    /// <returns>The directory name, or null if the path is null or has no directory component.</returns>
+    string? GetDirectoryName(string? path);
+
+    /// <summary>
+    /// Gets the file name and extension from the specified path.
+    /// </summary>
+    /// <param name="path">The file path.</param>
+    /// <returns>The file name and extension, or null if the path is null.</returns>
+    string? GetFileName(string? path);
 
     /// <summary>
     /// Gets the files that match the specified search pattern in the specified directory.

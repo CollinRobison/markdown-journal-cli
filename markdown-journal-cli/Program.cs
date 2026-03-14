@@ -50,6 +50,7 @@ public static class Program
         host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
         host.Services.AddSingleton<IJournalEntryService, JournalEntryService>();
         host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
+        host.Services.AddSingleton<IJournalFileUpdateService, JournalFileUpdateService>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
@@ -58,6 +59,7 @@ public static class Program
         host.Services.AddSingleton<AddTableOfContents>();
         host.Services.AddSingleton<AddFileTracking>();
         host.Services.AddSingleton<UpdateCommand>();
+        host.Services.AddSingleton<UpdateEntryCommand>();
 
         // Build the host and get the service provider
         var builtHost = host.Build();
@@ -121,6 +123,19 @@ public static class Program
                     update
                         .AddCommand<UpdateCommand>("journal")
                         .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");
+                    update.AddCommand<UpdateEntryCommand>("entry")
+                        .WithExample(
+                            "update",
+                            "--path",
+                            "Source/Repos/TestJournal",
+                            "entry",
+                            "OldFileName",
+                            "--name",
+                            "NewFileName",
+                            "--headings",
+                            "Projects-Completed_Tasks"
+                        );
+                        
                 }
             );
         });
