@@ -85,6 +85,15 @@ mdjournal update --path ~/Documents/MyJournal journal --config    # Only update 
 mdjournal update --path ~/Documents/MyJournal journal --dates     # Only update last edited dates and tracking
 mdjournal update --path ~/Documents/MyJournal journal --tracking  # Only update tracking index without metadata
 mdjournal update --path ~/Documents/MyJournal journal --toc       # Only update table of contents
+
+# Rename an entry and update all references
+mdjournal update --path ~/Documents/MyJournal entry my_entry --name new_name
+
+# Move an entry to a different heading and update its title
+mdjournal update --path ~/Documents/MyJournal entry my_entry --headings "Work-Projects" --title "Q1 Goals"
+
+# Add an entry to the ignore list
+mdjournal update --path ~/Documents/MyJournal entry draft_notes --ignore
 ```
 
 ## Commands
@@ -246,6 +255,46 @@ mdjournal update journal --path ~/Documents/MyJournal --config --toc
 - **Tracking (`--tracking`)**: Updates tracking index without modifying "Last Edited:" metadata (useful for resynchronizing without changing file contents)
 - **Table of Contents (`--toc`)**: Regenerates the TOC markdown file from current configuration
 
+### `update entry` - Update a Journal Entry
+Renames an entry file, changes its TOC title, moves it to a different heading, or updates its ignore status. All referenced locations (config, tracking index, TOC) are updated atomically.
+
+**Syntax:**
+```bash
+mdjournal update entry <fileName> [options]
+```
+
+**Arguments:**
+- `fileName` - Name of the file to update (with or without `.md`)
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `-n|--name <name>` - New entry name; updates the filename and TOC title when they currently match (letters, digits, underscores, and spaces only)
+- `-t|--title <title>` - New display title shown in the table of contents (does not rename the file)
+- `-h|--headings <headings>` - New location in the TOC hierarchy; use `-` to separate heading levels and `_` for spaces within a heading (e.g. `Projects-2024_Goals`)
+- `--ignore` - Add the entry to the ignore list so it won't appear in the TOC
+- `--unignore` - Remove the entry from the ignore list
+
+**Examples:**
+```bash
+# Rename an entry (updates filename and TOC title)
+mdjournal update entry my_notes --name meeting_notes
+
+# Update only the TOC display title without renaming the file
+mdjournal update entry meeting_notes --title "Q1 Meeting Notes"
+
+# Move an entry to a different heading location
+mdjournal update entry meeting_notes --headings "Work-Meetings"
+
+# Rename the file and move its heading in one command
+mdjournal update entry draft --name api_design --headings "Tech-Backend" --title "API Design Doc"
+
+# Exclude an entry from the TOC
+mdjournal update entry draft_thoughts --ignore
+
+# Re-include a previously ignored entry
+mdjournal update entry draft_thoughts --unignore
+```
+
 ## Contributing
 
 Interested in contributing? Check out the **[Development Guide](docs/DEVELOPMENT.md)** for:
@@ -264,8 +313,9 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ `add entry` command for creating journal entries
 - ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
 - ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
+- ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **645+ passing unit tests** covering core functionality
+- ✅ **798+ passing unit tests** covering core functionality
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
@@ -279,30 +329,13 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ Additional commands (update files, init, rename, open, search)
+- ⏳ `init` command — adopt an existing markdown directory as a journal
+- ⏳ `update entry --rename-toc` — rename the TOC file and update all references
+- ⏳ `open` command — open journal in default editor
+- ⏳ `search` command — full-text search across entries
+- ⏳ `--version` flag
 - ⏳ Global tool installation
-- ⏳ Advanced configuration options
-- ⏳ Pre-update change preview (--check flag)
-
-### Planned Commands
-```bash
-# TODO: Document these commands when implemented
-
-mdjournal --version
-
-mdjournal init [name] # Initializes an existing markdown directory as a journal (adds journalrc, file tracking, and toc)
-
-mdjournal update file --ignore # Updates file-specific settings like adding to ignore list maybe combine rename into this one --name --title or something like that
-
-mdjournal update toc --rename <name> # Renames the TOC file and updates all references
-
-mdjournal rename <file> <newname> # Renames a file and updates all references in config and TOC
-
-mdjournal open [name] # Opens journal in default editor (VS Code, Vim support)
-
-mdjournal search <term> # Searches across journal entries
-
-```
+- ⏳ Pre-update change preview (`--check` flag)
 
 **Known Limitations:**
 - Global tool installation not yet configured
