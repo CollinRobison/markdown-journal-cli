@@ -1,5 +1,6 @@
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;
 
@@ -20,7 +21,7 @@ public class MarkdownLinkRewriterTests
     public MarkdownLinkRewriterTests()
     {
         _fileSystem = new TestFileSystem();
-        _rewriter = new MarkdownLinkRewriter(_fileSystem);
+        _rewriter = new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
     }
 
     // ------------------------------------------------------------------

@@ -72,7 +72,8 @@ public class JournalUpdateServiceTests
             _fileTracking,
             _tableOfContentsService,
             _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem)
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NullLogger<JournalUpdateService>.Instance
         );
 
         _fileSystem.CreateDirectory(_testPath);
@@ -108,7 +109,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
-                Mock.Of<IMarkdownLinkRewriter>()
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NullLogger<JournalUpdateService>.Instance
             )
         );
     }
@@ -124,7 +126,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
-                Mock.Of<IMarkdownLinkRewriter>()
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NullLogger<JournalUpdateService>.Instance
             )
         );
     }
@@ -140,7 +143,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
-                Mock.Of<IMarkdownLinkRewriter>()
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NullLogger<JournalUpdateService>.Instance
             )
         );
     }
@@ -156,7 +160,8 @@ public class JournalUpdateServiceTests
                 null!,
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
-                Mock.Of<IMarkdownLinkRewriter>()
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NullLogger<JournalUpdateService>.Instance
             )
         );
     }
@@ -172,7 +177,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IFileTracking>(),
                 null!,
                 _journalSettings,
-                Mock.Of<IMarkdownLinkRewriter>()
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NullLogger<JournalUpdateService>.Instance
             )
         );
     }
@@ -674,7 +680,8 @@ public class JournalUpdateServiceTests
             _fileTracking,
             mockTocService.Object,
             _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem)
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NullLogger<JournalUpdateService>.Instance
         );
 
         // Arrange — create the TOC file so it can be tracked (UpdateFileInIndex only tracks existing files)
@@ -738,7 +745,7 @@ public class JournalUpdateServiceTests
 
         // Console output contains expected messages
         _console.Output.ShouldContain($"Renamed TOC: {oldTocFile} → {newTocFile}");
-        _console.Output.ShouldContain("Updated links in:");
+        _console.Output.ShouldContain("Last Edited updated for 1 file(s).");
     }
 
     [Fact]
@@ -840,9 +847,7 @@ public class JournalUpdateServiceTests
         var otherContent = _fileSystem.GetFileContent(Path.Combine(_testPath, "other.md"));
         otherContent.ShouldBe("No link.");
 
-        // Console output mentions both files
-        _console.Output.ShouldContain("Updated links in: intro.md");
-        _console.Output.ShouldContain("Updated links in: chapter-1.md");
+        // Console output mentions the count of updated files
         _console.Output.ShouldContain("Last Edited updated for 2 file(s).");
     }
 

@@ -20,4 +20,18 @@ public interface IMarkdownLinkRewriter
     /// markdown files whose content contains a markdown inline link to <paramref name="fileName"/>.
     /// </summary>
     IReadOnlyList<string> FindFilesWithLinkTo(string directory, string fileName);
+
+    /// <summary>
+    /// Scans every markdown file under <paramref name="directory"/>, rewrites all inline links
+    /// whose final path segment matches <paramref name="oldFileName"/> to use
+    /// <paramref name="newFileName"/> instead, and writes the file back if it changed.
+    /// Files listed in <paramref name="excludeFiles"/> are skipped.
+    /// Returns the relative paths of every file that was actually modified.
+    /// </summary>
+    IReadOnlyList<string> ReplaceLinksInDirectory(
+        string directory,
+        string oldFileName,
+        string newFileName,
+        IReadOnlyCollection<string>? excludeFiles = null
+    );
 }

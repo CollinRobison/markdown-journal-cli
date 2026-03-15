@@ -68,7 +68,8 @@ public class UpdateCommandTests
             _fileTracking,
             _tableOfContentsGenerator,
             _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem)
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NullLogger<JournalUpdateService>.Instance
         );
 
         _fileSystem.CreateDirectory(_testPath);
@@ -268,7 +269,7 @@ public class UpdateCommandTests
         // Date should NOT have been updated - tracking only
         updatedContent.ShouldContain("Last Edited: 01/01/2024");
         updatedContent.ShouldContain("Created: 01/01/2024");
-        _console.Output.ShouldContain("Updated:");
+        _console.Output.ShouldContain("Updated dates for 1 file(s).");
 
         // But tracking index should be updated - verify no changes on next check
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
@@ -331,7 +332,7 @@ public class UpdateCommandTests
 
         // Assert
         result.ShouldBe(0);
-        _console.Output.ShouldContain("Tracked:");
+        _console.Output.ShouldContain("Tracked 1 new file(s).");
 
         // Verify file is now tracked
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
@@ -362,7 +363,7 @@ public class UpdateCommandTests
 
         // Assert
         result.ShouldBe(0);
-        _console.Output.ShouldContain("Removed:");
+        _console.Output.ShouldContain("Removed 1 deleted file(s) from tracking.");
 
         // Verify file is removed from tracking
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
@@ -638,7 +639,8 @@ public class UpdateCommandTests
             tracking,
             customTocGen,
             customSettings,
-            new MarkdownLinkRewriter(_fileSystem)
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NullLogger<JournalUpdateService>.Instance
         );
         var command = new UpdateCommand(
             _console,
@@ -901,7 +903,7 @@ public class UpdateCommandTests
                 t.Entries.Any(e => e.File == "Learning-Rust.md")
             )
             .ShouldBeFalse();
-        _console.Output.ShouldContain("Config removed");
+        _console.Output.ShouldContain("Journal configuration updated.");
     }
 
     [Fact]
