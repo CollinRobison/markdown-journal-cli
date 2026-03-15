@@ -37,6 +37,27 @@ public class UpdateJournalSettings : UpdateSettings
     [CommandOption("--toc|--tableofcontents")]
     [Description("Flag to update the table of contents.")]
     public bool TocFlag { get; set; }
+
+    [CommandOption("--rename-toc")]
+    [Description(
+        "Rename the table-of-contents file to <name> (stem only, no extension). "
+            + "Updates .journalrc, rewrites all markdown inline link references, and stamps "
+            + "Last Edited on modified files."
+    )]
+    public string? RenameToc { get; set; }
+
+    public override ValidationResult Validate()
+    {
+        if (RenameToc is not null && RenameToc.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidationResult.Error(
+                "--rename-toc expects a stem only (no extension). "
+                    + "The .md extension is appended automatically."
+            );
+        }
+
+        return ValidationResult.Success();
+    }
 }
 
 public class UpdateEntrySettings : UpdateSettings

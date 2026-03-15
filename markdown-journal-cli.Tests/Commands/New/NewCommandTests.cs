@@ -925,6 +925,11 @@ public class NewCommandTests
         {
             throw new IOException("Simulated I/O error");
         }
+
+        public IReadOnlyList<string> GetMarkdownFiles(string directory)
+        {
+            throw new IOException("Simulated I/O error");
+        }
     }
 
     [Fact]
@@ -1303,6 +1308,11 @@ public class NewCommandTests
         public string? GetFileName(string? path) => Path.GetFileName(path);
 
         public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            return Array.Empty<string>();
+        }
+
+        public IReadOnlyList<string> GetMarkdownFiles(string directory)
         {
             return Array.Empty<string>();
         }

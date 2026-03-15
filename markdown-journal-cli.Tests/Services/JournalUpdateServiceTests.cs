@@ -3,6 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.Tracking;
@@ -70,7 +71,8 @@ public class JournalUpdateServiceTests
             _journalConfiguration,
             _fileTracking,
             _tableOfContentsService,
-            _journalSettings
+            _journalSettings,
+            new MarkdownLinkRewriter(_fileSystem)
         );
 
         _fileSystem.CreateDirectory(_testPath);
@@ -105,7 +107,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>()
             )
         );
     }
@@ -120,7 +123,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>()
             )
         );
     }
@@ -135,7 +139,8 @@ public class JournalUpdateServiceTests
                 null!,
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>()
             )
         );
     }
@@ -150,7 +155,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IJournalConfiguration>(),
                 null!,
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>()
             )
         );
     }
@@ -165,7 +171,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 null!,
-                _journalSettings
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>()
             )
         );
     }
@@ -666,7 +673,8 @@ public class JournalUpdateServiceTests
             mockJournalConfiguration.Object,
             _fileTracking,
             mockTocService.Object,
-            _journalSettings
+            _journalSettings,
+            new MarkdownLinkRewriter(_fileSystem)
         );
 
         // Arrange — create the TOC file so it can be tracked (UpdateFileInIndex only tracks existing files)
@@ -679,6 +687,163 @@ public class JournalUpdateServiceTests
         // Assert — the fallback filename (TableOfContentsFileName + ".md") must be tracked
         var index = _fileTracking.LoadIndex(_testPath);
         index.Files.ContainsKey(expectedTocFile).ShouldBeTrue();
+    }
+
+    #endregion
+
+    #region RenameToc
+
+    [Fact]
+    public void RenameToc_HappyPath_RenamesFile_UpdatesConfig_RewritesLinks_UpdatesTracking()
+    {
+        // Arrange
+        const string oldTocFile = "1a-TableOfContents.md";
+        const string newTocName = "MyContents";
+        const string newTocFile = "MyContents.md";
+
+        _fileSystem.CreateFile(_testPath, oldTocFile, "# Table of Contents");
+        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+
+        // A note that links to the old TOC
+        const string noteRelPath = "notes/intro.md";
+        _fileSystem.CreateDirectory(Path.Combine(_testPath, "notes"));
+        _fileSystem.CreateFile(
+            _testPath,
+            noteRelPath,
+            $"Created: 01/01/2025\n# Intro\nSee [TOC]({oldTocFile})."
+        );
+        _fileTracking.UpdateFileInIndex(_testPath, noteRelPath);
+
+        // Act
+        _service.RenameToc(_testPath, newTocName);
+
+        // Assert — old TOC file gone, new one exists
+        _fileSystem.FileExists(Path.Combine(_testPath, oldTocFile)).ShouldBeFalse();
+        _fileSystem.FileExists(Path.Combine(_testPath, newTocFile)).ShouldBeTrue();
+
+        // Config updated
+        var config = _journalConfiguration.Read(_testPath);
+        config!.TableOfContents.File.ShouldBe(newTocFile);
+
+        // Links rewritten in the note
+        var noteContent = _fileSystem.GetFileContent(Path.Combine(_testPath, noteRelPath));
+        noteContent.ShouldContain($"[TOC]({newTocFile})");
+        noteContent.ShouldNotContain(oldTocFile);
+
+        // Tracking updated
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.ContainsKey(newTocFile).ShouldBeTrue();
+        index.Files.ContainsKey(oldTocFile).ShouldBeFalse();
+        index.Files.ContainsKey(noteRelPath).ShouldBeTrue();
+
+        // Console output contains expected messages
+        _console.Output.ShouldContain($"Renamed TOC: {oldTocFile} → {newTocFile}");
+        _console.Output.ShouldContain("Updated links in:");
+    }
+
+    [Fact]
+    public void RenameToc_WhenAlreadyNamedCorrectly_SkipsRenameButRewritesStaleLinks()
+    {
+        // Arrange
+        const string tocFile = "1a-TableOfContents.md";
+        _fileSystem.CreateFile(_testPath, tocFile, "# TOC");
+        _fileTracking.UpdateFileInIndex(_testPath, tocFile);
+
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            $"[TOC]({tocFile})"
+        );
+        _fileTracking.UpdateFileInIndex(_testPath, "note.md");
+
+        // Act — pass same stem (no change in name)
+        _service.RenameToc(_testPath, "1a-TableOfContents");
+
+        // Assert — file still exists under same name
+        _fileSystem.FileExists(Path.Combine(_testPath, tocFile)).ShouldBeTrue();
+
+        // Config filename unchanged
+        var config = _journalConfiguration.Read(_testPath);
+        config!.TableOfContents.File.ShouldBe(tocFile);
+
+        // Links in note.md were still checked (the link stays the same since name didn't change)
+        _console.Output.ShouldNotContain("Renamed TOC:");
+    }
+
+    [Fact]
+    public void RenameToc_ThrowsTocRenameConflictException_WhenTargetFileAlreadyExists()
+    {
+        // Arrange
+        const string oldTocFile = "1a-TableOfContents.md";
+        const string conflictingFile = "MyContents.md";
+        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
+        _fileSystem.CreateFile(_testPath, conflictingFile, "# Other file");
+
+        // Act & Assert
+        Should.Throw<TocRenameConflictException>(
+            () => _service.RenameToc(_testPath, "MyContents")
+        );
+    }
+
+    [Fact]
+    public void RenameToc_WhenNoFilesReferenceTheToc_PrintsNoLinkMessage()
+    {
+        // Arrange
+        const string oldTocFile = "1a-TableOfContents.md";
+        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
+        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+
+        // A file with no link to the TOC
+        _fileSystem.CreateFile(_testPath, "note.md", "No links here.");
+        _fileTracking.UpdateFileInIndex(_testPath, "note.md");
+
+        // Act
+        _service.RenameToc(_testPath, "MyContents");
+
+        // Assert
+        _console.Output.ShouldContain("No link references needed updating.");
+    }
+
+    [Fact]
+    public void RenameToc_WhenMultipleFilesReferToc_AllLinksRewrittenAndTrackingUpdated()
+    {
+        // Arrange
+        const string oldTocFile = "1a-TableOfContents.md";
+        const string newTocName = "MyContents";
+        const string newTocFile = "MyContents.md";
+
+        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
+        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+
+        _fileSystem.CreateFile(_testPath, "intro.md",
+            $"Created: 01/01/2025\n# Intro\n[TOC]({oldTocFile})");
+        _fileSystem.CreateFile(_testPath, "chapter-1.md",
+            $"Created: 01/01/2025\n# Chapter 1\n[TOC]({oldTocFile})");
+        _fileSystem.CreateFile(_testPath, "other.md", "No link.");
+        _fileTracking.UpdateFileInIndex(_testPath, "intro.md");
+        _fileTracking.UpdateFileInIndex(_testPath, "chapter-1.md");
+        _fileTracking.UpdateFileInIndex(_testPath, "other.md");
+
+        // Act
+        _service.RenameToc(_testPath, newTocName);
+
+        // Assert — both files updated
+        var introContent = _fileSystem.GetFileContent(Path.Combine(_testPath, "intro.md"));
+        introContent.ShouldContain($"[TOC]({newTocFile})");
+        introContent.ShouldContain("Last Edited:");
+
+        var ch1Content = _fileSystem.GetFileContent(Path.Combine(_testPath, "chapter-1.md"));
+        ch1Content.ShouldContain($"[TOC]({newTocFile})");
+        ch1Content.ShouldContain("Last Edited:");
+
+        // "other.md" was not modified
+        var otherContent = _fileSystem.GetFileContent(Path.Combine(_testPath, "other.md"));
+        otherContent.ShouldBe("No link.");
+
+        // Console output mentions both files
+        _console.Output.ShouldContain("Updated links in: intro.md");
+        _console.Output.ShouldContain("Updated links in: chapter-1.md");
+        _console.Output.ShouldContain("Last Edited updated for 2 file(s).");
     }
 
     #endregion

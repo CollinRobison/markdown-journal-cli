@@ -51,6 +51,7 @@ public static class Program
         host.Services.AddSingleton<IJournalEntryService, JournalEntryService>();
         host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
         host.Services.AddSingleton<IJournalFileUpdateService, JournalFileUpdateService>();
+        host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();

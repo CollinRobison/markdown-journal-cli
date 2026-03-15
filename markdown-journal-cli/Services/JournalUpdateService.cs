@@ -1,4 +1,5 @@
 using System;
+using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
@@ -14,7 +15,8 @@ public class JournalUpdateService(
     IJournalConfiguration journalConfiguration,
     IFileTracking fileTracking,
     ITableOfContentsService tableOfContentsService,
-    IOptions<JournalSettings> journalSettings
+    IOptions<JournalSettings> journalSettings,
+    IMarkdownLinkRewriter markdownLinkRewriter
 ) : IJournalUpdateService
 {
     private readonly IAnsiConsole _console =
@@ -25,9 +27,10 @@ public class JournalUpdateService(
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
-
     private readonly ITableOfContentsService _tableOfContentsService =
         tableOfContentsService ?? throw new ArgumentNullException(nameof(tableOfContentsService));
+    private readonly IMarkdownLinkRewriter _markdownLinkRewriter =
+        markdownLinkRewriter ?? throw new ArgumentNullException(nameof(markdownLinkRewriter));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults)
@@ -138,5 +141,76 @@ public class JournalUpdateService(
             _console.MarkupLine(
                 $"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]"
             );
+    }
+
+    public void RenameToc(string journalPath, string newTocName)
+    {
+        var config = _journalConfiguration.Read(journalPath)
+            ?? throw new JournalrcNotFoundException(journalPath);
+
+        var currentTocFile = config.TableOfContents.File;
+        var newTocFile = newTocName + FileConstants.MarkdownExtension;
+        var isAlreadyNamed = string.Equals(
+            currentTocFile,
+            newTocFile,
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (!isAlreadyNamed)
+        {
+            var newTocAbsPath = _fileSystem.CombinePaths(journalPath, newTocFile);
+            if (_fileSystem.FileExists(newTocAbsPath))
+                throw new TocRenameConflictException(journalPath, newTocFile);
+
+            var currentTocAbsPath = _fileSystem.CombinePaths(journalPath, currentTocFile);
+            _fileSystem.RenameFile(currentTocAbsPath, newTocAbsPath);
+            _console.MarkupLine($"Renamed TOC: {currentTocFile} → {newTocFile}");
+
+            _journalConfiguration.Update(
+                journalPath,
+                cfg => cfg.TableOfContents.File = newTocFile
+            );
+            _console.MarkupLine("Updated .journalrc table-of-contents filename.");
+
+            _fileTracking.RenameFileInIndex(journalPath, currentTocFile, newTocFile);
+        }
+
+        // Rewrite links in all other markdown files that reference the old TOC filename
+        var filesWithLinks = _markdownLinkRewriter
+            .FindFilesWithLinkTo(journalPath, currentTocFile)
+            .Where(f => !string.Equals(f, currentTocFile, StringComparison.OrdinalIgnoreCase)
+                     && !string.Equals(f, newTocFile, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (filesWithLinks.Count == 0)
+        {
+            _console.MarkupLine("No link references needed updating.");
+            return;
+        }
+
+        foreach (var relativePath in filesWithLinks)
+        {
+            var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
+            var content = _fileSystem.GetFileContent(absolutePath);
+
+            var updated = _markdownLinkRewriter.RewriteLinks(content, currentTocFile, newTocFile);
+            updated = MarkdownMetadataParser.UpdateLastEditedDate(
+                updated,
+                DateTime.Now,
+                _journalSettings.DateFormat
+            );
+
+            var directory = _fileSystem.GetDirectoryName(absolutePath) ?? journalPath;
+            var fileName = _fileSystem.GetFileName(absolutePath);
+            if (fileName != null)
+                _fileSystem.UpdateFile(directory, fileName, updated);
+
+            _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+            _console.MarkupLine($"Updated links in: {relativePath}");
+        }
+
+        _console.MarkupLine(
+            $"[green]Last Edited updated for {filesWithLinks.Count} file(s).[/]"
+        );
     }
 }
