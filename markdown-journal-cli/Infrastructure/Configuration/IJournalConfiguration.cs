@@ -126,4 +126,22 @@ public interface IJournalConfiguration
     /// <param name="directory">The directory containing the configuration.</param>
     /// <param name="files">The list of markdown filenames to populate the structure from.</param>
     void RegenerateStructure(string directory, IEnumerable<string> files);
+
+    /// <summary>
+    /// Finds an entry in the journal configuration by filename and returns it along with its topic path.
+    /// Searches through root entries and all topics/subtopics recursively.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="fileName">The filename of the entry to find.</param>
+    /// <returns>A tuple containing the entry (null if not found) and its topic path (empty array if at root level or not found).</returns>
+    (Entries? entry, string[] topicPath) FindEntry(string directory, string fileName);
+
+    /// <summary>
+    /// Updates all references to a file after it has been renamed.
+    /// Updates root entries, topic entries, and ignore list.
+    /// </summary>
+    /// <param name="directory">The directory containing the configuration.</param>
+    /// <param name="oldFile">The old filename to replace.</param>
+    /// <param name="newFile">The new filename to use.</param>
+    void UpdateFileReferences(string directory, string oldFile, string newFile);
 }

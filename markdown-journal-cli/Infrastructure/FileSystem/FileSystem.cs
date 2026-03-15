@@ -64,6 +64,14 @@ public class FileSystem : IFileSystem
         }
     }
 
+    public void RenameFile(string oldPath, string newPath)
+    {
+        if (!FileExists(oldPath))
+            throw new FileNotFoundException($"File not found: {oldPath}");
+        File.Move(oldPath, newPath, overwrite: false);
+        _logger.LogDebug("File renamed from {OldPath} to {NewPath}", oldPath, newPath);
+    }
+
     public string GetFileContent(string filePath)
     {
         if (!FileExists(filePath))
@@ -72,6 +80,12 @@ public class FileSystem : IFileSystem
         }
         return File.ReadAllText(filePath);
     }
+
+    public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+    public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
+    public string? GetFileName(string? path) => Path.GetFileName(path);
 
     public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {

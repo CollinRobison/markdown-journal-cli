@@ -52,7 +52,7 @@ public class TableOfContentsService(
             );
 
         var tocFile = config.TableOfContents.File;
-        var tocFilePath = Path.Combine(journalDirectory, tocFile);
+        var tocFilePath = _fileSystem.CombinePaths(journalDirectory, tocFile);
         if (_fileSystem.FileExists(tocFilePath))
         {
             var existingContent = _fileSystem.GetFileContent(tocFilePath);
@@ -71,7 +71,7 @@ public class TableOfContentsService(
 
         var tocContent = GenerateTableOfContents(config, createdDate, lastEditedDate);
 
-        _fileSystem.UpdateFile(journalDirectory, tocFilePath, tocContent);
+        _fileSystem.UpdateFile(journalDirectory, tocFile, tocContent);
         _logger.LogDebug("Table of contents updated at '{TocFilePath}'", tocFilePath);
     }
 
@@ -208,7 +208,9 @@ public class TableOfContentsService(
         {
             foreach (var entry in visibleEntries)
             {
-                var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
+                var entryPathWithoutExt = _fileSystem.GetFileNameWithoutExtension(entry.File);
+                if (entryPathWithoutExt == null)
+                    continue;
 
                 foreach (var subtopic in subtopics)
                 {
@@ -299,7 +301,9 @@ public class TableOfContentsService(
         {
             foreach (var entry in visibleEntries)
             {
-                var entryPathWithoutExt = Path.GetFileNameWithoutExtension(entry.File);
+                var entryPathWithoutExt = _fileSystem.GetFileNameWithoutExtension(entry.File);
+                if (entryPathWithoutExt == null)
+                    continue;
 
                 foreach (var nestedSubtopic in subtopic.Subtopics)
                 {
@@ -387,13 +391,13 @@ public class TableOfContentsService(
     )
     {
         // Check if all visible files in the subtopic (and nested subtopics) start with the entry path
-        return HasFilesWithPrefix(subtopic, entryPathWithoutExt, ignoreFiles);
+        return HasFilesWithPrefix(subtopic, entryPathWithoutExt, ignoreFiles, _fileSystem);
     }
 
     /// <summary>
     /// Recursively checks if a topic has any visible files that start with the given prefix.
     /// </summary>
-    private static bool HasFilesWithPrefix(Topic topic, string prefix, string[] ignoreFiles)
+    private static bool HasFilesWithPrefix(Topic topic, string prefix, string[] ignoreFiles, IFileSystem fileSystem)
     {
         // Check entries
         if (topic.Entries != null)
@@ -402,9 +406,9 @@ public class TableOfContentsService(
             {
                 if (!IsFileIgnored(entry.File, ignoreFiles))
                 {
-                    var filePath = Path.GetFileNameWithoutExtension(entry.File);
+                    var filePath = fileSystem.GetFileNameWithoutExtension(entry.File);
                     // Check if file path starts with prefix followed by separator
-                    if (filePath.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
+                    if (filePath != null && filePath.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
                     }
@@ -417,7 +421,7 @@ public class TableOfContentsService(
         {
             foreach (var subtopic in topic.Subtopics)
             {
-                if (HasFilesWithPrefix(subtopic, prefix, ignoreFiles))
+                if (HasFilesWithPrefix(subtopic, prefix, ignoreFiles, fileSystem))
                 {
                     return true;
                 }

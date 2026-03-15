@@ -40,9 +40,10 @@ markdown-journal-cli/
 │   │   │   └── AddSettings.cs
 │   │   ├── New/                   # New journal command
 │   │   │   └── NewCommand.cs
-│   │   └── Update/                # Update journal command
-│   │       ├── UpdateCommand.cs
-│   │       └── UpdateSettings.cs
+│   │   ├── Update/                # Update journal/entry commands
+│   │   │   ├── UpdateCommand.cs
+│   │   │   ├── UpdateEntryCommand.cs
+│   │   │   └── UpdateSettings.cs
 │   ├── Exceptions/                # Custom exceptions
 │   │   └── JournalExceptions.cs
 │   ├── Infrastructure/            # Core services
@@ -76,11 +77,13 @@ markdown-journal-cli/
 │   │   └── TableOfContentsGenerator.cs
 │   ├── Services/                  # Business logic services
 │   │   ├── IEntryFormatterService.cs
-│   │   └── EntryFormatterService.cs
+│   │   ├── EntryFormatterService.cs
+│   │   ├── IJournalFileUpdateService.cs
+│   │   └── JournalFileUpdateService.cs
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (634 tests)
+├── markdown-journal-cli.Tests/    # Unit tests (798 tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
 │   │   ├── Add/
@@ -90,7 +93,8 @@ markdown-journal-cli/
 │   │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   │   └── AddTableOfContentsIntegrationTests.cs
 │   │   └── Update/
-│   │       └── UpdateCommandTests.cs
+│   │       ├── UpdateCommandTests.cs
+│   │       └── UpdateEntryCommandTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
 │   │   ├── FileSystemTests.cs
 │   │   ├── FileTrackingTests.cs
@@ -106,7 +110,8 @@ markdown-journal-cli/
 │   │   ├── TableOfContentsGeneratorTests.cs
 │   │   └── TemplateManagerTests.cs
 │   └── Services/
-│       └── EntryFormatterServiceTests.cs
+│       ├── EntryFormatterServiceTests.cs
+│       └── JournalFileUpdateServiceTests.cs
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
 ```
@@ -663,9 +668,10 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ Basic project structure established
 - ✅ Core `new` command implemented
 - ✅ `add` command branch with entry, config, toc, and tracking subcommands
-- ✅ `update` command for journal synchronization (config, dates, TOC)
+- ✅ `update journal` command for journal synchronization (config, dates, TOC)
+- ✅ `update entry` command for renaming, relocating, and ignoring entries
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (634 tests passing)
+- ✅ Testing framework setup (798 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing

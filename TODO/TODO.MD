@@ -1,6 +1,6 @@
 
 
-- [ ] update readme
+- [ ] update readme for update entry
 
 
 - [ ] TOC update make sure when regenerating table of content or journalrc file it respects which file is toc. have a way of detecting.

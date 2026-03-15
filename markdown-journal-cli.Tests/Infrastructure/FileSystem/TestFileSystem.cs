@@ -135,6 +135,14 @@ public class TestFileSystem : IFileSystem
         _files.Remove(filePath);
     }
 
+    public void RenameFile(string oldPath, string newPath)
+    {
+        if (!_files.ContainsKey(oldPath))
+            throw new FileNotFoundException($"File not found: {oldPath}");
+        _files[newPath] = _files[oldPath];
+        _files.Remove(oldPath);
+    }
+
     string IFileSystem.GetFileContent(string filePath)
     {
         if (!_files.ContainsKey(filePath))
@@ -143,6 +151,12 @@ public class TestFileSystem : IFileSystem
         }
         return _files[filePath];
     }
+
+    public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+    public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
+    public string? GetFileName(string? path) => Path.GetFileName(path);
 
     public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {

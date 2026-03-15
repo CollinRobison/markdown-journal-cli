@@ -905,10 +905,21 @@ public class NewCommandTests
             throw new NotImplementedException();
         }
 
+        public void RenameFile(string oldPath, string newPath)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GetFileContent(string filePath)
         {
             throw new NotImplementedException();
         }
+
+        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+        public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
+        public string? GetFileName(string? path) => Path.GetFileName(path);
 
         public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
         {
@@ -1275,10 +1286,21 @@ public class NewCommandTests
             throw new NotImplementedException();
         }
 
+        public void RenameFile(string oldPath, string newPath)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GetFileContent(string filePath)
         {
             throw new NotImplementedException();
         }
+
+        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+        public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
+        public string? GetFileName(string? path) => Path.GetFileName(path);
 
         public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
         {

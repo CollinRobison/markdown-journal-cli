@@ -392,6 +392,18 @@ public class TestJournalConfiguration : IJournalConfiguration
         // Not implemented for tests - can be added if needed
         throw new NotImplementedException();
     }
+
+    public (Entries? entry, string[] topicPath) FindEntry(string directory, string fileName)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
+
+    public void UpdateFileReferences(string directory, string oldFile, string newFile)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
 }
 
 /// <summary>

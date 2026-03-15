@@ -86,10 +86,13 @@ public sealed class TypeRegistrar : ITypeRegistrar
    - `IFileSystem` → `FileSystem` (File operations)
    - `ITemplateManager` → `TemplateManager` (Template processing)
    - `IJournalConfiguration` → `JournalConfiguration` (Config management)
-   - `IJournalInitializer` → `JournalInitializer` (Journal creation orchestration)   - `ITableOfContentsGenerator` → `TableOfContentsGenerator` (TOC generation)
+   - `IJournalInitializer` → `JournalInitializer` (Journal creation orchestration)
+   - `ITableOfContentsGenerator` → `TableOfContentsGenerator` (TOC generation)
    - `IFileTracking` → `FileTracking` (Change detection)
    - `IHashService` → `HashService` (SHA256 hashing)
-   - `IEntryFormatterService` → `EntryFormatterService` (Entry name formatting)3. **Building** - `registrar.Build()` creates `IServiceProvider`
+   - `IEntryFormatterService` → `EntryFormatterService` (Entry name formatting)
+   - `IJournalFileUpdateService` → `JournalFileUpdateService` (Entry rename/move/ignore)
+3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
 ### Benefits of This Approach
@@ -98,85 +101,15 @@ public sealed class TypeRegistrar : ITypeRegistrar
 - ✅ **Separation of Concerns** - Commands focus on business logic
 - ✅ **Future-Proof** - Easy to add new services (logging, config, etc.)
 
-### Alternative Approaches Considered
-
-**1. No DI (Direct Instantiation)**
-```csharp
-public NewCommand() 
-{
-    _fileSystem = new FileSystem(); // Tightly coupled
-}
-```
-❌ Hard to test, not flexible
-
-**2. Service Locator Pattern**
-```csharp
-public NewCommand() 
-{
-    _fileSystem = ServiceLocator.Get<IFileSystem>();
-}
-```
-❌ Hidden dependencies, anti-pattern
-
-**3. Manual Factory Pattern**
-```csharp
-public static class CommandFactory 
-{
-    public static NewCommand CreateNewCommand() => new(new FileSystem());
-}
-```
-❌ Boilerplate, doesn't scale
-
 ## 🚨 Exception Architecture
 
 ### Exception Hierarchy
 ```
 System.Exception
     └── JournalException (Base for all journal errors)
-            └── JournalAlreadyExistsException (Specific error type)
-            └── [Future: JournalNotFoundException]
-            └── [Future: InvalidJournalFormatException]
-```
-
-### Constructor Chaining Explanation
-```csharp
-public class JournalException : Exception
-{
-    // This constructor calls Exception(string message)
-    public JournalException(string message) : base(message) { }
-    
-    // This constructor calls Exception(string message, Exception innerException)
-    public JournalException(string message, Exception inner) : base(message, inner) { }
-}
-```
-
-**Why `: base()` is Required:**
-- Constructors are **NOT inherited** in C#
-- Must manually "expose" parent constructors you want to use
-- `: base()` calls parent constructor **before** your constructor body
-- Without it, `Exception` properties (Message, StackTrace, etc.) wouldn't be initialized
-
-### Exception Handling Strategy
-```csharp
-try 
-{
-    // Command logic
-}
-catch (JournalAlreadyExistsException ex) // Most specific first
-{
-    _console.MarkupLine($"[red]Error:[/] {ex.Message}");
-    return 1; // Specific exit code
-}
-catch (JournalException ex) // General journal errors
-{
-    _console.MarkupLine($"[red]Error:[/] {ex.Message}");
-    return 1;
-}
-catch (Exception ex) // Unexpected errors
-{
-    _console.MarkupLine($"[red]Error:[/] Unexpected error: {ex.Message}");
-    return 1;
-}
+            └── JournalAlreadyExistsException
+            └── JournalrcNotFoundException
+            └── [other domain-specific exceptions]
 ```
 
 ## 📁 File System Abstraction
@@ -254,13 +187,32 @@ public interface ITemplateManager
 public interface IJournalConfiguration
 {
     void Create(string directory, JournalConfig config);
-    JournalConfig Read(string directory);
+    JournalConfig? Read(string directory);
     void Update(string directory, Action<JournalConfig> config);
+    void AddEntry(string directory, string name, string file, ...);
+    bool RemoveEntry(string directory, string file);
+    bool UpdateEntryName(string directory, string file, string newEntryName);
+    void UpdateFileReferences(string directory, string oldFile, string newFile);
+    (Entries? entry, string[] topicPath) FindEntry(string directory, string fileName);
 }
 ```
-- Handles `.journalrc` file operations
-- Supports complex journal configuration objects
-- Enables journal metadata and settings management
+- Handles all `.journalrc` CRUD operations
+- Supports complex nested topic/subtopic hierarchy
+- Provides entry find, rename, and file-reference update for rename workflows
+
+**`IJournalFileUpdateService`** - Orchestrates entry update operations
+```csharp
+public interface IJournalFileUpdateService
+{
+    void UpdateEntry(string directory, string currentFileName, ...);
+    void RenameEntry(string directory, string oldFile, string newFile);
+    void UpdateEntryLocation(string directory, string fileName, string[] newTopicPath, string displayName);
+    void UpdateEntryDisplayName(string directory, string fileName, string newDisplayName);
+    void SetIgnoreStatus(string directory, string fileName, bool ignored);
+}
+```
+- Orchestrates renaming, relocation, title changes, and ignore-status toggling
+- Updates all references: file system, tracking index, config, and TOC in a single operation
 
 ### Service Interaction Flow
 ```
@@ -280,11 +232,21 @@ AddEntry
     ├── IFileTracking.UpdateFileInIndex()
     └── ITableOfContentsGenerator.UpdateTableOfContents()
 
-UpdateCommand
+UpdateJournal
     ├── IFileTracking.DetectChangesWithoutUpdate()
     ├── MarkdownMetadataParser.UpdateLastEditedDate()
     ├── IJournalConfiguration.AddEntry() / RemoveEntry()
     └── ITableOfContentsGenerator.UpdateTableOfContents()
+
+UpdateEntry
+    └── IJournalFileUpdateService.UpdateEntry()
+            ├── IFileSystem.RenameFile()             (when renaming)
+            ├── IFileTracking.RenameFileInIndex()    (when renaming)
+            ├── IJournalConfiguration.UpdateFileReferences() (when renaming)
+            ├── IJournalConfiguration.UpdateEntryLocation()  (when moving heading)
+            ├── IJournalConfiguration.UpdateEntryName()      (when changing title)
+            ├── IJournalConfiguration.AddIgnoreEntry() / RemoveEntry() (ignore toggle)
+            └── ITableOfContentsGenerator.UpdateTableOfContents()
 
 AddJournalrc
     └── IJournalConfigGenerator.GenerateFromTableOfContents()
@@ -561,29 +523,35 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (634 tests)
+markdown-journal-cli.Tests/ (798 tests)
 ├── Commands/
-│   ├── NewCommandTests.cs          # New journal command tests
+│   ├── NewCommandTests.cs
 │   ├── Add/
-│   │   ├── AddEntryCommandTests.cs     # Entry creation tests
-│   │   ├── AddJournalrcCommandTests.cs # Config creation tests
-│   │   └── AddTableOfContentsCommandTests.cs
+│   │   ├── AddEntryCommandTests.cs
+│   │   ├── AddJournalrcCommandTests.cs
+│   │   ├── AddTableOfContentsCommandTests.cs
+│   │   └── AddTableOfContentsIntegrationTests.cs
 │   └── Update/
-│       └── UpdateCommandTests.cs   # Journal synchronization tests
+│       ├── UpdateCommandTests.cs
+│       └── UpdateEntryCommandTests.cs
 ├── Infrastructure/
-│   ├── FileSystemTests.cs          # File operations
-│   ├── FileTrackingTests.cs        # Change detection
-│   ├── HashServiceTests.cs         # SHA256 hashing
-│   ├── JournalConfigurationTests.cs # Config CRUD, natural sort
+│   ├── FileSystemTests.cs
+│   ├── FileTrackingTests.cs
+│   ├── HashServiceTests.cs
+│   ├── JournalConfigurationTests.cs
+│   ├── JournalConfigGeneratorTests.cs
 │   ├── MarkdownMetadataParserTests.cs
-│   ├── TestFileSystem.cs           # Mock file system
-│   └── TypeRegistrarTests.cs       # DI container
+│   ├── TableOfContentsMarkdownParserTests.cs
+│   ├── TestFileSystem.cs
+│   └── TypeRegistrarTests.cs
 ├── JournalTemplates/
-│   ├── JournalInitializerTests.cs  # Journal creation
-│   ├── TableOfContentsGeneratorTests.cs # TOC generation, parent-child
-│   └── TemplateManagerTests.cs     # Template processing
+│   ├── JournalInitializerTests.cs
+│   ├── TableOfContentsGeneratorTests.cs
+│   └── TemplateManagerTests.cs
 └── Services/
-    └── EntryFormatterServiceTests.cs # Entry name formatting
+    ├── EntryFormatterServiceTests.cs
+    ├── JournalFileUpdateServiceTests.cs
+    └── [other service tests]
 ```
 
 ### Testing Strategy
@@ -622,108 +590,42 @@ public class NewCommandTests
 
 ## 🔮 Future Architecture Considerations
 
-### Planned Enhancements
-
-**1. Configuration System**
-```csharp
-public interface IConfiguration
-{
-    string DefaultJournalPath { get; }
-    string DefaultEditor { get; }
-    JournalSettings GetJournalSettings(string name);
-}
-```
-
-**2. Plugin Architecture**
-```csharp
-public interface IJournalPlugin
-{
-    string Name { get; }
-    void ProcessEntry(JournalEntry entry);
-}
-```
-
-**3. Template System**
-```csharp
-public interface ITemplateEngine
-{
-    string RenderTemplate(string templateName, object data);
-}
-```
-
-**4. Async Operations**
-```csharp
-public interface IFileSystemAsync
-{
-    Task<bool> DirectoryExistsAsync(string path);
-    Task CreateDirectoryAsync(string path);
-}
-```
-
-### Scalability Considerations
-- **Command Organization** - May need command groups/categories as features grow
-- **Shared Services** - Logging, configuration, metrics services
-- **Performance** - Async operations for large journal operations
-- **Extensibility** - Plugin system for custom journal formats/processors
+- **`init` command** - Adopt an existing markdown directory as a journal (add `.journalrc`, tracking, TOC)
+- **Async file operations** - For large journals with many files
+- **Global configuration** - User-level defaults (default editor, date format, etc.)
+- **Plugin/extension points** - Custom template generators and entry processors
+- **`--check` flag** - Dry-run preview of changes before applying them
 
 ## 📋 Design Decisions Log
 
 ### Decision: Use Spectre.Console.Cli
-**Rationale:** Rich terminal UI, excellent command parsing, built-in help generation
+**Rationale:** Rich terminal UI, excellent command parsing, built-in help generation  
 **Alternatives:** System.CommandLine, custom argument parsing
-**Trade-offs:** Additional dependency, learning curve
 
 ### Decision: File System Abstraction
-**Rationale:** Testability, cross-platform compatibility
+**Rationale:** Testability, cross-platform compatibility  
 **Alternatives:** Direct file system calls
-**Trade-offs:** Additional complexity, slight performance overhead
 
 ### Decision: Custom Exception Hierarchy
-**Rationale:** Clear error categorization, better error handling
-**Alternatives:** Using generic exceptions with error codes
-**Trade-offs:** More classes to maintain, but much clearer error handling
+**Rationale:** Clear error categorization, better error handling  
+**Alternatives:** Generic exceptions with error codes
 
 ### Decision: Natural Sorting for Entries
-**Rationale:** Matches file system behavior, user expectations
-**Alternatives:** Lexicographic sorting (default string comparison)
-**Trade-offs:** Custom comparer implementation (~50 lines), but much better UX
-
-### Decision: Parent-Child Topic Detection
-**Rationale:** Cleaner TOC when topic name matches single entry
-**Alternatives:** Always render entries separately from topic headings
-**Trade-offs:** More complex rendering logic, but eliminates redundant entries
+**Rationale:** Matches file system behavior and user expectations (`file_5` before `file_10`)  
+**Alternatives:** Default lexicographic sorting
 
 ### Decision: SHA256 for File Hashing
-**Rationale:** Cryptographically secure, collision-resistant, standard library support
-**Alternatives:** MD5 (faster but deprecated), CRC32 (not secure)
-**Trade-offs:** Slightly slower than MD5, but appropriate for file integrity
-
-### Decision: Ignore Files in Configuration
-**Rationale:** Flexible control over TOC without deleting files
-**Alternatives:** Separate ignore file like .gitignore, file naming conventions
-**Trade-offs:** Requires configuration management, but provides fine-grained control
+**Rationale:** Collision-resistant, standard library support, appropriate for file integrity  
+**Alternatives:** MD5 (deprecated), CRC32 (not secure)
 
 ### Decision: Multi-Layer TOC Exclusion
-**Rationale:** Defense in depth prevents TOC file from appearing in its own contents
-**Alternatives:** Single point of checking (e.g., only at render time)
-**Trade-offs:** More code complexity (4 check points), but bulletproof against edge cases
+**Rationale:** Defense in depth prevents the TOC file from appearing in its own contents  
+**Alternatives:** Single check at render time
 
 ### Decision: Automatic Last Edited Updates
-**Rationale:** Reduces manual maintenance, leverages existing change detection
+**Rationale:** Reduces manual maintenance, leverages existing change detection  
 **Alternatives:** Manual date updates, file system modification times
-**Trade-offs:** Modifies file content (not just metadata), but provides consistent, visible tracking
-**Trade-offs:** Centralized in .journalrc, easier to manage but less discoverable
 
 ### Decision: Constructor Injection over Property Injection
-**Rationale:** Explicit dependencies, immutable after construction
+**Rationale:** Explicit dependencies, immutable after construction  
 **Alternatives:** Property injection, service locator
-**Trade-offs:** More verbose constructors, but much clearer dependencies
-
-## 🤔 Architectural Questions for Future Discussion
-
-- Should we implement a repository pattern for journal storage?
-- How should we handle journal metadata (creation date, tags, etc.)?
-- Should we support multiple journal formats (Markdown, Org-mode, etc.)?
-- How should we handle journal encryption/security?
-- Should we implement a journal indexing/search system?
-- How should we handle journal templates and customization?

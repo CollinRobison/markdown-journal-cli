@@ -55,4 +55,13 @@ public interface IFileTracking
     /// <param name="path">the journal directory path.</param>
     /// <param name="relativeFilePath">the relative file path of file to update in index.</param>
     public void RemoveFileFromIndex(string path, string relativeFilePath);
+
+    /// <summary>
+    /// Rename a file in the index: removes the old entry and adds the new one with a freshly
+    /// computed hash and timestamp.  Performs a single load/save cycle.
+    /// </summary>
+    /// <param name="path">the journal directory path.</param>
+    /// <param name="oldRelativeFilePath">the relative file path of the old (source) file.</param>
+    /// <param name="newRelativeFilePath">the relative file path of the new (destination) file.</param>
+    public void RenameFileInIndex(string path, string oldRelativeFilePath, string newRelativeFilePath);
 }

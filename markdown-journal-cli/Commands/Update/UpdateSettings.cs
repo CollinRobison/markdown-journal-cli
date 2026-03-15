@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Update;
@@ -37,3 +38,67 @@ public class UpdateJournalSettings : UpdateSettings
     [Description("Flag to update the table of contents.")]
     public bool TocFlag { get; set; }
 }
+
+public class UpdateEntrySettings : UpdateSettings
+{
+    [CommandArgument(0, "<fileName>")]
+    [Description("The name of the file you want to update. this can be with or without the .md file extension.")]
+    public required string FileName {get; set;}
+
+    [CommandOption("-n|--name")]
+    [Description(
+        "The new name for the entry (last filename segment only). "
+        + "Updates both the file name and TOC title when they currently match, unless --title is also specified. "
+        + "To change the heading location use -h|--headings."
+    )]
+    public string? EntryName { get; set; }
+
+    [CommandOption("-t|--title")]
+    [Description("The title of the journal entry. This is the name that will show on the TOC.")]
+    public string? EntryTitle { get; set; }
+
+    [CommandOption("-h|--headings")]
+    [Description(
+        "The new location in the TOC hierarchy. Use - to separate heading levels and _ for spaces within heading names. "
+            + "Example: 'Projects-2024_Goals' creates nested headings. If you use spaces without - separators, "
+            + "the entire string is treated as a single heading. Recommended: use _ for clarity."
+    )]
+    public string? Headings { get; set; }
+
+    [CommandOption("--ignore")]
+    [Description("Add this entry to the ignore list so it won't appear in the table of contents.")]
+    public bool IgnoreFile { get; set; }
+
+    [CommandOption("--unignore")]
+    [Description("Remove this entry from the ignore list so it will appear in the table of contents.")]
+    public bool UnignoreFile { get; set; }
+
+    public override ValidationResult Validate()
+    {
+        if (IgnoreFile && UnignoreFile)
+        {
+            return ValidationResult.Error(
+                "Cannot specify both --ignore and --unignore flags."
+            );
+        }
+
+        if (!string.IsNullOrEmpty(EntryName) && !EntryName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' '))
+        {
+            return ValidationResult.Error(
+                "Entry name may only contain letters, digits, underscores, and spaces. Use -h|--headings to set the heading location."
+            );
+        }
+        if (
+            !string.IsNullOrEmpty(Headings)
+            && !Headings.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' ' || c == '-')
+        )
+        {
+            return ValidationResult.Error(
+                "Headings contains a character that is not a letter, digit, underscore, space, or hyphen."
+            );
+        }
+
+        return ValidationResult.Success();
+    }
+}
+

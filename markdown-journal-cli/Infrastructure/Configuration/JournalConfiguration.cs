@@ -323,12 +323,16 @@ public class JournalConfiguration(
             return;
         }
 
-        // Extract filename without path and extension
-        var fileName = Path.GetFileNameWithoutExtension(file);
+        // If ignoring file, only add to ignore list and skip structure
         if (ignoreFile)
         {
             AddIgnoreEntry(directory, file);
+            _logger.LogDebug("File '{File}' added to ignore list only (not added to structure)", file);
+            return;
         }
+
+        // Extract filename without path and extension
+        var fileName = Path.GetFileNameWithoutExtension(file);
         if (IsRootEntry(fileName))
         {
             // File matches root entry pattern (1a-9z), add as root entry
@@ -475,6 +479,53 @@ public class JournalConfiguration(
         {
             AddEntry(directory, string.Empty, file);
         }
+    }
+
+    public (Entries? entry, string[] topicPath) FindEntry(string directory, string fileName)
+    {
+        var config = Read(directory);
+        if (config == null)
+        {
+            return (null, []);
+        }
+
+        // Search in root entries first
+        foreach (var entry in config.TableOfContents.RootEntries)
+        {
+            if (string.Equals(entry.File, fileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return (entry, []);
+            }
+        }
+
+        // Search in topics recursively
+        return FindInTopics(config.TableOfContents.Structure.Topics, fileName, []);
+    }
+
+    public void UpdateFileReferences(string directory, string oldFile, string newFile)
+    {
+        Update(directory, config =>
+        {
+            // Update root entries
+            foreach (var entry in config.TableOfContents.RootEntries)
+            {
+                if (string.Equals(entry.File, oldFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.File = newFile;
+                }
+            }
+
+            // Update topic entries recursively
+            UpdateFileInTopics(config.TableOfContents.Structure.Topics, oldFile, newFile);
+
+            // Update ignore list
+            if (config.TableOfContents.IgnoreFiles is { Length: > 0 })
+            {
+                config.TableOfContents.IgnoreFiles = config.TableOfContents.IgnoreFiles
+                    .Select(f => string.Equals(f, oldFile, StringComparison.OrdinalIgnoreCase) ? newFile : f)
+                    .ToArray();
+            }
+        });
     }
 
     #region Private Helper Methods
@@ -820,6 +871,63 @@ public class JournalConfiguration(
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Recursively searches topics for the given file name, returning the matching entry and the
+    /// accumulated topic path.
+    /// </summary>
+    private static (Entries? entry, string[] path) FindInTopics(
+        Topic[] topics,
+        string fileName,
+        List<string> currentPath
+    )
+    {
+        foreach (var topic in topics)
+        {
+            var pathWithTopic = new List<string>(currentPath) { topic.Name };
+
+            foreach (var entry in topic.Entries)
+            {
+                if (string.Equals(entry.File, fileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (entry, pathWithTopic.ToArray());
+                }
+            }
+
+            if (topic.Subtopics is { Length: > 0 })
+            {
+                var (found, path) = FindInTopics(topic.Subtopics, fileName, pathWithTopic);
+                if (found is not null)
+                {
+                    return (found, path);
+                }
+            }
+        }
+
+        return (null, []);
+    }
+
+    /// <summary>
+    /// Recursively updates the file reference in all topic and subtopic entries.
+    /// </summary>
+    private static void UpdateFileInTopics(Topic[] topics, string oldFile, string newFile)
+    {
+        foreach (var topic in topics)
+        {
+            foreach (var entry in topic.Entries)
+            {
+                if (string.Equals(entry.File, oldFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.File = newFile;
+                }
+            }
+
+            if (topic.Subtopics is { Length: > 0 })
+            {
+                UpdateFileInTopics(topic.Subtopics, oldFile, newFile);
+            }
+        }
     }
 
     #endregion
