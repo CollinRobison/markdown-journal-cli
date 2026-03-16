@@ -1,4 +1,5 @@
 ﻿using markdown_journal_cli.Commands.Add;
+using markdown_journal_cli.Commands.Init;
 using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Infrastructure.Configuration;
@@ -42,6 +43,7 @@ public static class Program
         host.Services.AddSingleton<ITemplateManager, TemplateManager>();
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
         host.Services.AddSingleton<INewJournalService, NewJournalService>();
+        host.Services.AddSingleton<IInitJournalService, InitJournalService>();
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
         host.Services.AddSingleton<IHashService, HashService>();
         host.Services.AddSingleton<IFileTracking, FileTracking>();
@@ -55,6 +57,7 @@ public static class Program
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
+        host.Services.AddSingleton<InitCommand>();
         host.Services.AddSingleton<AddEntry>();
         host.Services.AddSingleton<AddJournalrc>();
         host.Services.AddSingleton<AddTableOfContents>();
@@ -92,6 +95,9 @@ public static class Program
 
             // New
             config.AddCommand<NewCommand>("new");
+
+            // Init
+            config.AddCommand<InitCommand>("init");
 
             config.AddBranch<AddSettings>(
                 "add",
