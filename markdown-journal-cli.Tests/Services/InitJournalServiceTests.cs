@@ -2,7 +2,6 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
@@ -18,9 +17,9 @@ namespace markdown_journal_cli.Tests.Services;
 public class InitJournalServiceTests
 {
     private readonly Mock<IFileSystem> _mockFileSystem;
-    private readonly Mock<ITemplateManager> _mockTemplateManager;
     private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
     private readonly Mock<IFileTracking> _mockFileTracking;
+    private readonly Mock<ITableOfContentsService> _mockTableOfContentsService;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly InitJournalService _service;
 
@@ -31,9 +30,9 @@ public class InitJournalServiceTests
     public InitJournalServiceTests()
     {
         _mockFileSystem = new Mock<IFileSystem>();
-        _mockTemplateManager = new Mock<ITemplateManager>();
         _mockJournalConfiguration = new Mock<IJournalConfiguration>();
         _mockFileTracking = new Mock<IFileTracking>();
+        _mockTableOfContentsService = new Mock<ITableOfContentsService>();
 
         _journalSettings = Options.Create(
             new JournalSettings
@@ -43,19 +42,15 @@ public class InitJournalServiceTests
             }
         );
 
-        _mockTemplateManager
-            .Setup(t => t.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>()))
-            .Returns("toc content");
-
         _mockFileSystem
             .Setup(f => f.CombinePaths(It.IsAny<string[]>()))
             .Returns((string[] parts) => Path.Combine(parts));
 
         _service = new InitJournalService(
             _mockFileSystem.Object,
-            _mockTemplateManager.Object,
             _mockJournalConfiguration.Object,
             _mockFileTracking.Object,
+            _mockTableOfContentsService.Object,
             _journalSettings
         );
     }
@@ -109,8 +104,8 @@ public class InitJournalServiceTests
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileSystem.Verify(
-            f => f.CreateMarkdownFile(JournalDirectory, DefaultTocName, It.IsAny<string>()),
+        _mockTableOfContentsService.Verify(
+            t => t.UpdateTableOfContents(JournalDirectory, It.IsAny<DateTime?>(), It.IsAny<DateTime?>()),
             Times.Once
         );
     }
@@ -129,27 +124,31 @@ public class InitJournalServiceTests
     public void Initialize_UsesTocNameFromParameter_WhenProvided()
     {
         const string customToc = "my-custom-toc";
+        JournalConfig? capturedConfig = null;
         _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        _mockJournalConfiguration
+            .Setup(c => c.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
+            .Callback<string, JournalConfig>((_, cfg) => capturedConfig = cfg);
 
         _service.Initialize(JournalDirectory, JournalName, customToc);
 
-        _mockFileSystem.Verify(
-            f => f.CreateMarkdownFile(JournalDirectory, customToc, It.IsAny<string>()),
-            Times.Once
-        );
+        capturedConfig.ShouldNotBeNull();
+        capturedConfig!.TableOfContents.File.ShouldBe($"{customToc}.md");
     }
 
     [Fact]
     public void Initialize_UsesDefaultTocName_WhenParameterIsNull()
     {
+        JournalConfig? capturedConfig = null;
         _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        _mockJournalConfiguration
+            .Setup(c => c.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
+            .Callback<string, JournalConfig>((_, cfg) => capturedConfig = cfg);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileSystem.Verify(
-            f => f.CreateMarkdownFile(JournalDirectory, DefaultTocName, It.IsAny<string>()),
-            Times.Once
-        );
+        capturedConfig.ShouldNotBeNull();
+        capturedConfig!.TableOfContents.File.ShouldBe($"{DefaultTocName}.md");
     }
 
     #endregion
