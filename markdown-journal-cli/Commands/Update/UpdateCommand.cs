@@ -53,44 +53,61 @@ public sealed class UpdateCommand(
                 !settings.DateFlag
                 && !settings.ConfigFlag
                 && !settings.TocFlag
-                && !settings.Tracking;
+                && !settings.Tracking
+                && settings.RenameToc is null;
 
             if (
-                (all || settings.ConfigFlag || settings.TocFlag)
+                (all || settings.ConfigFlag || settings.TocFlag || settings.RenameToc is not null)
                 && !_fileSystem.FileExists(journalrcPath)
             )
             {
                 throw new JournalrcNotFoundException(settings.FilePath);
             }
 
-            var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
-
-            if (!fileResults.HasChanges)
+            // --rename-toc is not a change-detection operation — handle it first and independently
+            if (settings.RenameToc is not null)
             {
-                _console.MarkupLine("[green]Everything is up to date.[/]");
-                return 0;
+                _journalUpdateService.RenameToc(settings.FilePath, settings.RenameToc);
             }
 
-            if (all || settings.DateFlag || settings.Tracking)
+            // For the remaining update operations we need to detect tracked file changes
+            if (all || settings.DateFlag || settings.Tracking || settings.ConfigFlag || settings.TocFlag)
             {
-                _journalUpdateService.UpdateLastEditedDatesAndTracking(
-                    settings.FilePath,
-                    fileResults,
-                    settings.Tracking
-                );
-            }
+                var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
 
-            if (all || settings.ConfigFlag)
-            {
-                _journalUpdateService.UpdateJournalConfig(settings.FilePath, fileResults);
-            }
+                if (!fileResults.HasChanges)
+                {
+                    if (settings.RenameToc is null)
+                        _console.MarkupLine("[green]Everything is up to date.[/]");
+                    return 0;
+                }
 
-            if (all || settings.TocFlag)
-            {
-                _journalUpdateService.UpdateTableOfContents(settings.FilePath);
+                if (all || settings.DateFlag || settings.Tracking)
+                {
+                    _journalUpdateService.UpdateLastEditedDatesAndTracking(
+                        settings.FilePath,
+                        fileResults,
+                        settings.Tracking
+                    );
+                }
+
+                if (all || settings.ConfigFlag)
+                {
+                    _journalUpdateService.UpdateJournalConfig(settings.FilePath, fileResults);
+                }
+
+                if (all || settings.TocFlag)
+                {
+                    _journalUpdateService.UpdateTableOfContents(settings.FilePath);
+                }
             }
 
             return 0;
+        }
+        catch (TocRenameConflictException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            return 1;
         }
         catch (JournalrcNotFoundException ex)
         {

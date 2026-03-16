@@ -1,4 +1,5 @@
 using markdown_journal_cli.Commands.Update;
+using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
@@ -66,7 +67,9 @@ public class UpdateCommandTests
             _journalConfiguration,
             _fileTracking,
             _tableOfContentsGenerator,
-            _journalSettings
+            _journalSettings,
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NullLogger<JournalUpdateService>.Instance
         );
 
         _fileSystem.CreateDirectory(_testPath);
@@ -266,7 +269,7 @@ public class UpdateCommandTests
         // Date should NOT have been updated - tracking only
         updatedContent.ShouldContain("Last Edited: 01/01/2024");
         updatedContent.ShouldContain("Created: 01/01/2024");
-        _console.Output.ShouldContain("Updated:");
+        _console.Output.ShouldContain("Updated dates for 1 file(s).");
 
         // But tracking index should be updated - verify no changes on next check
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
@@ -329,7 +332,7 @@ public class UpdateCommandTests
 
         // Assert
         result.ShouldBe(0);
-        _console.Output.ShouldContain("Tracked:");
+        _console.Output.ShouldContain("Tracked 1 new file(s).");
 
         // Verify file is now tracked
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
@@ -360,7 +363,7 @@ public class UpdateCommandTests
 
         // Assert
         result.ShouldBe(0);
-        _console.Output.ShouldContain("Removed:");
+        _console.Output.ShouldContain("Removed 1 deleted file(s) from tracking.");
 
         // Verify file is removed from tracking
         var changeResults = _fileTracking.DetectChangesWithoutUpdate(_testPath);
@@ -635,7 +638,9 @@ public class UpdateCommandTests
             customConfig,
             tracking,
             customTocGen,
-            customSettings
+            customSettings,
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NullLogger<JournalUpdateService>.Instance
         );
         var command = new UpdateCommand(
             _console,
@@ -812,6 +817,11 @@ public class UpdateCommandTests
 
     #region Config Update
 
+    private void SetupTrackingFile()
+    {
+        _fileTracking.UpdateIndex(_testPath);
+    }
+
     private void SetupJournalConfig()
     {
         var config = new markdown_journal_cli.Infrastructure.Configuration.Models.JournalConfig
@@ -893,7 +903,7 @@ public class UpdateCommandTests
                 t.Entries.Any(e => e.File == "Learning-Rust.md")
             )
             .ShouldBeFalse();
-        _console.Output.ShouldContain("Config removed");
+        _console.Output.ShouldContain("Journal configuration updated.");
     }
 
     [Fact]
@@ -1330,6 +1340,134 @@ public class UpdateCommandTests
         updatedConfig.ShouldNotBeNull();
         updatedConfig.TableOfContents.RootEntries.ShouldBeEmpty();
         _console.Output.ShouldNotContain("Config added: custom-toc.md");
+    }
+
+    #endregion
+
+    #region RenameToc
+
+    [Fact]
+    public void Execute_CallsRenameToc_WhenRenameTocFlagProvided()
+    {
+        // Arrange — seed files so tracking and .journalrc exist
+        SetupTrackingFile();
+        SetupJournalConfig();
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings
+        {
+            FilePath = _testPath,
+            RenameToc = "MyContents",
+        };
+
+        // Create the current TOC file so RenameFile doesn't throw
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
+        _fileTracking.UpdateFileInIndex(_testPath, "1a-TableOfContents.md");
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        // Config should reflect the new TOC filename
+        var config = _journalConfiguration.Read(_testPath);
+        config!.TableOfContents.File.ShouldBe("MyContents.md");
+        _console.Output.ShouldContain("Renamed TOC:");
+    }
+
+    [Fact]
+    public void Execute_ReturnsOne_AndPrintsError_WhenTocRenameConflictExceptionThrown()
+    {
+        // Arrange — create both the current TOC and a conflicting file
+        SetupTrackingFile();
+        SetupJournalConfig();
+
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
+        _fileSystem.CreateFile(_testPath, "MyContents.md", "# Conflicting file");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings
+        {
+            FilePath = _testPath,
+            RenameToc = "MyContents",
+        };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+        _console.Output.ShouldContain("MyContents.md");
+    }
+
+    [Fact]
+    public void Execute_CallsRenameTocAndOtherUpdates_WhenCombinedWithOtherFlags()
+    {
+        // Arrange — create TOC and a note with a known hash, then simulate modification.
+        // Goal: verify --rename-toc + --date can coexist in a single invocation.
+        SetupJournalConfig();
+
+        var tocPath = Path.Combine(_testPath, "1a-TableOfContents.md");
+        var notePath = Path.Combine(_testPath, "note.md");
+
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
+        _fileSystem.CreateFile(
+            _testPath,
+            "note.md",
+            "Created: 01/01/2025\n# Note\nContent."
+        );
+        _hashService.SetHash(tocPath, "hash-a-toc");
+        _hashService.SetHash(notePath, "hash-a-note");
+        _fileTracking.UpdateIndex(_testPath);
+
+        // Mark note.md as modified for next detection pass
+        _hashService.SetHash(notePath, "hash-b-note");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings
+        {
+            FilePath = _testPath,
+            RenameToc = "MyContents",
+            DateFlag = true,
+        };
+
+        // Act
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        // Assert — command succeeds and TOC rename happened
+        result.ShouldBe(0);
+        _fileSystem.FileExists(Path.Combine(_testPath, "MyContents.md")).ShouldBeTrue();
+        _fileSystem.FileExists(tocPath).ShouldBeFalse();
+        // .journalrc config was updated
+        var config = _journalConfiguration.Read(_testPath);
+        config!.TableOfContents.File.ShouldBe("MyContents.md");
+        // No error output
+        _console.Output.ShouldNotContain("Error:");
+        // Rename was reported
+        _console.Output.ShouldContain("Renamed TOC:");
+    }
+
+    [Fact]
+    public void Execute_DoesNotCallRenameToc_WhenNoFlagsProvided()
+    {
+        // Arrange — "all" mode: no explicit flags, no --rename-toc
+        SetupTrackingFile();
+        SetupJournalConfig();
+
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
+        _fileTracking.UpdateFileInIndex(_testPath, "1a-TableOfContents.md");
+
+        var command = CreateCommand();
+        // No RenameToc set → all = true path, should not rename
+        var settings = new UpdateJournalSettings { FilePath = _testPath };
+
+        // Act
+        command.Execute(CreateCommandContext(), settings);
+
+        // Assert — TOC is still under the original name
+        _fileSystem.FileExists(Path.Combine(_testPath, "1a-TableOfContents.md")).ShouldBeTrue();
+        _console.Output.ShouldNotContain("Renamed TOC:");
     }
 
     #endregion

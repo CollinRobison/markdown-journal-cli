@@ -190,4 +190,17 @@ public class TestFileSystem : IFileSystem
 
         return files;
     }
+
+    public IReadOnlyList<string> GetMarkdownFiles(string directory)
+    {
+        var normalizedDirectory = directory.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar
+        );
+        var prefix = normalizedDirectory + Path.DirectorySeparatorChar;
+
+        return GetFiles(directory, "*.md", SearchOption.AllDirectories)
+            .Select(f => f.StartsWith(prefix) ? f.Substring(prefix.Length) : f)
+            .ToList();
+    }
 }

@@ -91,4 +91,17 @@ public class FileSystem : IFileSystem
     {
         return Directory.GetFiles(path, searchPattern, searchOption);
     }
+
+    public IReadOnlyList<string> GetMarkdownFiles(string directory)
+    {
+        var normalizedDirectory = directory.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar
+        );
+        var prefix = normalizedDirectory + Path.DirectorySeparatorChar;
+
+        return GetFiles(directory, "*.md", SearchOption.AllDirectories)
+            .Select(f => f.StartsWith(prefix) ? f.Substring(prefix.Length) : f)
+            .ToList();
+    }
 }

@@ -86,6 +86,9 @@ mdjournal update --path ~/Documents/MyJournal journal --dates     # Only update 
 mdjournal update --path ~/Documents/MyJournal journal --tracking  # Only update tracking index without metadata
 mdjournal update --path ~/Documents/MyJournal journal --toc       # Only update table of contents
 
+# Rename the TOC file and update all references
+mdjournal update --path ~/Documents/MyJournal journal --rename-toc MyContents
+
 # Rename an entry and update all references
 mdjournal update --path ~/Documents/MyJournal entry my_entry --name new_name
 
@@ -220,6 +223,7 @@ mdjournal update journal [options]
 - `-d|--dates` - Only update "Last Edited:" dates for modified files and update tracking
 - `-t|--tracking` - Only update tracking index without modifying "Last Edited:" metadata (overrides `--dates`)
 - `--toc|--tableofcontents` - Only regenerate the table of contents
+- `--rename-toc <name>` - Rename the TOC file to `<name>.md`, update `.journalrc`, rewrite all inline link references across the journal, and stamp "Last Edited" on every changed file
 
 **Behavior:**
 - **Without flags**: Updates configuration, dates, and TOC (equivalent to `--config --dates --toc`)
@@ -227,6 +231,7 @@ mdjournal update journal [options]
 - **Tracking override**: When `--tracking` is specified with `--dates`, tracking takes precedence and metadata is not modified
 - **Change Detection**: Uses SHA256 hashing to identify added, modified, and deleted files. 
 - **TOC File Exclusion**: Automatically prevents the TOC file from appearing as an entry in its own contents
+- **`--rename-toc` is independent**: Runs before change-detection operations; can be combined with other flags
 
 **Examples:**
 ```bash
@@ -245,6 +250,9 @@ mdjournal update journal --path ~/Documents/MyJournal --tracking
 # Only regenerate the table of contents
 mdjournal update journal --path ~/Documents/MyJournal --toc
 
+# Rename the TOC file and rewrite all references to it
+mdjournal update journal --path ~/Documents/MyJournal --rename-toc MyContents
+
 # Update both config and TOC, but skip dates
 mdjournal update journal --path ~/Documents/MyJournal --config --toc
 ```
@@ -254,6 +262,7 @@ mdjournal update journal --path ~/Documents/MyJournal --config --toc
 - **Dates (`--dates`)**: Updates "Last Edited:" metadata in modified files and refreshes the tracking index
 - **Tracking (`--tracking`)**: Updates tracking index without modifying "Last Edited:" metadata (useful for resynchronizing without changing file contents)
 - **Table of Contents (`--toc`)**: Regenerates the TOC markdown file from current configuration
+- **Rename TOC (`--rename-toc <name>`)**: Renames the TOC file on disk, updates `.journalrc`, rewrites all inline markdown link references across the journal, and stamps "Last Edited" on every modified file. Pass the stem only — `.md` is appended automatically. Errors if a file named `<name>.md` already exists.
 
 ### `update entry` - Update a Journal Entry
 Renames an entry file, changes its TOC title, moves it to a different heading, or updates its ignore status. All referenced locations (config, tracking index, TOC) are updated atomically.
@@ -315,8 +324,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **798+ passing unit tests** covering core functionality
-- ✅ Service-oriented architecture with dependency injection
+- ✅ **818+ passing unit tests** covering core functionality- ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
 - ✅ **File tracking and change detection** using SHA256 hashing
@@ -330,7 +338,8 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 **Planned Features:**
 - ⏳ `init` command — adopt an existing markdown directory as a journal
-- ⏳ `update entry --rename-toc` — rename the TOC file and update all references
+- ✅ **`--rename-toc` flag** for `update journal` — rename the TOC file, update `.journalrc`, and rewrite all link references
+- ✅ **`IMarkdownLinkRewriter` infrastructure** — reusable inline-link rewrite service, foundation for future file-rename operations
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
 - ⏳ `--version` flag

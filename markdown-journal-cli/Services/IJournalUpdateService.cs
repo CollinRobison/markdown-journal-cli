@@ -24,4 +24,18 @@ public interface IJournalUpdateService
     /// Regenerates the table of contents markdown file from the current journal configuration.
     /// </summary>
     public void UpdateTableOfContents(string journalPath);
+
+    /// <summary>
+    /// Renames the journal's table-of-contents file to <paramref name="newTocName"/>,
+    /// updates the .journalrc configuration, and rewrites all markdown inline link references
+    /// to the old TOC filename in other journal files, updating Last Edited dates and
+    /// the tracking index for each modified file.
+    /// If the TOC is already named correctly, only the link-reference check is performed.
+    /// </summary>
+    /// <param name="journalPath">The root path of the journal.</param>
+    /// <param name="newTocName">The desired stem of the new TOC file (no extension).</param>
+    /// <exception cref="markdown_journal_cli.Exceptions.TocRenameConflictException">
+    /// Thrown when a file named <paramref name="newTocName"/>.md already exists and is not the current TOC.
+    /// </exception>
+    public void RenameToc(string journalPath, string newTocName);
 }

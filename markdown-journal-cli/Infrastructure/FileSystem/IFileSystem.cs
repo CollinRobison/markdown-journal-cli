@@ -182,4 +182,12 @@ public interface IFileSystem
     /// <exception cref="IOException">Thrown when an I/O error occurs.</exception>
     /// <exception cref="UnauthorizedAccessException">Thrown when the caller does not have permission to access the directory.</exception>
     string[] GetFiles(string path, string searchPattern, SearchOption searchOption);
+
+    /// <summary>
+    /// Returns the relative paths of all markdown files found recursively under
+    /// <paramref name="directory"/>, relative to that directory.
+    /// </summary>
+    /// <param name="directory">The root directory to search.</param>
+    /// <returns>A read-only list of relative paths (e.g. <c>notes/intro.md</c>).</returns>
+    IReadOnlyList<string> GetMarkdownFiles(string directory);
 }
