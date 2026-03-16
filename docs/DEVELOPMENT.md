@@ -60,6 +60,8 @@ markdown-journal-cli/
 │   │   ├── FileSystem/           # File system abstraction
 │   │   │   ├── IFileSystem.cs
 │   │   │   ├── FileSystem.cs
+│   │   │   ├── IMarkdownLinkRewriter.cs   # Inline link rewriting interface
+│   │   │   ├── MarkdownLinkRewriter.cs    # Compiled-regex link rewriter implementation
 │   │   │   └── MarkdownMetadataParser.cs
 │   │   └── Tracking/             # File change detection
 │   │       ├── IFileTracking.cs
@@ -78,12 +80,14 @@ markdown-journal-cli/
 │   ├── Services/                  # Business logic services
 │   │   ├── IEntryFormatterService.cs
 │   │   ├── EntryFormatterService.cs
+│   │   ├── IJournalUpdateService.cs        # + RenameToc method
+│   │   ├── JournalUpdateService.cs         # + RenameToc implementation; IMarkdownLinkRewriter injected
 │   │   ├── IJournalFileUpdateService.cs
 │   │   └── JournalFileUpdateService.cs
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (798 tests)
+├── markdown-journal-cli.Tests/    # Unit tests (818 tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
 │   │   ├── Add/
@@ -93,17 +97,19 @@ markdown-journal-cli/
 │   │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   │   └── AddTableOfContentsIntegrationTests.cs
 │   │   └── Update/
-│   │       ├── UpdateCommandTests.cs
+│   │       ├── UpdateCommandTests.cs          # + --rename-toc dispatch tests
 │   │       └── UpdateEntryCommandTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
-│   │   ├── FileSystemTests.cs
+│   │   ├── FileSystem/
+│   │   │   ├── FileSystemTests.cs
+│   │   │   ├── MarkdownLinkRewriterTests.cs   # new: inline-link rewriting unit tests
+│   │   │   ├── MarkdownMetadataParserTests.cs
+│   │   │   └── TestFileSystem.cs
 │   │   ├── FileTrackingTests.cs
 │   │   ├── HashServiceTests.cs
 │   │   ├── JournalConfigurationTests.cs
 │   │   ├── JournalConfigGeneratorTests.cs
-│   │   ├── MarkdownMetadataParserTests.cs
 │   │   ├── TableOfContentsMarkdownParserTests.cs
-│   │   ├── TestFileSystem.cs
 │   │   └── TypeRegistrarTests.cs
 │   ├── JournalTemplates/         # Template and initialization tests
 │   │   ├── JournalInitializerTests.cs
@@ -111,6 +117,7 @@ markdown-journal-cli/
 │   │   └── TemplateManagerTests.cs
 │   └── Services/
 │       ├── EntryFormatterServiceTests.cs
+│       ├── JournalUpdateServiceTests.cs       # + RenameToc test cases
 │       └── JournalFileUpdateServiceTests.cs
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
@@ -547,6 +554,7 @@ host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
 host.Services.AddSingleton<IHashService, HashService>(); 
 host.Services.AddSingleton<IFileTracking, FileTracking>();
 host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
+host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -575,6 +583,13 @@ Implemented in `TableOfContentsGenerator.cs`:
 - Files in `.journalrc` `ignoreFiles` array are excluded from TOC
 - Still tracked in file system and configuration
 - Useful for draft entries or non-public content
+
+**IMarkdownLinkRewriter Pattern**
+- **Purpose**: Stateless infrastructure service for finding and rewriting inline markdown links `[text](file.md)` across a journal directory
+- **Benefits**: Reusable across future rename operations (e.g. `update entry --name`); keeps service orchestrators free of file-enumeration and regex details
+- **Features**: Pure string `RewriteLinks`, read-only `FindFilesWithLinkTo`, bulk `ReplaceLinksInDirectory` that scans/rewrites/persists in one call; `RegexOptions.Compiled` for multi-file performance
+- **Scope**: Inline links only — reference-style links (`[text][ref]`) are out of scope for this iteration
+- **Example**: Used by `JournalUpdateService.RenameToc` to rewrite all references to the old TOC filename
 
 ## 🏗️ Service Architecture Patterns
 
@@ -670,8 +685,10 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ `add` command branch with entry, config, toc, and tracking subcommands
 - ✅ `update journal` command for journal synchronization (config, dates, TOC)
 - ✅ `update entry` command for renaming, relocating, and ignoring entries
+- ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
+- ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (798 tests passing)
+- ✅ Testing framework setup (818 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing

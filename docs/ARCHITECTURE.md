@@ -22,6 +22,7 @@ This document provides detailed technical information about the Markdown Journal
                     │  • IFileTracking / IHashService       │
                     │  • IEntryFormatterService             │
                     │  • IFileSystem                        │
+                    │  • IMarkdownLinkRewriter              │
                     │  • ITemplateManager                   │
                     └─────────────────────────────────────────┘
 ```
@@ -92,6 +93,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
    - `IHashService` → `HashService` (SHA256 hashing)
    - `IEntryFormatterService` → `EntryFormatterService` (Entry name formatting)
    - `IJournalFileUpdateService` → `JournalFileUpdateService` (Entry rename/move/ignore)
+   - `IMarkdownLinkRewriter` → `MarkdownLinkRewriter` (Inline link rewriting)
 3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
@@ -107,8 +109,9 @@ public sealed class TypeRegistrar : ITypeRegistrar
 ```
 System.Exception
     └── JournalException (Base for all journal errors)
-            └── JournalAlreadyExistsException
-            └── JournalrcNotFoundException
+            ├── JournalAlreadyExistsException
+            ├── JournalrcNotFoundException
+            ├── TocRenameConflictException   ← thrown when --rename-toc target filename is already in use
             └── [other domain-specific exceptions]
 ```
 
@@ -121,6 +124,14 @@ public interface IFileSystem
     bool DirectoryExists(string path);
     void CreateDirectory(string path);
     string CombinePaths(params string[] paths);
+    void RenameFile(string oldPath, string newPath);
+    // ...
+    /// <summary>
+    /// Returns the relative paths of all markdown (.md) files found recursively
+    /// under <paramref name="directory"/>, relative to that directory.
+    /// Added to support IMarkdownLinkRewriter scanning without coupling to System.IO.
+    /// </summary>
+    IReadOnlyList<string> GetMarkdownFiles(string directory);
 }
 ```
 
@@ -200,8 +211,7 @@ public interface IJournalConfiguration
 - Supports complex nested topic/subtopic hierarchy
 - Provides entry find, rename, and file-reference update for rename workflows
 
-**`IJournalFileUpdateService`** - Orchestrates entry update operations
-```csharp
+**`IJournalFileUpdateService`** - Orchestrates entry update operations```csharp
 public interface IJournalFileUpdateService
 {
     void UpdateEntry(string directory, string currentFileName, ...);
@@ -213,6 +223,23 @@ public interface IJournalFileUpdateService
 ```
 - Orchestrates renaming, relocation, title changes, and ignore-status toggling
 - Updates all references: file system, tracking index, config, and TOC in a single operation
+
+**`IMarkdownLinkRewriter`** - Reusable inline-link rewriting infrastructure
+```csharp
+public interface IMarkdownLinkRewriter
+{
+    string RewriteLinks(string content, string oldFileName, string newFileName);
+    IReadOnlyList<string> FindFilesWithLinkTo(string directory, string fileName);
+    IReadOnlyList<string> ReplaceLinksInDirectory(
+        string directory, string oldFileName, string newFileName,
+        IReadOnlyCollection<string>? excludeFiles = null);
+}
+```
+- Stateless, reusable — designed to serve any future file-rename operation
+- `RewriteLinks` is a pure string transformation (regex, no I/O)
+- `ReplaceLinksInDirectory` is the preferred bulk API: scans, rewrites, and persists all changed files in one call, returning the list of modified relative paths
+- Matches only inline links `[text](path/file.md)`; reference-style links are out of scope for this iteration
+- Uses `RegexOptions.Compiled` — the pattern is JIT-compiled once and reused across every `.md` file in the journal
 
 ### Service Interaction Flow
 ```
@@ -247,6 +274,19 @@ UpdateEntry
             ├── IJournalConfiguration.UpdateEntryName()      (when changing title)
             ├── IJournalConfiguration.AddIgnoreEntry() / RemoveEntry() (ignore toggle)
             └── ITableOfContentsGenerator.UpdateTableOfContents()
+
+UpdateJournal --rename-toc
+    └── IJournalUpdateService.RenameToc()
+            ├── IJournalConfiguration.Read()           (get current TOC filename)
+            ├── IFileSystem.FileExists()               (conflict check)
+            ├── IFileSystem.RenameFile()               (rename on disk)
+            ├── IJournalConfiguration.Update()         (update .journalrc)
+            ├── IFileTracking.RenameFileInIndex()      (update tracking)
+            ├── IMarkdownLinkRewriter.ReplaceLinksInDirectory()  (bulk rewrite)
+            │       └── IFileSystem.GetMarkdownFiles() (enumerate .md files)
+            │       └── IFileSystem.UpdateFile()       (persist each changed file)
+            ├── MarkdownMetadataParser.UpdateLastEditedDate() (stamp modified files)
+            └── IFileTracking.UpdateFileInIndex()      (per modified file)
 
 AddJournalrc
     └── IJournalConfigGenerator.GenerateFromTableOfContents()
@@ -523,7 +563,7 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (798 tests)
+markdown-journal-cli.Tests/ (818 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs
 │   ├── Add/
@@ -532,17 +572,19 @@ markdown-journal-cli.Tests/ (798 tests)
 │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   └── AddTableOfContentsIntegrationTests.cs
 │   └── Update/
-│       ├── UpdateCommandTests.cs
+│       ├── UpdateCommandTests.cs        ← extended: --rename-toc dispatch tests added
 │       └── UpdateEntryCommandTests.cs
 ├── Infrastructure/
-│   ├── FileSystemTests.cs
+│   ├── FileSystem/
+│   │   ├── FileSystemTests.cs
+│   │   ├── MarkdownLinkRewriterTests.cs  ← new: unit tests for inline-link rewriting
+│   │   ├── MarkdownMetadataParserTests.cs
+│   │   └── TestFileSystem.cs
 │   ├── FileTrackingTests.cs
 │   ├── HashServiceTests.cs
 │   ├── JournalConfigurationTests.cs
 │   ├── JournalConfigGeneratorTests.cs
-│   ├── MarkdownMetadataParserTests.cs
 │   ├── TableOfContentsMarkdownParserTests.cs
-│   ├── TestFileSystem.cs
 │   └── TypeRegistrarTests.cs
 ├── JournalTemplates/
 │   ├── JournalInitializerTests.cs
@@ -550,8 +592,8 @@ markdown-journal-cli.Tests/ (798 tests)
 │   └── TemplateManagerTests.cs
 └── Services/
     ├── EntryFormatterServiceTests.cs
-    ├── JournalFileUpdateServiceTests.cs
-    └── [other service tests]
+    ├── JournalUpdateServiceTests.cs      ← extended: RenameToc test cases added
+    └── JournalFileUpdateServiceTests.cs
 ```
 
 ### Testing Strategy
@@ -621,6 +663,18 @@ public class NewCommandTests
 ### Decision: Multi-Layer TOC Exclusion
 **Rationale:** Defense in depth prevents the TOC file from appearing in its own contents  
 **Alternatives:** Single check at render time
+
+### Decision: `IMarkdownLinkRewriter` as a Dedicated Infrastructure Service
+**Rationale:** Link rewriting is a cross-cutting concern needed today for `--rename-toc` and tomorrow for `update entry --name`. Extracting it into a stateless interface keeps `JournalUpdateService` focused on orchestration and allows the rewriter to be tested in complete isolation with pure string inputs.  
+**Alternatives:** Inline regex directly in `JournalUpdateService`; this would duplicate logic when entry rename is implemented
+
+### Decision: `ReplaceLinksInDirectory` as the Preferred Bulk API
+**Rationale:** Encapsulates the scan-rewrite-persist loop inside the infrastructure layer, keeping `JournalUpdateService.RenameToc` free of file-enumeration details. `FindFilesWithLinkTo` is retained for read-only queries.  
+**Alternatives:** Let the service call `FindFilesWithLinkTo` + `RewriteLinks` + `UpdateFile` in a loop
+
+### Decision: `RegexOptions.Compiled` in `MarkdownLinkRewriter`
+**Rationale:** The same pattern is applied across every `.md` file in the journal directory in a single `ReplaceLinksInDirectory` call. `Compiled` JIT-compiles the regex once and amortizes that cost across all file reads, making it worthwhile even for modest journal sizes.  
+**Alternatives:** `RegexOptions.None` (simpler, negligibly slower for small file counts)
 
 ### Decision: Automatic Last Edited Updates
 **Rationale:** Reduces manual maintenance, leverages existing change detection  
