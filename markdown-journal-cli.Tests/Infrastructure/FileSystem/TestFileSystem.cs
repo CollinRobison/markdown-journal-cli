@@ -158,6 +158,8 @@ public class TestFileSystem : IFileSystem
 
     public string? GetFileName(string? path) => Path.GetFileName(path);
 
+    public string GetFullPath(string path) => Path.GetFullPath(path);
+
     public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {
         var pattern = searchPattern.Replace("*", "").Replace("?", "");

@@ -2,7 +2,6 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using Microsoft.Extensions.Options;
 
@@ -11,25 +10,26 @@ namespace markdown_journal_cli.Services;
 public class InitJournalService : IInitJournalService
 {
     private readonly IFileSystem _fileSystem;
-    private readonly ITemplateManager _templateManager;
     private readonly IJournalConfiguration _journalConfiguration;
     private readonly IFileTracking _fileTracking;
+    private readonly ITableOfContentsService _tableOfContentsService;
     private readonly JournalSettings _journalSettings;
 
     public InitJournalService(
         IFileSystem fileSystem,
-        ITemplateManager templateManager,
         IJournalConfiguration journalConfiguration,
         IFileTracking fileTracking,
+        ITableOfContentsService tableOfContentsService,
         IOptions<JournalSettings> journalSettings
     )
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _templateManager =
-            templateManager ?? throw new ArgumentNullException(nameof(templateManager));
         _journalConfiguration =
             journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
         _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+        _tableOfContentsService =
+            tableOfContentsService
+            ?? throw new ArgumentNullException(nameof(tableOfContentsService));
         _journalSettings = journalSettings.Value;
     }
 
@@ -48,60 +48,39 @@ public class InitJournalService : IInitJournalService
                 nameof(journalName)
             );
 
-        var resolvedTocName = CreateTableOfContents(journalDirectory, tableOfContentsName);
-        CreateJournalConfiguration(journalDirectory, journalName, resolvedTocName);
-        CreateFileTrackingIndex(journalDirectory);
-    }
-
-    private string CreateTableOfContents(string journalDirectory, string? tocName)
-    {
-        var resolvedName = string.IsNullOrWhiteSpace(tocName)
+        var resolvedTocName = string.IsNullOrWhiteSpace(tableOfContentsName)
             ? _journalSettings.TableOfContentsFileName
-            : tocName;
+            : tableOfContentsName;
 
-        var filePath = _fileSystem.CombinePaths(
+        var tocFile = $"{resolvedTocName}{FileConstants.MarkdownExtension}";
+        var tocPath = _fileSystem.CombinePaths(journalDirectory, tocFile);
+
+        if (_fileSystem.FileExists(tocPath))
+            throw new TocFileAlreadyExistsException(journalDirectory, tocFile);
+
+        // 1. Create journal configuration
+        _journalConfiguration.Create(
             journalDirectory,
-            $"{resolvedName}{FileConstants.MarkdownExtension}"
-        );
-
-        if (_fileSystem.FileExists(filePath))
-            throw new TocFileAlreadyExistsException(
-                journalDirectory,
-                $"{resolvedName}{FileConstants.MarkdownExtension}"
-            );
-
-        _fileSystem.CreateMarkdownFile(
-            journalDirectory,
-            resolvedName,
-            _templateManager.GenerateFromTemplate("table-of-contents", null)
-        );
-
-        return resolvedName;
-    }
-
-    private void CreateJournalConfiguration(
-        string journalDirectory,
-        string journalName,
-        string tocName
-    )
-    {
-        JournalConfig journalrc =
-            new()
+            new JournalConfig
             {
                 JournalName = journalName,
                 TableOfContents = new()
                 {
-                    File = $"{tocName}{FileConstants.MarkdownExtension}",
+                    File = tocFile,
                     Structure = new() { Topics = [] },
                     RootEntries = [],
                 },
-            };
+            }
+        );
 
-        _journalConfiguration.Create(journalDirectory, journalrc);
-    }
+        // 2. Create table of contents (reads from configuration)
+        _tableOfContentsService.UpdateTableOfContents(
+            journalDirectory,
+            createdDate: DateTime.Now,
+            lastEditedDate: DateTime.Now
+        );
 
-    private void CreateFileTrackingIndex(string journalDirectory)
-    {
+        // 3. Create file tracking index
         _fileTracking.LoadIndex(journalDirectory);
         _fileTracking.UpdateIndex(journalDirectory);
     }

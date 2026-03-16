@@ -8,7 +8,7 @@ using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Init;
 
-[Description("Initialises an existing directory as an mdjournal-managed journal")]
+[Description("Initialises an existing directory as an mdjournal managed journal")]
 public sealed class InitCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,
@@ -24,13 +24,15 @@ public sealed class InitCommand(
         initJournalService ?? throw new ArgumentNullException(nameof(initJournalService));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
+    private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
+
     public override int Execute(CommandContext context, InitSettings settings)
     {
         var filePath = settings.FilePath ?? ".";
-        var resolvedPath = Path.GetFullPath(filePath);
+        var resolvedPath = _fileSystem.GetFullPath(filePath);
         var journalName =
             settings.JournalName
-            ?? Path.GetFileName(resolvedPath)
+            ?? NullIfEmpty(_fileSystem.GetFileName(resolvedPath))
             ?? _journalSettings.DefaultJournalName;
 
         if (!_fileSystem.DirectoryExists(filePath))

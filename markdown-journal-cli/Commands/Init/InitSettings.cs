@@ -12,14 +12,14 @@ public sealed class InitSettings : CommandSettings
     )]
     public string? JournalName { get; set; }
 
-    [CommandOption("-p|--path <filePath>")]
+    [CommandOption("-p|--path")]
     [Description(
         "The path to the existing directory to initialise as a journal. Defaults to the current directory."
     )]
     [DefaultValue(".")]
     public string? FilePath { get; set; }
 
-    [CommandOption("-n|--toc|--tableofcontents <tocFileName>")]
+    [CommandOption("--toc|--tableofcontents")]
     [Description(
         "The name for the Table of Contents file. Defaults to the configured TableOfContentsFileName."
     )]
