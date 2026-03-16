@@ -87,6 +87,8 @@ public class FileSystem : IFileSystem
 
     public string? GetFileName(string? path) => Path.GetFileName(path);
 
+    public string GetFullPath(string path) => Path.GetFullPath(path);
+
     public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {
         return Directory.GetFiles(path, searchPattern, searchOption);
