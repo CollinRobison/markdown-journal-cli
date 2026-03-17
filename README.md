@@ -338,13 +338,13 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 **Planned Features:**
 - ⏳ `init` command — adopt an existing markdown directory as a journal
-- ✅ **`--rename-toc` flag** for `update journal` — rename the TOC file, update `.journalrc`, and rewrite all link references
-- ✅ **`IMarkdownLinkRewriter` infrastructure** — reusable inline-link rewrite service, foundation for future file-rename operations
+- ⏳ `remove` | `rm` entry command - delete an entry make remove a command branch so we can add other remove types later. 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
 - ⏳ `--version` flag
 - ⏳ Global tool installation
 - ⏳ Pre-update change preview (`--check` flag)
+- ⏳ add to update entry the ability to update references to that entry in other entries. 
 
 **Known Limitations:**
 - Global tool installation not yet configured
