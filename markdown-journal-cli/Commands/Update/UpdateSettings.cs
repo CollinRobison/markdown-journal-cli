@@ -78,7 +78,7 @@ public class UpdateEntrySettings : UpdateSettings
     [Description("The title of the journal entry. This is the name that will show on the TOC.")]
     public string? EntryTitle { get; set; }
 
-    [CommandOption("-h|--headings")]
+    [CommandOption("--he|--headings")]
     [Description(
         "The new location in the TOC hierarchy. Use - to separate heading levels and _ for spaces within heading names. "
             + "Example: 'Projects-2024_Goals' creates nested headings. If you use spaces without - separators, "
