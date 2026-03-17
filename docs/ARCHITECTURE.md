@@ -643,10 +643,20 @@ markdown-journal-cli.Tests/ (846 tests)
 │   ├── TableOfContentsGeneratorTests.cs
 │   └── TemplateManagerTests.cs
 └── Services/
-    ├── EntryFormatterServiceTests.cs
-    ├── InitJournalServiceTests.cs         ← new: unit tests for InitJournalService
-    ├── JournalUpdateServiceTests.cs      ← extended: RenameToc test cases added
-    └── JournalFileUpdateServiceTests.cs
+    ├── EntryFormatter/
+    │   └── EntryFormatterServiceTests.cs
+    ├── InitJournal/
+    │   └── InitJournalServiceTests.cs         ← new: unit tests for InitJournalService
+    ├── JournalEntry/
+    │   └── JournalEntryServiceTests.cs
+    ├── JournalFileUpdate/
+    │   └── JournalFileUpdateServiceTests.cs
+    ├── JournalUpdate/
+    │   └── JournalUpdateServiceTests.cs      ← extended: RenameToc test cases added
+    ├── NewJournal/
+    │   └── NewJournalServiceTests.cs
+    └── TableOfContents/
+        └── TableOfContentsServiceTests.cs
 ```
 
 ### Testing Strategy
