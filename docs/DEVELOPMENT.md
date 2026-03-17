@@ -80,15 +80,28 @@ markdown-journal-cli/
 │   │   ├── TemplateManager.cs
 │   │   ├── ITableOfContentsGenerator.cs
 │   │   └── TableOfContentsGenerator.cs
-│   ├── Services/                  # Business logic services
-│   │   ├── IEntryFormatterService.cs
-│   │   ├── EntryFormatterService.cs
-│   │   ├── IInitJournalService.cs          # Journal adoption orchestration
-│   │   ├── InitJournalService.cs
-│   │   ├── IJournalUpdateService.cs        # + RenameToc method
-│   │   ├── JournalUpdateService.cs         # + RenameToc implementation; IMarkdownLinkRewriter injected
-│   │   ├── IJournalFileUpdateService.cs
-│   │   └── JournalFileUpdateService.cs
+│   ├── Services/                  # Business logic services (each pair in its own subfolder)
+│   │   ├── EntryFormatter/
+│   │   │   ├── IEntryFormatterService.cs
+│   │   │   └── EntryFormatterService.cs
+│   │   ├── InitJournal/
+│   │   │   ├── IInitJournalService.cs      # Journal adoption orchestration
+│   │   │   └── InitJournalService.cs
+│   │   ├── JournalEntry/
+│   │   │   ├── IJournalEntryService.cs
+│   │   │   └── JournalEntryService.cs
+│   │   ├── JournalFileUpdate/
+│   │   │   ├── IJournalFileUpdateService.cs
+│   │   │   └── JournalFileUpdateService.cs
+│   │   ├── JournalUpdate/
+│   │   │   ├── IJournalUpdateService.cs    # + RenameToc method
+│   │   │   └── JournalUpdateService.cs     # + RenameToc implementation; IMarkdownLinkRewriter injected
+│   │   ├── NewJournal/
+│   │   │   ├── INewJournalService.cs
+│   │   │   └── NewJournalService.cs
+│   │   └── TableOfContents/
+│   │       ├── ITableOfContentsService.cs
+│   │       └── TableOfContentsService.cs
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
@@ -123,10 +136,20 @@ markdown-journal-cli/
 │   │   ├── TableOfContentsGeneratorTests.cs
 │   │   └── TemplateManagerTests.cs
 │   └── Services/
-│       ├── EntryFormatterServiceTests.cs
-│       ├── InitJournalServiceTests.cs
-│       ├── JournalUpdateServiceTests.cs       # + RenameToc test cases
-│       └── JournalFileUpdateServiceTests.cs
+│       ├── EntryFormatter/
+│       │   └── EntryFormatterServiceTests.cs
+│       ├── InitJournal/
+│       │   └── InitJournalServiceTests.cs
+│       ├── JournalEntry/
+│       │   └── JournalEntryServiceTests.cs
+│       ├── JournalFileUpdate/
+│       │   └── JournalFileUpdateServiceTests.cs
+│       ├── JournalUpdate/
+│       │   └── JournalUpdateServiceTests.cs   # + RenameToc test cases
+│       ├── NewJournal/
+│       │   └── NewJournalServiceTests.cs
+│       └── TableOfContents/
+│           └── TableOfContentsServiceTests.cs
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
 ```
