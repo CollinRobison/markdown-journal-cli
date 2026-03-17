@@ -77,6 +77,24 @@ public class TrackingIndexNotFoundException(string path, string trackingFileName
 }
 
 /// <summary>
+/// Exception thrown when the TOC filename supplied to <c>init</c> conflicts with an existing file.
+/// </summary>
+/// <param name="directory">The journal directory where the conflict was detected.</param>
+/// <param name="fileName">The filename that already exists.</param>
+public class TocFileAlreadyExistsException(string directory, string fileName)
+    : JournalException(
+        $"Cannot create TOC: '{fileName}' already exists in '{directory}'. "
+            + "Choose a different name with --toc or remove the conflicting file first."
+    )
+{
+    /// <summary>Gets the journal directory where the conflict was detected.</summary>
+    public string Directory { get; } = directory;
+
+    /// <summary>Gets the filename that already exists.</summary>
+    public string FileName { get; } = fileName;
+}
+
+/// <summary>
 /// Exception thrown when the desired new TOC filename is already in use by another file.
 /// </summary>
 /// <param name="directory">The journal directory where the conflict was detected.</param>

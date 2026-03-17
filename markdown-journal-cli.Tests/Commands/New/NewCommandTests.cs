@@ -921,6 +921,8 @@ public class NewCommandTests
 
         public string? GetFileName(string? path) => Path.GetFileName(path);
 
+        public string GetFullPath(string path) => Path.GetFullPath(path);
+
         public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
         {
             throw new IOException("Simulated I/O error");
@@ -1306,6 +1308,8 @@ public class NewCommandTests
         public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 
         public string? GetFileName(string? path) => Path.GetFileName(path);
+
+        public string GetFullPath(string path) => Path.GetFullPath(path);
 
         public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
         {

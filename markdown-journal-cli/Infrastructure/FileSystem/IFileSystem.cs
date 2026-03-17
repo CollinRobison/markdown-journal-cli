@@ -170,6 +170,13 @@ public interface IFileSystem
     string? GetFileName(string? path);
 
     /// <summary>
+    /// Returns the absolute path for the specified path string.
+    /// </summary>
+    /// <param name="path">The file or directory for which to obtain absolute path information.</param>
+    /// <returns>The fully qualified location of <paramref name="path"/>.</returns>
+    string GetFullPath(string path);
+
+    /// <summary>
     /// Gets the files that match the specified search pattern in the specified directory.
     /// </summary>
     /// <param name="path">The directory path to search.</param>
