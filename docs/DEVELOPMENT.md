@@ -38,6 +38,9 @@ markdown-journal-cli/
 │   │   │   ├── AddJournalrcCommand.cs
 │   │   │   ├── AddTableOfContentsCommand.cs
 │   │   │   └── AddSettings.cs
+│   │   ├── Init/                  # Init journal command
+│   │   │   ├── InitCommand.cs
+│   │   │   └── InitSettings.cs
 │   │   ├── New/                   # New journal command
 │   │   │   └── NewCommand.cs
 │   │   ├── Update/                # Update journal/entry commands
@@ -80,6 +83,8 @@ markdown-journal-cli/
 │   ├── Services/                  # Business logic services
 │   │   ├── IEntryFormatterService.cs
 │   │   ├── EntryFormatterService.cs
+│   │   ├── IInitJournalService.cs          # Journal adoption orchestration
+│   │   ├── InitJournalService.cs
 │   │   ├── IJournalUpdateService.cs        # + RenameToc method
 │   │   ├── JournalUpdateService.cs         # + RenameToc implementation; IMarkdownLinkRewriter injected
 │   │   ├── IJournalFileUpdateService.cs
@@ -87,9 +92,11 @@ markdown-journal-cli/
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (818 tests)
+├── markdown-journal-cli.Tests/    # Unit tests (846 tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
+│   │   ├── Init/
+│   │   │   └── InitCommandTests.cs
 │   │   ├── Add/
 │   │   │   ├── AddEntryCommandTests.cs
 │   │   │   ├── AddFileTrackingCommandTests.cs
@@ -117,6 +124,7 @@ markdown-journal-cli/
 │   │   └── TemplateManagerTests.cs
 │   └── Services/
 │       ├── EntryFormatterServiceTests.cs
+│       ├── InitJournalServiceTests.cs
 │       ├── JournalUpdateServiceTests.cs       # + RenameToc test cases
 │       └── JournalFileUpdateServiceTests.cs
 ├── docs/                         # Documentation
@@ -550,6 +558,7 @@ host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
 host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
 host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
+host.Services.AddSingleton<IInitJournalService, InitJournalService>();  // ← init command
 host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
 host.Services.AddSingleton<IHashService, HashService>(); 
 host.Services.AddSingleton<IFileTracking, FileTracking>();
@@ -558,6 +567,7 @@ host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
+host.Services.AddSingleton<InitCommand>();   // ← init command
 host.Services.AddSingleton<AddEntry>();
 host.Services.AddSingleton<AddJournalrc>();
 host.Services.AddSingleton<AddTableOfContents>();
@@ -682,13 +692,14 @@ public void NewCommand_Should_Handle_InitializationFailure()
 ### Current Status
 - ✅ Basic project structure established
 - ✅ Core `new` command implemented
+- ✅ **`init` command** — adopt an existing markdown directory as a journal (creates `.journalrc`, TOC, and tracking index; no template files)
 - ✅ `add` command branch with entry, config, toc, and tracking subcommands
 - ✅ `update journal` command for journal synchronization (config, dates, TOC)
 - ✅ `update entry` command for renaming, relocating, and ignoring entries
 - ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
 - ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (818 tests passing)
+- ✅ Testing framework setup (846 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing

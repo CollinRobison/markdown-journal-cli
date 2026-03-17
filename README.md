@@ -10,6 +10,9 @@ mdjournal new MyJournal
 
 # Create a journal at a specific path
 mdjournal new WorkJournal --path ~/Documents/Journals
+
+# Adopt an existing markdown directory as a journal
+mdjournal init MyNotes --path ~/Documents/Notes
 ```
 
 ## 📋 Table of Contents
@@ -102,7 +105,7 @@ mdjournal update --path ~/Documents/MyJournal entry draft_notes --ignore
 ## Commands
 
 ### `new` - Create New Journal
-Creates a new markdown journal directory structure.
+Creates a new markdown journal directory structure including template files, configuration, TOC, and tracking index.
 
 **Syntax:**
 ```bash
@@ -119,6 +122,39 @@ mdjournal new [name] [options]
 ```bash
 mdjournal new
 mdjournal new "Travel Journal" --path ~/Documents
+```
+
+### `init` - Initialize Existing Directory as Journal
+Adopts an existing markdown directory as an mdjournal-managed journal. Creates a `.journalrc` configuration, a Table of Contents, and a file-tracking index pre-populated with all existing markdown files. Unlike `new`, no template files are created.
+
+**Syntax:**
+```bash
+mdjournal init [name] [options]
+```
+
+**Arguments:**
+- `name` - Display name for the journal (default: directory name)
+
+**Options:**
+- `-p|--path <path>` - Path to the existing directory to initialise (default: current directory)
+- `--toc|--tableofcontents <name>` - Name for the TOC file without extension (default: configured `TableOfContentsFileName`)
+
+**Behavior:**
+- **Directory must already exist** — `init` never creates directories
+- **No existing `.journalrc`** — errors if the directory is already managed
+- **TOC conflict check** — errors if the resolved TOC filename already exists; use `--toc` to specify an alternate name
+- **File tracking** — all existing `.md` files (including the newly created TOC) are indexed
+
+**Examples:**
+```bash
+# Adopt the current directory with its folder name as journal name
+mdjournal init
+
+# Adopt a specific directory with an explicit name
+mdjournal init MyNotes --path ~/Documents/Notes
+
+# Adopt a directory and specify a custom TOC filename
+mdjournal init WorkNotes --path ~/Work --toc Contents
 ```
 
 ### `add entry` - Add New Journal Entry
@@ -319,12 +355,13 @@ For technical details about the project architecture, see the **[Architecture Gu
 **Current Status:**
 - ✅ Basic project structure
 - ✅ `new` command implementation  
+- ✅ **`init` command** — adopt an existing markdown directory as a journal (creates `.journalrc`, TOC, and tracking index from existing files; no template files created)
 - ✅ `add entry` command for creating journal entries
 - ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
 - ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **818+ passing unit tests** covering core functionality- ✅ Service-oriented architecture with dependency injection
+- ✅ **846 passing unit tests** covering core functionality- ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
 - ✅ **File tracking and change detection** using SHA256 hashing
@@ -337,7 +374,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ `init` command — adopt an existing markdown directory as a journal
 - ⏳ `remove` | `rm` entry command - delete an entry make remove a command branch so we can add other remove types later. 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries

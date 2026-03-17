@@ -34,10 +34,12 @@ Program.cs
     ├── CommandApp (Spectre.Console.Cli)
     └── Commands/
             ├── NewCommand
+            ├── InitCommand
             └── [Future Commands]
                     └── Infrastructure/
                                     ├── IFileSystem (File operations)
                                     ├── IJournalInitializer (Journal creation)
+                                    ├── IInitJournalService (Journal adoption)
                                     ├── ITemplateManager (Template generation)
                                     ├── IJournalConfiguration (Configuration management)
                                     └── Custom Exceptions
@@ -97,6 +99,29 @@ public sealed class TypeRegistrar : ITypeRegistrar
 3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
+### DI Registration (Program.cs)
+```csharp
+// Core services
+host.Services.AddSingleton<IFileSystem, FileSystem>();
+host.Services.AddSingleton<ITemplateManager, TemplateManager>();
+host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
+host.Services.AddSingleton<INewJournalService, NewJournalService>();
+host.Services.AddSingleton<IInitJournalService, InitJournalService>();  // ← init command
+host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
+host.Services.AddSingleton<IHashService, HashService>();
+host.Services.AddSingleton<IFileTracking, FileTracking>();
+host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
+host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
+
+// Commands
+host.Services.AddSingleton<NewCommand>();
+host.Services.AddSingleton<InitCommand>();   // ← init command
+host.Services.AddSingleton<AddEntry>();
+host.Services.AddSingleton<AddJournalrc>();
+host.Services.AddSingleton<AddTableOfContents>();
+host.Services.AddSingleton<AddFileTracking>();
+```
+
 ### Benefits of This Approach
 - ✅ **Testability** - Easy to mock `IFileSystem` in tests
 - ✅ **Flexibility** - Can swap implementations without changing commands
@@ -111,7 +136,8 @@ System.Exception
     └── JournalException (Base for all journal errors)
             ├── JournalAlreadyExistsException
             ├── JournalrcNotFoundException
-            ├── TocRenameConflictException   ← thrown when --rename-toc target filename is already in use
+            ├── TocFileAlreadyExistsException  ← thrown when init target TOC filename already exists
+            ├── TocRenameConflictException     ← thrown when --rename-toc target filename is already in use
             └── [other domain-specific exceptions]
 ```
 
@@ -125,6 +151,8 @@ public interface IFileSystem
     void CreateDirectory(string path);
     string CombinePaths(params string[] paths);
     void RenameFile(string oldPath, string newPath);
+    string? GetFileName(string? path);
+    string GetFullPath(string path);   // ← returns the absolute path for a relative input
     // ...
     /// <summary>
     /// Returns the relative paths of all markdown (.md) files found recursively
@@ -169,6 +197,18 @@ public class TestFileSystem : IFileSystem
 ### Core Services Overview
 
 The application follows a service-oriented architecture with clear separation of concerns:
+
+**`IInitJournalService`** - Orchestrates adoption of existing directories as journals
+```csharp
+public interface IInitJournalService
+{
+    void Initialize(string journalDirectory, string journalName, string? tableOfContentsName);
+}
+```
+- Validates the directory exists and isn't already managed (done by `InitCommand` before calling)
+- Creates tracking index, config, and TOC from existing files — no template files
+- Accepts an optional custom TOC name; throws `TocFileAlreadyExistsException` on conflict
+- Distinct from `IJournalInitializer` which creates a new directory with starter templates
 
 **`IJournalInitializer`** - Orchestrates journal creation
 ```csharp
@@ -250,6 +290,16 @@ NewCommand
             ├── IJournalConfiguration.Create()
             ├── ITableOfContentsGenerator.UpdateTableOfContents()
             └── IFileTracking.UpdateIndex()
+
+InitCommand
+    └── IInitJournalService.Initialize()
+            ├── IFileSystem.FileExists()              (TOC conflict check)
+            ├── IFileTracking.LoadIndex()             (load or create index)
+            ├── IFileTracking.UpdateIndex()           (index all existing .md files)
+            ├── IJournalConfigGenerator.GenerateFromTrackingIndex()  (write .journalrc)
+            ├── ITableOfContentsService.UpdateTableOfContents()      (create TOC)
+            └── IFileTracking.UpdateIndex()           (re-index to include newly created TOC)
+            ✗ Does NOT create template files (unlike NewCommand)
 
 AddEntry
     ├── IEntryFormatterService.FormatEntryName()
@@ -563,9 +613,11 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (818 tests)
+markdown-journal-cli.Tests/ (846 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs
+│   ├── Init/
+│   │   └── InitCommandTests.cs          ← new: init command integration tests
 │   ├── Add/
 │   │   ├── AddEntryCommandTests.cs
 │   │   ├── AddJournalrcCommandTests.cs
@@ -592,6 +644,7 @@ markdown-journal-cli.Tests/ (818 tests)
 │   └── TemplateManagerTests.cs
 └── Services/
     ├── EntryFormatterServiceTests.cs
+    ├── InitJournalServiceTests.cs         ← new: unit tests for InitJournalService
     ├── JournalUpdateServiceTests.cs      ← extended: RenameToc test cases added
     └── JournalFileUpdateServiceTests.cs
 ```
@@ -632,7 +685,6 @@ public class NewCommandTests
 
 ## 🔮 Future Architecture Considerations
 
-- **`init` command** - Adopt an existing markdown directory as a journal (add `.journalrc`, tracking, TOC)
 - **Async file operations** - For large journals with many files
 - **Global configuration** - User-level defaults (default editor, date format, etc.)
 - **Plugin/extension points** - Custom template generators and entry processors
@@ -679,6 +731,14 @@ public class NewCommandTests
 ### Decision: Automatic Last Edited Updates
 **Rationale:** Reduces manual maintenance, leverages existing change detection  
 **Alternatives:** Manual date updates, file system modification times
+
+### Decision: `init` vs `new` — No Template Files
+**Rationale:** `init` adopts a directory that already contains content. Creating intro/template files would pollute an existing collection and conflict with existing filenames. The command focuses purely on adding management metadata: `.journalrc`, a TOC, and a tracking index.  
+**Alternatives:** Re-use `NewJournalService` and skip template creation via a flag — rejected because it couples two semantically distinct operations and makes the flag surface of `NewJournalService` grow for unrelated reasons.
+
+### Decision: Double `UpdateIndex` call in `InitJournalService`
+**Rationale:** The first `UpdateIndex` call indexes all pre-existing markdown files before the TOC is created. The second call runs after TOC creation so the new TOC file is also included in the index. This ensures every file the user would encounter in the journal is tracked from day one.  
+**Alternatives:** Manually add the TOC path to the index — this would duplicate internal `FileTracking` logic and increase coupling.
 
 ### Decision: Constructor Injection over Property Injection
 **Rationale:** Explicit dependencies, immutable after construction  
