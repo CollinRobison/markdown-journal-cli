@@ -1,10 +1,8 @@
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
-using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
@@ -18,6 +16,7 @@ public class InitJournalServiceTests
 {
     private readonly Mock<IFileSystem> _mockFileSystem;
     private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
+    private readonly Mock<IJournalConfigGenerator> _mockJournalConfigGenerator;
     private readonly Mock<IFileTracking> _mockFileTracking;
     private readonly Mock<ITableOfContentsService> _mockTableOfContentsService;
     private readonly IOptions<JournalSettings> _journalSettings;
@@ -31,6 +30,7 @@ public class InitJournalServiceTests
     {
         _mockFileSystem = new Mock<IFileSystem>();
         _mockJournalConfiguration = new Mock<IJournalConfiguration>();
+        _mockJournalConfigGenerator = new Mock<IJournalConfigGenerator>();
         _mockFileTracking = new Mock<IFileTracking>();
         _mockTableOfContentsService = new Mock<ITableOfContentsService>();
 
@@ -49,6 +49,7 @@ public class InitJournalServiceTests
         _service = new InitJournalService(
             _mockFileSystem.Object,
             _mockJournalConfiguration.Object,
+            _mockJournalConfigGenerator.Object,
             _mockFileTracking.Object,
             _mockTableOfContentsService.Object,
             _journalSettings
@@ -124,79 +125,71 @@ public class InitJournalServiceTests
     public void Initialize_UsesTocNameFromParameter_WhenProvided()
     {
         const string customToc = "my-custom-toc";
-        JournalConfig? capturedConfig = null;
         _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-        _mockJournalConfiguration
-            .Setup(c => c.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
-            .Callback<string, JournalConfig>((_, cfg) => capturedConfig = cfg);
 
         _service.Initialize(JournalDirectory, JournalName, customToc);
 
-        capturedConfig.ShouldNotBeNull();
-        capturedConfig!.TableOfContents.File.ShouldBe($"{customToc}.md");
-    }
-
-    [Fact]
-    public void Initialize_UsesDefaultTocName_WhenParameterIsNull()
-    {
-        JournalConfig? capturedConfig = null;
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-        _mockJournalConfiguration
-            .Setup(c => c.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
-            .Callback<string, JournalConfig>((_, cfg) => capturedConfig = cfg);
-
-        _service.Initialize(JournalDirectory, JournalName, null);
-
-        capturedConfig.ShouldNotBeNull();
-        capturedConfig!.TableOfContents.File.ShouldBe($"{DefaultTocName}.md");
-    }
-
-    #endregion
-
-    #region Journal configuration
-
-    [Fact]
-    public void Initialize_CallsJournalConfigurationCreate()
-    {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-
-        _service.Initialize(JournalDirectory, JournalName, null);
-
-        _mockJournalConfiguration.Verify(
-            c => c.Create(JournalDirectory, It.IsAny<JournalConfig>()),
+        _mockJournalConfigGenerator.Verify(
+            g => g.GenerateFromTrackingIndex(JournalDirectory, customToc, JournalName),
             Times.Once
         );
     }
 
     [Fact]
-    public void Initialize_ConfigurationHasCorrectJournalName()
+    public void Initialize_UsesDefaultTocName_WhenParameterIsNull()
     {
-        JournalConfig? capturedConfig = null;
         _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-        _mockJournalConfiguration
-            .Setup(c => c.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
-            .Callback<string, JournalConfig>((_, cfg) => capturedConfig = cfg);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        capturedConfig.ShouldNotBeNull();
-        capturedConfig!.JournalName.ShouldBe(JournalName);
+        _mockJournalConfigGenerator.Verify(
+            g => g.GenerateFromTrackingIndex(JournalDirectory, DefaultTocName, JournalName),
+            Times.Once
+        );
+    }
+
+    #endregion
+
+    #region Journal config generation
+
+    [Fact]
+    public void Initialize_CallsGenerateFromTrackingIndex()
+    {
+        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        _mockJournalConfigGenerator.Verify(
+            g => g.GenerateFromTrackingIndex(JournalDirectory, DefaultTocName, JournalName),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void Initialize_ConfigurationTocFileReferenceMatchesResolvedTocName()
+    public void Initialize_ConfigGenerationUsesCorrectJournalName()
+    {
+        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        _mockJournalConfigGenerator.Verify(
+            g => g.GenerateFromTrackingIndex(JournalDirectory, It.IsAny<string>(), JournalName),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void Initialize_ConfigGenerationUsesResolvedTocFileName()
     {
         const string customToc = "custom-toc";
-        JournalConfig? capturedConfig = null;
         _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-        _mockJournalConfiguration
-            .Setup(c => c.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
-            .Callback<string, JournalConfig>((_, cfg) => capturedConfig = cfg);
 
         _service.Initialize(JournalDirectory, JournalName, customToc);
 
-        capturedConfig.ShouldNotBeNull();
-        capturedConfig!.TableOfContents.File.ShouldBe($"{customToc}.md");
+        _mockJournalConfigGenerator.Verify(
+            g => g.GenerateFromTrackingIndex(JournalDirectory, customToc, JournalName),
+            Times.Once
+        );
     }
 
     #endregion
@@ -220,7 +213,7 @@ public class InitJournalServiceTests
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Once);
+        _mockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Exactly(2));
     }
 
     #endregion

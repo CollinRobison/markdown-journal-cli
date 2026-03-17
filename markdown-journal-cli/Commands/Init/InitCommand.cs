@@ -8,7 +8,7 @@ using Spectre.Console.Cli;
 
 namespace markdown_journal_cli.Commands.Init;
 
-[Description("Initialises an existing directory as an mdjournal managed journal")]
+[Description("Initializes an existing directory as an mdjournal managed journal")]
 public sealed class InitCommand(
     IAnsiConsole console,
     IFileSystem fileSystem,

@@ -10,7 +10,7 @@ namespace markdown_journal_cli.Services;
 public class InitJournalService : IInitJournalService
 {
     private readonly IFileSystem _fileSystem;
-    private readonly IJournalConfiguration _journalConfiguration;
+    private readonly IJournalConfigGenerator _configGenerator;
     private readonly IFileTracking _fileTracking;
     private readonly ITableOfContentsService _tableOfContentsService;
     private readonly JournalSettings _journalSettings;
@@ -18,14 +18,14 @@ public class InitJournalService : IInitJournalService
     public InitJournalService(
         IFileSystem fileSystem,
         IJournalConfiguration journalConfiguration,
+        IJournalConfigGenerator configGenerator,
         IFileTracking fileTracking,
         ITableOfContentsService tableOfContentsService,
         IOptions<JournalSettings> journalSettings
     )
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _journalConfiguration =
-            journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+        _configGenerator = configGenerator ?? throw new ArgumentNullException(nameof(configGenerator));
         _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
         _tableOfContentsService =
             tableOfContentsService
@@ -58,30 +58,22 @@ public class InitJournalService : IInitJournalService
         if (_fileSystem.FileExists(tocPath))
             throw new TocFileAlreadyExistsException(journalDirectory, tocFile);
 
-        // 1. Create journal configuration
-        _journalConfiguration.Create(
-            journalDirectory,
-            new JournalConfig
-            {
-                JournalName = journalName,
-                TableOfContents = new()
-                {
-                    File = tocFile,
-                    Structure = new() { Topics = [] },
-                    RootEntries = [],
-                },
-            }
-        );
+        // 1. Create file tracking index
+        _fileTracking.LoadIndex(journalDirectory);
+        _fileTracking.UpdateIndex(journalDirectory);
+        
+        // 2. Create journal configuration
 
-        // 2. Create table of contents (reads from configuration)
+        _configGenerator.GenerateFromTrackingIndex(journalDirectory, resolvedTocName, journalName);
+
+        // 3. Create table of contents (reads from configuration)
         _tableOfContentsService.UpdateTableOfContents(
             journalDirectory,
             createdDate: DateTime.Now,
-            lastEditedDate: DateTime.Now
-        );
+            lastEditedDate: DateTime.Now);
 
-        // 3. Create file tracking index
-        _fileTracking.LoadIndex(journalDirectory);
+        //4. add toc to file tracking after creation
+
         _fileTracking.UpdateIndex(journalDirectory);
     }
 }
