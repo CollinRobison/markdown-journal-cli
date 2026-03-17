@@ -374,13 +374,19 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ `remove` | `rm` entry command - delete an entry make remove a command branch so we can add other remove types later. 
+- ⏳ `remove` | `rm` entry command - delete an entry make remove a command branch so we can add other remove types later. **(finish before moving on)**
+- ⏳ Pre-update change preview (`--check` flag) **(finish before moving on)**
+- ⏳ add to update entry the ability to update references to that entry in other entries. **(finish before moving on)**
+- ⏳ look through and clean up all tests **(finish before moving on)**
+- ⏳ `--version` flag **(finish before moving on)**
+- ⏳ Global tool installation **(finish before moving on)**
+- ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
+- ⏳ make the repo collaborator ready and make public with correct license. **(finish before moving on)**
+- ⏳  LOOK INTO SETTING UP A ROLLBACK SYSTEM FOR WHEN A COMMAND FAILS. FOR EXAMPLE HOLDING EACH FILE TYPE IN MEMORY AND IF FILE CREATIONS DROPS THEN REVERT BACK. **(finish before moving on)**
+- ⏳ create flow chart from written notes on the flow between toc - journalrc - tracking file for docs **(finish before moving on)**
+
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
-- ⏳ `--version` flag
-- ⏳ Global tool installation
-- ⏳ Pre-update change preview (`--check` flag)
-- ⏳ add to update entry the ability to update references to that entry in other entries. 
 
 **Known Limitations:**
 - Global tool installation not yet configured
