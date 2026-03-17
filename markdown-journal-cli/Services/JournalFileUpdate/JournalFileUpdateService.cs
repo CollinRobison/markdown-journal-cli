@@ -15,7 +15,8 @@ public class JournalFileUpdateService(
     ITableOfContentsService tableOfContentsService,
     IOptions<JournalSettings> journalSettings,
     ILogger<JournalFileUpdateService> logger,
-    IFileTracking fileTracking
+    IFileTracking fileTracking,
+    IMarkdownLinkRewriter markdownLinkRewriter
 ) : IJournalFileUpdateService
 {
     private readonly IFileSystem _fileSystem =
@@ -31,6 +32,8 @@ public class JournalFileUpdateService(
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly IFileTracking _fileTracking =
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+    private readonly IMarkdownLinkRewriter _markdownLinkRewriter =
+        markdownLinkRewriter ?? throw new ArgumentNullException(nameof(markdownLinkRewriter));
 
     public void UpdateEntry(
         string directory,
@@ -39,7 +42,8 @@ public class JournalFileUpdateService(
         string? newEntryTitle = null,
         string? newHeadings = null,
         bool ignoreFile = false,
-        bool unignoreFile = false
+        bool unignoreFile = false,
+        bool updateBacklinks = true
     )
     {
         _logger.LogDebug(
@@ -93,7 +97,18 @@ public class JournalFileUpdateService(
 
         // 6. Apply the changes
         ApplyFileRename(directory, currentFile, targetFile, isRenaming);
-        
+
+        if (isRenaming && updateBacklinks)
+        {
+            var tocFile = _journalSettings.TableOfContentsFileName + FileConstants.MarkdownExtension;
+            _markdownLinkRewriter.ReplaceLinksInDirectory(
+                directory,
+                currentFile,
+                targetFile,
+                excludeFiles: [targetFile, tocFile]
+            );
+        }
+
         // Skip config updates if we're ignoring - they'll be removed anyway
         if (!ignoreFile)
         {

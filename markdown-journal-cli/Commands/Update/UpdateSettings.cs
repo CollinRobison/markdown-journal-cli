@@ -94,6 +94,10 @@ public class UpdateEntrySettings : UpdateSettings
     [Description("Remove this entry from the ignore list so it will appear in the table of contents.")]
     public bool UnignoreFile { get; set; }
 
+    [CommandOption("--nb|--no-backlinks")]
+    [Description("Skip updating inline link references in other entry files after a rename. Backlink updates are enabled by default.")]
+    public bool NoBacklinks { get; set; }
+
     public override ValidationResult Validate()
     {
         if (IgnoreFile && UnignoreFile)

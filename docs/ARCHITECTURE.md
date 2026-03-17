@@ -254,7 +254,7 @@ public interface IJournalConfiguration
 **`IJournalFileUpdateService`** - Orchestrates entry update operations```csharp
 public interface IJournalFileUpdateService
 {
-    void UpdateEntry(string directory, string currentFileName, ...);
+    void UpdateEntry(string directory, string currentFileName, ..., bool updateBacklinks = true);
     void RenameEntry(string directory, string oldFile, string newFile);
     void UpdateEntryLocation(string directory, string fileName, string[] newTopicPath, string displayName);
     void UpdateEntryDisplayName(string directory, string fileName, string newDisplayName);
@@ -262,7 +262,8 @@ public interface IJournalFileUpdateService
 }
 ```
 - Orchestrates renaming, relocation, title changes, and ignore-status toggling
-- Updates all references: file system, tracking index, config, and TOC in a single operation
+- Updates all references: file system, tracking index, config, TOC, and backlinks in a single operation
+- `updateBacklinks` (default `true`): when a rename occurs, rewrites inline link references in all other entry files via `IMarkdownLinkRewriter`; suppressed with `--no-backlinks` flag
 
 **`IMarkdownLinkRewriter`** - Reusable inline-link rewriting infrastructure
 ```csharp
@@ -320,6 +321,9 @@ UpdateEntry
             ├── IFileSystem.RenameFile()             (when renaming)
             ├── IFileTracking.RenameFileInIndex()    (when renaming)
             ├── IJournalConfiguration.UpdateFileReferences() (when renaming)
+            ├── IMarkdownLinkRewriter.ReplaceLinksInDirectory() (when renaming & updateBacklinks=true)
+            │       └── IFileSystem.GetMarkdownFiles() (enumerate .md files, excludes TOC + renamed file)
+            │       └── IFileSystem.UpdateFile()       (persist each changed file)
             ├── IJournalConfiguration.UpdateEntryLocation()  (when moving heading)
             ├── IJournalConfiguration.UpdateEntryName()      (when changing title)
             ├── IJournalConfiguration.AddIgnoreEntry() / RemoveEntry() (ignore toggle)
@@ -613,7 +617,7 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (846 tests)
+markdown-journal-cli.Tests/ (853 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs
 │   ├── Init/

@@ -19,6 +19,7 @@ public interface IJournalFileUpdateService
     /// <param name="newHeadings">Optional new heading location in TOC hierarchy.</param>
     /// <param name="ignoreFile">If true, add file to ignore list.</param>
     /// <param name="unignoreFile">If true, remove file from ignore list.</param>
+    /// <param name="updateBacklinks">If true (default), rewrite inline links in other entry files when the entry is renamed.</param>
     void UpdateEntry(
         string directory,
         string currentFileName,
@@ -26,7 +27,8 @@ public interface IJournalFileUpdateService
         string? newEntryTitle = null,
         string? newHeadings = null,
         bool ignoreFile = false,
-        bool unignoreFile = false
+        bool unignoreFile = false,
+        bool updateBacklinks = true
     );
 
     /// <summary>
