@@ -32,7 +32,8 @@ public sealed class UpdateEntryCommand(
                 settings.EntryTitle,
                 settings.Headings,
                 settings.IgnoreFile,
-                settings.UnignoreFile
+                settings.UnignoreFile,
+                !settings.NoBacklinks
             );
 
             _console.MarkupLine(

@@ -318,11 +318,15 @@ mdjournal update entry <fileName> [options]
 - `-h|--headings <headings>` - New location in the TOC hierarchy; use `-` to separate heading levels and `_` for spaces within a heading (e.g. `Projects-2024_Goals`)
 - `--ignore` - Add the entry to the ignore list so it won't appear in the TOC
 - `--unignore` - Remove the entry from the ignore list
+- `--nb|--no-backlinks` - Skip updating inline link references in other entry files after a rename (backlink updates are enabled by default)
 
 **Examples:**
 ```bash
-# Rename an entry (updates filename and TOC title)
+# Rename an entry (updates filename, TOC title, and all backlinks in other entries)
 mdjournal update entry my_notes --name meeting_notes
+
+# Rename without updating backlinks in other files
+mdjournal update entry my_notes --name meeting_notes --no-backlinks
 
 # Update only the TOC display title without renaming the file
 mdjournal update entry meeting_notes --title "Q1 Meeting Notes"
@@ -376,7 +380,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 **Planned Features:**
 - ⏳ `remove` | `rm` entry command - delete an entry make remove a command branch so we can add other remove types later. **(finish before moving on)**
 - ⏳ Pre-update change preview (`--check` flag) **(finish before moving on)**
-- ⏳ add to update entry the ability to update references to that entry in other entries. **(finish before moving on)**
 - ⏳ look through and clean up all tests **(finish before moving on)**
 - ⏳ `--version` flag **(finish before moving on)**
 - ⏳ Global tool installation **(finish before moving on)**

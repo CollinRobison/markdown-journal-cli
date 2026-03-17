@@ -20,12 +20,14 @@ public class JournalFileUpdateServiceTests
     private readonly Mock<IEntryFormatterService> _mockEntryFormatter;
     private readonly Mock<ITableOfContentsService> _mockTableOfContentsService;
     private readonly Mock<IFileTracking> _mockFileTracking;
+    private readonly Mock<IMarkdownLinkRewriter> _mockMarkdownLinkRewriter;
     private readonly JournalFileUpdateService _service;
 
     private const string Directory = "/test/journal";
     private const string OldFile = "old_file.md";
     private const string NewFile = "new_file.md";
     private const string TestFile = "test_file.md";
+    private const string TocFile = "1a-TableOfContents.md";
 
     public JournalFileUpdateServiceTests()
     {
@@ -34,6 +36,7 @@ public class JournalFileUpdateServiceTests
         _mockEntryFormatter = new Mock<IEntryFormatterService>();
         _mockTableOfContentsService = new Mock<ITableOfContentsService>();
         _mockFileTracking = new Mock<IFileTracking>();
+        _mockMarkdownLinkRewriter = new Mock<IMarkdownLinkRewriter>();
 
         var journalSettings = Microsoft.Extensions.Options.Options.Create(
             new JournalSettings
@@ -54,7 +57,8 @@ public class JournalFileUpdateServiceTests
             _mockTableOfContentsService.Object,
             journalSettings,
             NullLogger<JournalFileUpdateService>.Instance,
-            _mockFileTracking.Object
+            _mockFileTracking.Object,
+            _mockMarkdownLinkRewriter.Object
         );
     }
 
@@ -1224,6 +1228,192 @@ public class JournalFileUpdateServiceTests
         _mockFileSystem
             .Setup(fs => fs.FileExists(journalrcPath))
             .Returns(true);
+    }
+
+    #endregion
+
+    #region Backlink Update Tests
+
+    private void SetupRenameScenario(string currentFile, string newName, string newFile)
+    {
+        SetupBasicFileAndJournalrcExists(currentFile);
+
+        _mockJournalConfiguration
+            .Setup(jc => jc.FindEntry(Directory, currentFile))
+            .Returns((null, Array.Empty<string>()));
+
+        var currentStem = System.IO.Path.GetFileNameWithoutExtension(currentFile);
+        var newStem = System.IO.Path.GetFileNameWithoutExtension(newFile);
+
+        _mockFileSystem
+            .Setup(fs => fs.GetFileNameWithoutExtension(currentFile))
+            .Returns(currentStem);
+        _mockFileSystem
+            .Setup(fs => fs.GetFileNameWithoutExtension(newFile))
+            .Returns(newStem);
+
+        _mockEntryFormatter
+            .Setup(ef => ef.AddSpaceSeparators(newName))
+            .Returns(newName);
+        _mockEntryFormatter
+            .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
+            .Returns(newStem);
+        _mockEntryFormatter
+            .Setup(ef => ef.RemoveSpaceSeparators(currentStem))
+            .Returns(currentStem.Replace("_", " "));
+        _mockEntryFormatter
+            .Setup(ef => ef.RemoveSpaceSeparators(newName))
+            .Returns(newName.Replace("_", " "));
+
+        var targetFilePath = $"{Directory}/{newFile}";
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(Directory, newFile))
+            .Returns(targetFilePath);
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(targetFilePath))
+            .Returns(false);
+    }
+
+    [Fact]
+    public void UpdateEntry_CallsReplaceLinksInDirectory_WhenRenameOccurs()
+    {
+        // Arrange
+        const string currentFile = "old_entry.md";
+        const string newName = "new_entry";
+        const string expectedNewFile = "new_entry.md";
+
+        SetupRenameScenario(currentFile, newName, expectedNewFile);
+
+        // Act
+        _service.UpdateEntry(Directory, currentFile, newEntryName: newName, updateBacklinks: true);
+
+        // Assert
+        _mockMarkdownLinkRewriter.Verify(
+            r => r.ReplaceLinksInDirectory(
+                Directory,
+                currentFile,
+                expectedNewFile,
+                It.Is<IReadOnlyCollection<string>>(ex =>
+                    ex.Contains(expectedNewFile, StringComparer.OrdinalIgnoreCase) &&
+                    ex.Contains(TocFile, StringComparer.OrdinalIgnoreCase))
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void UpdateEntry_DoesNotCallReplaceLinksInDirectory_WhenNoRenameOccurs()
+    {
+        // Arrange — only a title change, file stays the same
+        const string currentFile = "my_entry.md";
+        const string stem = "my_entry";
+        SetupBasicFileAndJournalrcExists(currentFile);
+
+        _mockJournalConfiguration
+            .Setup(jc => jc.FindEntry(Directory, currentFile))
+            .Returns((new markdown_journal_cli.Infrastructure.Configuration.Models.Entries
+            {
+                Name = "My Entry",
+                File = currentFile
+            }, Array.Empty<string>()));
+
+        _mockFileSystem
+            .Setup(fs => fs.GetFileNameWithoutExtension(currentFile))
+            .Returns(stem);
+        _mockEntryFormatter
+            .Setup(ef => ef.RemoveSpaceSeparators("New Title"))
+            .Returns("New Title");
+
+        // Act — title-only: no file rename
+        _service.UpdateEntry(Directory, currentFile, newEntryTitle: "New Title");
+
+        // Assert — no rename means no backlink scan
+        _mockMarkdownLinkRewriter.Verify(
+            r => r.ReplaceLinksInDirectory(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>>()
+            ),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void UpdateEntry_DoesNotCallReplaceLinksInDirectory_WhenUpdateBacklinksFalse()
+    {
+        // Arrange
+        const string currentFile = "old_entry.md";
+        const string newName = "new_entry";
+        const string expectedNewFile = "new_entry.md";
+
+        SetupRenameScenario(currentFile, newName, expectedNewFile);
+
+        // Act — opt-out flag
+        _service.UpdateEntry(Directory, currentFile, newEntryName: newName, updateBacklinks: false);
+
+        // Assert — rewriter must NOT be called
+        _mockMarkdownLinkRewriter.Verify(
+            r => r.ReplaceLinksInDirectory(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>>()
+            ),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void UpdateEntry_ExcludesTocFile_FromReplaceLinks()
+    {
+        // Arrange
+        const string currentFile = "old_entry.md";
+        const string newName = "new_entry";
+        const string expectedNewFile = "new_entry.md";
+
+        SetupRenameScenario(currentFile, newName, expectedNewFile);
+
+        // Act
+        _service.UpdateEntry(Directory, currentFile, newEntryName: newName, updateBacklinks: true);
+
+        // Assert — TOC file must be in the exclusion list
+        _mockMarkdownLinkRewriter.Verify(
+            r => r.ReplaceLinksInDirectory(
+                Directory,
+                currentFile,
+                expectedNewFile,
+                It.Is<IReadOnlyCollection<string>>(ex =>
+                    ex.Contains(TocFile, StringComparer.OrdinalIgnoreCase))
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void UpdateEntry_ExcludesRenamedFile_FromReplaceLinks()
+    {
+        // Arrange
+        const string currentFile = "old_entry.md";
+        const string newName = "new_entry";
+        const string expectedNewFile = "new_entry.md";
+
+        SetupRenameScenario(currentFile, newName, expectedNewFile);
+
+        // Act
+        _service.UpdateEntry(Directory, currentFile, newEntryName: newName, updateBacklinks: true);
+
+        // Assert — the newly renamed file itself must be excluded
+        _mockMarkdownLinkRewriter.Verify(
+            r => r.ReplaceLinksInDirectory(
+                Directory,
+                currentFile,
+                expectedNewFile,
+                It.Is<IReadOnlyCollection<string>>(ex =>
+                    ex.Contains(expectedNewFile, StringComparer.OrdinalIgnoreCase))
+            ),
+            Times.Once
+        );
     }
 
     #endregion

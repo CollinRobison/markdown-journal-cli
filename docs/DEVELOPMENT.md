@@ -719,10 +719,11 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ `add` command branch with entry, config, toc, and tracking subcommands
 - ✅ `update journal` command for journal synchronization (config, dates, TOC)
 - ✅ `update entry` command for renaming, relocating, and ignoring entries
+- ✅ `--no-backlinks` flag on `update entry` — backlink rewriting on rename enabled by default; opt-out via `--nb|--no-backlinks`
 - ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
 - ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (846 tests passing)
+- ✅ Testing framework setup (853 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing

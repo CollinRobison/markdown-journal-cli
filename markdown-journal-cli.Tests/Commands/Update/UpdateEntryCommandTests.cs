@@ -64,6 +64,7 @@ public class UpdateEntryCommandTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>()
             ))
             .Throws(new FileNotFoundException("File 'nonexistent.md' not found at '/test/journal'."));
@@ -96,6 +97,7 @@ public class UpdateEntryCommandTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<bool>()
             ))
@@ -160,7 +162,8 @@ public class UpdateEntryCommandTests
                 null,
                 null,
                 false,
-                false
+                false,
+                true
             ),
             Times.Once
         );
@@ -189,7 +192,8 @@ public class UpdateEntryCommandTests
                 null,
                 null,
                 false,
-                false
+                false,
+                true
             ),
             Times.Once
         );
@@ -224,7 +228,8 @@ public class UpdateEntryCommandTests
                 "Custom Title",
                 null,
                 false,
-                false
+                false,
+                true
             ),
             Times.Once
         );
@@ -254,7 +259,8 @@ public class UpdateEntryCommandTests
                 "Override Title",
                 null,
                 false,
-                false
+                false,
+                true
             ),
             Times.Once
         );
@@ -289,7 +295,8 @@ public class UpdateEntryCommandTests
                 null,
                 "Projects-2024",
                 false,
-                false
+                false,
+                true
             ),
             Times.Once
         );
@@ -324,7 +331,8 @@ public class UpdateEntryCommandTests
                 null,
                 null,
                 true,
-                false
+                false,
+                true
             ),
             Times.Once
         );
@@ -355,6 +363,7 @@ public class UpdateEntryCommandTests
                 null,
                 null,
                 false,
+                true,
                 true
             ),
             Times.Once
@@ -391,6 +400,72 @@ public class UpdateEntryCommandTests
                 "New_Name",
                 "Updated Title",
                 "Projects-2024",
+                false,
+                false,
+                true
+            ),
+            Times.Once
+        );
+    }
+
+    #endregion
+
+    #region No-Backlinks Flag
+
+    [Fact]
+    public void Execute_PassesUpdateBacklinks_True_ByDefault()
+    {
+        // Arrange — --no-backlinks not set; default is to update backlinks
+        var settings = new UpdateEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            EntryName = "New_Name",
+        };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        _mockFileUpdateService.Verify(
+            x => x.UpdateEntry(
+                TestPath,
+                TestFileName,
+                "New_Name",
+                null,
+                null,
+                false,
+                false,
+                true
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void Execute_PassesUpdateBacklinks_False_WhenNoBacklinksFlagSet()
+    {
+        // Arrange — --no-backlinks present; backlink scan should be skipped
+        var settings = new UpdateEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            EntryName = "New_Name",
+            NoBacklinks = true,
+        };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        _mockFileUpdateService.Verify(
+            x => x.UpdateEntry(
+                TestPath,
+                TestFileName,
+                "New_Name",
+                null,
+                null,
+                false,
                 false,
                 false
             ),
