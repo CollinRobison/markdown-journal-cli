@@ -1,6 +1,7 @@
 ﻿using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Commands.Init;
 using markdown_journal_cli.Commands.New;
+using markdown_journal_cli.Commands.Remove;
 using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
@@ -8,6 +9,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Services.RemoveEntry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -54,6 +56,7 @@ public static class Program
         host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
         host.Services.AddSingleton<IJournalFileUpdateService, JournalFileUpdateService>();
         host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
+        host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
@@ -64,6 +67,7 @@ public static class Program
         host.Services.AddSingleton<AddFileTracking>();
         host.Services.AddSingleton<UpdateCommand>();
         host.Services.AddSingleton<UpdateEntryCommand>();
+        host.Services.AddSingleton<RemoveEntryCommand>();
 
         // Build the host and get the service provider
         var builtHost = host.Build();
@@ -145,6 +149,18 @@ public static class Program
                         
                 }
             );
+
+            config.AddBranch<RemoveSettings>(
+                "remove",
+                remove =>
+                {
+                    remove.SetDescription("Removes a specified file from an existing journal.");
+                    remove.AddCommand<RemoveEntryCommand>("entry")
+                        .WithExample("remove", "--path", "Source/Repos/TestJournal", "entry", "old_notes")
+                        .WithExample("remove", "--path", "Source/Repos/TestJournal", "entry", "old_notes", "--force")
+                        .WithExample("remove", "--path", "Source/Repos/TestJournal", "entry", "old_notes", "--clean-refs");
+                }
+            ).WithAlias("rm");
         });
 
         return app.Run(args);

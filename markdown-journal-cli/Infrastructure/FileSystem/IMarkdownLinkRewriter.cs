@@ -34,4 +34,17 @@ public interface IMarkdownLinkRewriter
         string newFileName,
         IReadOnlyCollection<string>? excludeFiles = null
     );
+
+    /// <summary>
+    /// Scans every markdown file under <paramref name="directory"/>, strips all inline markdown
+    /// links whose final path segment matches <paramref name="fileName"/> — replacing
+    /// [text](file.md) with just the link text — and writes the file back if it changed.
+    /// Files listed in <paramref name="excludeFiles"/> are skipped.
+    /// Returns the relative paths of every file that was modified.
+    /// </summary>
+    IReadOnlyList<string> StripLinksInDirectory(
+        string directory,
+        string fileName,
+        IReadOnlyCollection<string>? excludeFiles = null
+    );
 }

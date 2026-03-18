@@ -174,4 +174,90 @@ public class MarkdownLinkRewriterTests
     }
 
     #endregion
+
+    // ------------------------------------------------------------------
+    // StripLinksInDirectory
+    // ------------------------------------------------------------------
+
+    #region StripLinksInDirectory
+
+    [Fact]
+    public void StripLinksInDirectory_RemovesLinksToFile_KeepsLinkText()
+    {
+        // Arrange
+        const string journalPath = "/journal";
+        const string deletedFile = "removed_entry.md";
+        _fileSystem.CreateDirectory(journalPath);
+        _fileSystem.CreateFile(journalPath, "note.md",
+            $"See [Meeting Notes]({deletedFile}) for details.");
+
+        // Act
+        var modified = _rewriter.StripLinksInDirectory(journalPath, deletedFile);
+
+        // Assert
+        modified.ShouldHaveSingleItem();
+        modified[0].ShouldBe("note.md");
+        _fileSystem._files[Path.Combine(journalPath, "note.md")]
+            .ShouldBe("See Meeting Notes for details.");
+    }
+
+    [Fact]
+    public void StripLinksInDirectory_SkipsExcludedFiles()
+    {
+        // Arrange
+        const string journalPath = "/journal";
+        const string deletedFile = "removed_entry.md";
+        _fileSystem.CreateDirectory(journalPath);
+        _fileSystem.CreateFile(journalPath, "note.md",
+            $"See [Meeting Notes]({deletedFile}) for details.");
+
+        // Act
+        var modified = _rewriter.StripLinksInDirectory(
+            journalPath,
+            deletedFile,
+            excludeFiles: ["note.md"]
+        );
+
+        // Assert
+        modified.ShouldBeEmpty();
+        _fileSystem._files[Path.Combine(journalPath, "note.md")]
+            .ShouldContain(deletedFile); // unchanged
+    }
+
+    [Fact]
+    public void StripLinksInDirectory_ReturnsEmptyList_WhenNoLinksFound()
+    {
+        // Arrange
+        const string journalPath = "/journal";
+        _fileSystem.CreateDirectory(journalPath);
+        _fileSystem.CreateFile(journalPath, "note.md", "No links here at all.");
+
+        // Act
+        var modified = _rewriter.StripLinksInDirectory(journalPath, "removed_entry.md");
+
+        // Assert
+        modified.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void StripLinksInDirectory_HandlesMultipleLinksInSingleFile()
+    {
+        // Arrange
+        const string journalPath = "/journal";
+        const string deletedFile = "removed_entry.md";
+        _fileSystem.CreateDirectory(journalPath);
+        _fileSystem.CreateFile(journalPath, "note.md",
+            $"See [Notes]({deletedFile}) and also [Notes again]({deletedFile}).");
+
+        // Act
+        var modified = _rewriter.StripLinksInDirectory(journalPath, deletedFile);
+
+        // Assert
+        modified.ShouldHaveSingleItem();
+        var content = _fileSystem._files[Path.Combine(journalPath, "note.md")];
+        content.ShouldBe("See Notes and also Notes again.");
+        content.ShouldNotContain(deletedFile);
+    }
+
+    #endregion
 }
