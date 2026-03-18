@@ -34,7 +34,8 @@ public sealed class RemoveEntryCommand(
             if (!settings.Force)
             {
                 var confirmed = _console.Confirm(
-                    $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone."
+                    $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone.",
+                    defaultValue: false
                 );
 
                 if (!confirmed)

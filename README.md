@@ -422,7 +422,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ✅ `remove` | `rm` entry command - delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead links (`--clean-refs`)
 - ⏳ Pre-update change preview (`--check` flag) **(finish before moving on)**
 - ⏳ look through and clean up all tests **(finish before moving on)**
 - ⏳ `--version` flag **(finish before moving on)**
