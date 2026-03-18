@@ -112,6 +112,7 @@ host.Services.AddSingleton<IHashService, HashService>();
 host.Services.AddSingleton<IFileTracking, FileTracking>();
 host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
+host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -120,6 +121,9 @@ host.Services.AddSingleton<AddEntry>();
 host.Services.AddSingleton<AddJournalrc>();
 host.Services.AddSingleton<AddTableOfContents>();
 host.Services.AddSingleton<AddFileTracking>();
+host.Services.AddSingleton<UpdateCommand>();
+host.Services.AddSingleton<UpdateEntryCommand>();
+host.Services.AddSingleton<RemoveEntryCommand>();  // ← remove command
 ```
 
 ### Benefits of This Approach
@@ -136,8 +140,10 @@ System.Exception
     └── JournalException (Base for all journal errors)
             ├── JournalAlreadyExistsException
             ├── JournalrcNotFoundException
-            ├── TocFileAlreadyExistsException  ← thrown when init target TOC filename already exists
-            ├── TocRenameConflictException     ← thrown when --rename-toc target filename is already in use
+            ├── TrackingIndexNotFoundException
+            ├── TocFileAlreadyExistsException      ← thrown when init target TOC filename already exists
+            ├── TocRenameConflictException         ← thrown when --rename-toc target filename is already in use
+            ├── ProtectedJournalFileException      ← thrown when remove entry targets .journalrc, tracking index, or TOC
             └── [other domain-specific exceptions]
 ```
 
@@ -197,6 +203,19 @@ public class TestFileSystem : IFileSystem
 ### Core Services Overview
 
 The application follows a service-oriented architecture with clear separation of concerns:
+
+**`IRemoveEntryService`** - Orchestrates full removal of a journal entry
+```csharp
+public interface IRemoveEntryService
+{
+    IReadOnlyList<string> RemoveEntry(string journalPath, string fileName, bool cleanRefs);
+}
+```
+- Validates `.journalrc` and tracking index exist before proceeding
+- Guards against protected infrastructure files (`.journalrc`, tracking index, TOC file)
+- Deletes the entry file, removes it from config and tracking, regenerates the TOC
+- When `cleanRefs` is `true`, calls `IMarkdownLinkRewriter.StripLinksInDirectory` to remove dead links across the journal and re-hashes modified files
+- Returns relative paths of files modified by dead-link cleanup (empty when `cleanRefs` is `false`)
 
 **`IInitJournalService`** - Orchestrates adoption of existing directories as journals
 ```csharp
@@ -274,11 +293,15 @@ public interface IMarkdownLinkRewriter
     IReadOnlyList<string> ReplaceLinksInDirectory(
         string directory, string oldFileName, string newFileName,
         IReadOnlyCollection<string>? excludeFiles = null);
+    IReadOnlyList<string> StripLinksInDirectory(
+        string directory, string fileName,
+        IReadOnlyCollection<string>? excludeFiles = null);
 }
 ```
-- Stateless, reusable — designed to serve any future file-rename operation
+- Stateless, reusable — designed to serve any future file-rename or file-removal operation
 - `RewriteLinks` is a pure string transformation (regex, no I/O)
-- `ReplaceLinksInDirectory` is the preferred bulk API: scans, rewrites, and persists all changed files in one call, returning the list of modified relative paths
+- `ReplaceLinksInDirectory` is the preferred bulk API for renames: scans, rewrites, and persists all changed files in one call, returning the list of modified relative paths
+- `StripLinksInDirectory` is the bulk API for removals: scans all `.md` files, replaces `[text](removed.md)` with just `text`, and persists changed files — used by `RemoveEntryService` when `--clean-refs` is passed
 - Matches only inline links `[text](path/file.md)`; reference-style links are out of scope for this iteration
 - Uses `RegexOptions.Compiled` — the pattern is JIT-compiled once and reused across every `.md` file in the journal
 
@@ -617,23 +640,25 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (853 tests)
+markdown-journal-cli.Tests/ (882 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs
 │   ├── Init/
-│   │   └── InitCommandTests.cs          ← new: init command integration tests
+│   │   └── InitCommandTests.cs          ← init command integration tests
 │   ├── Add/
 │   │   ├── AddEntryCommandTests.cs
 │   │   ├── AddJournalrcCommandTests.cs
 │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   └── AddTableOfContentsIntegrationTests.cs
+│   ├── Remove/
+│   │   └── RemoveEntryCommandTests.cs   ← new: remove entry command tests
 │   └── Update/
 │       ├── UpdateCommandTests.cs        ← extended: --rename-toc dispatch tests added
 │       └── UpdateEntryCommandTests.cs
 ├── Infrastructure/
 │   ├── FileSystem/
 │   │   ├── FileSystemTests.cs
-│   │   ├── MarkdownLinkRewriterTests.cs  ← new: unit tests for inline-link rewriting
+│   │   ├── MarkdownLinkRewriterTests.cs  ← extended: StripLinksInDirectory tests added
 │   │   ├── MarkdownMetadataParserTests.cs
 │   │   └── TestFileSystem.cs
 │   ├── FileTrackingTests.cs
@@ -650,7 +675,7 @@ markdown-journal-cli.Tests/ (853 tests)
     ├── EntryFormatter/
     │   └── EntryFormatterServiceTests.cs
     ├── InitJournal/
-    │   └── InitJournalServiceTests.cs         ← new: unit tests for InitJournalService
+    │   └── InitJournalServiceTests.cs
     ├── JournalEntry/
     │   └── JournalEntryServiceTests.cs
     ├── JournalFileUpdate/
@@ -659,6 +684,8 @@ markdown-journal-cli.Tests/ (853 tests)
     │   └── JournalUpdateServiceTests.cs      ← extended: RenameToc test cases added
     ├── NewJournal/
     │   └── NewJournalServiceTests.cs
+    ├── RemoveEntry/
+    │   └── RemoveEntryServiceTests.cs        ← new: remove entry service tests
     └── TableOfContents/
         └── TableOfContentsServiceTests.cs
 ```
@@ -757,3 +784,15 @@ public class NewCommandTests
 ### Decision: Constructor Injection over Property Injection
 **Rationale:** Explicit dependencies, immutable after construction  
 **Alternatives:** Property injection, service locator
+
+### Decision: `ProtectedJournalFileException` for Infrastructure File Guard
+**Rationale:** Infrastructure files (`.journalrc`, tracking index, TOC) must never be deleted via the `remove entry` command. A dedicated exception gives the command a precise catch target and produces a user-friendly error message that clearly identifies the file as protected, rather than surfacing a generic `FileNotFoundException` or silent no-op.  
+**Alternatives:** Silent skip (poor discoverability); generic `InvalidOperationException` (less precise error messaging).
+
+### Decision: `--clean-refs` as Opt-In on `remove entry`
+**Rationale:** Stripping dead links across every `.md` file is a write-heavy operation that is often unnecessary (e.g. when removing a draft that was never linked to). Making it opt-in with `--clean-refs` keeps the default fast and non-destructive. The `--force` flag already bypasses the confirmation prompt — combining it with `--clean-refs` gives a fully non-interactive removal pipeline for scripted use.  
+**Alternatives:** Always strip dead links on remove — too aggressive; leaves user no escape hatch if the regex rewrite produces unexpected results.
+
+### Decision: `StripLinksInDirectory` as a First-Class `IMarkdownLinkRewriter` Method
+**Rationale:** The removal use case (strip `[text](file.md)` → `text`) is structurally identical to the rename use case (`ReplaceLinksInDirectory`) but semantically different — no new filename, just link removal. Adding it to the existing interface keeps all link-rewriting behaviour in one place and allows `RemoveEntryService` to remain free of regex and file-enumeration details. It is tested in complete isolation in `MarkdownLinkRewriterTests`.  
+**Alternatives:** Implement stripping inline in `RemoveEntryService` — duplicates the scan-rewrite-persist loop and couples the service to regex internals.

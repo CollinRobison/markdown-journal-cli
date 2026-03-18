@@ -300,6 +300,48 @@ mdjournal update journal --path ~/Documents/MyJournal --config --toc
 - **Table of Contents (`--toc`)**: Regenerates the TOC markdown file from current configuration
 - **Rename TOC (`--rename-toc <name>`)**: Renames the TOC file on disk, updates `.journalrc`, rewrites all inline markdown link references across the journal, and stamps "Last Edited" on every modified file. Pass the stem only — `.md` is appended automatically. Errors if a file named `<name>.md` already exists.
 
+### `remove entry` - Remove a Journal Entry
+Removes a journal entry file, its configuration entry, its tracking record, and regenerates the TOC. Optionally strips all dead inline links pointing to the removed file across the journal.
+
+**Syntax:**
+```bash
+mdjournal remove entry <fileName> [options]
+# or using the rm alias:
+mdjournal rm entry <fileName> [options]
+```
+
+**Arguments:**
+- `fileName` - Name of the file to remove (with or without `.md` extension)
+
+**Options:**
+- `-p|--path <path>` - Path to the journal directory (default: current directory)
+- `-f|--force` - Skip the confirmation prompt and remove immediately
+- `--clean-refs` - Scan all other entry files and strip any inline links pointing to the removed entry
+
+**Protected Files:** The command refuses to remove `.journalrc`, the tracking index, or the TOC file — these are protected infrastructure files.
+
+**Examples:**
+```bash
+# Remove an entry (prompts for confirmation)
+mdjournal remove entry old_notes --path ~/Documents/MyJournal
+
+# Remove without confirmation prompt
+mdjournal remove entry old_notes --path ~/Documents/MyJournal --force
+
+# Remove and clean up dead links in other entries
+mdjournal remove entry old_notes --path ~/Documents/MyJournal --force --clean-refs
+
+# Using the rm alias
+mdjournal rm entry old_notes --path ~/Documents/MyJournal --force
+```
+
+**What Gets Removed/Updated:**
+- **File**: The `.md` entry file is deleted from disk
+- **Config**: The entry is removed from `.journalrc`
+- **Tracking**: The entry is removed from the tracking index
+- **TOC**: Table of contents is regenerated to reflect the removal
+- **Dead links (`--clean-refs`)**: All inline `[text](old_notes.md)` links in other entries are replaced with just the link text; those files are re-hashed in the tracking index
+
 ### `update entry` - Update a Journal Entry
 Renames an entry file, changes its TOC title, moves it to a different heading, or updates its ignore status. All referenced locations (config, tracking index, TOC) are updated atomically.
 
@@ -364,8 +406,10 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
 - ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
+- ✅ **`remove entry` command** — delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead inline links (`--clean-refs`); `rm` alias supported
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **846 passing unit tests** covering core functionality- ✅ Service-oriented architecture with dependency injection
+- ✅ **882 passing unit tests** covering core functionality
+- ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
 - ✅ **File tracking and change detection** using SHA256 hashing
@@ -378,7 +422,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ `remove` | `rm` entry command - delete an entry make remove a command branch so we can add other remove types later. **(finish before moving on)**
+- ✅ `remove` | `rm` entry command - delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead links (`--clean-refs`)
 - ⏳ Pre-update change preview (`--check` flag) **(finish before moving on)**
 - ⏳ look through and clean up all tests **(finish before moving on)**
 - ⏳ `--version` flag **(finish before moving on)**

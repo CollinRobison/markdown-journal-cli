@@ -43,6 +43,9 @@ markdown-journal-cli/
 │   │   │   └── InitSettings.cs
 │   │   ├── New/                   # New journal command
 │   │   │   └── NewCommand.cs
+│   │   ├── Remove/                # Remove journal entry command
+│   │   │   ├── RemoveEntryCommand.cs
+│   │   │   └── RemoveSettings.cs
 │   │   ├── Update/                # Update journal/entry commands
 │   │   │   ├── UpdateCommand.cs
 │   │   │   ├── UpdateEntryCommand.cs
@@ -99,13 +102,16 @@ markdown-journal-cli/
 │   │   ├── NewJournal/
 │   │   │   ├── INewJournalService.cs
 │   │   │   └── NewJournalService.cs
+│   │   ├── RemoveEntry/
+│   │   │   ├── IRemoveEntryService.cs      # Remove entry orchestration
+│   │   │   └── RemoveEntryService.cs
 │   │   └── TableOfContents/
 │   │       ├── ITableOfContentsService.cs
 │   │       └── TableOfContentsService.cs
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (846 tests)
+├── markdown-journal-cli.Tests/    # Unit tests (882 tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
 │   │   ├── Init/
@@ -116,13 +122,15 @@ markdown-journal-cli/
 │   │   │   ├── AddJournalrcCommandTests.cs
 │   │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   │   └── AddTableOfContentsIntegrationTests.cs
+│   │   ├── Remove/
+│   │   │   └── RemoveEntryCommandTests.cs     # remove entry command tests
 │   │   └── Update/
 │   │       ├── UpdateCommandTests.cs          # + --rename-toc dispatch tests
 │   │       └── UpdateEntryCommandTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
 │   │   ├── FileSystem/
 │   │   │   ├── FileSystemTests.cs
-│   │   │   ├── MarkdownLinkRewriterTests.cs   # new: inline-link rewriting unit tests
+│   │   │   ├── MarkdownLinkRewriterTests.cs   # extended: StripLinksInDirectory tests added
 │   │   │   ├── MarkdownMetadataParserTests.cs
 │   │   │   └── TestFileSystem.cs
 │   │   ├── FileTrackingTests.cs
@@ -148,6 +156,8 @@ markdown-journal-cli/
 │       │   └── JournalUpdateServiceTests.cs   # + RenameToc test cases
 │       ├── NewJournal/
 │       │   └── NewJournalServiceTests.cs
+│       ├── RemoveEntry/
+│       │   └── RemoveEntryServiceTests.cs     # remove entry service tests
 │       └── TableOfContents/
 │           └── TableOfContentsServiceTests.cs
 ├── docs/                         # Documentation
@@ -587,6 +597,7 @@ host.Services.AddSingleton<IHashService, HashService>();
 host.Services.AddSingleton<IFileTracking, FileTracking>();
 host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
+host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -595,6 +606,9 @@ host.Services.AddSingleton<AddEntry>();
 host.Services.AddSingleton<AddJournalrc>();
 host.Services.AddSingleton<AddTableOfContents>();
 host.Services.AddSingleton<AddFileTracking>();
+host.Services.AddSingleton<UpdateCommand>();
+host.Services.AddSingleton<UpdateEntryCommand>();
+host.Services.AddSingleton<RemoveEntryCommand>();  // ← remove command
 ```
 
 ### Key Architectural Patterns
@@ -721,9 +735,10 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ `update entry` command for renaming, relocating, and ignoring entries
 - ✅ `--no-backlinks` flag on `update entry` — backlink rewriting on rename enabled by default; opt-out via `--nb|--no-backlinks`
 - ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
-- ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting
+- ✅ **`remove entry` command** — delete an entry file, remove config/tracking records, regenerate TOC; `--clean-refs` strips dead inline links across the journal; `rm` alias supported
+- ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting and link stripping
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (853 tests passing)
+- ✅ Testing framework setup (882 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing
