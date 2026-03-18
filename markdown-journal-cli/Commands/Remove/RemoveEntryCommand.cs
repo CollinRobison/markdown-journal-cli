@@ -53,7 +53,7 @@ public sealed class RemoveEntryCommand(
 
             _console.MarkupLine($"[green]Removed:[/] '{settings.FileName.EscapeMarkup()}'");
             _console.MarkupLine($"[dim]  - {settings.FileName.EscapeMarkup()} removed from config[/]");
-            _console.MarkupLine($"[dim]  Removed from tracking: {settings.FileName.EscapeMarkup()}[/]");
+            _console.MarkupLine($"[dim]  - {settings.FileName.EscapeMarkup()} removed from tracking[/]");
             _console.MarkupLine("[green]Table of contents updated.[/]");
 
             if (settings.CleanRefs && modifiedFiles.Count > 0)
