@@ -1,0 +1,99 @@
+using System.ComponentModel;
+using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Services.RemoveEntry;
+using Microsoft.Extensions.Logging;
+using Spectre.Console;
+using Spectre.Console.Cli;
+
+namespace markdown_journal_cli.Commands.Remove;
+
+[Description("Removes a journal entry file, its config entry, its tracking record, and regenerates the TOC.")]
+public sealed class RemoveEntryCommand(
+    IAnsiConsole console,
+    IRemoveEntryService removeEntryService,
+    ILogger<RemoveEntryCommand> logger
+) : Command<RemoveEntrySettings>
+{
+    private readonly IAnsiConsole _console =
+        console ?? throw new ArgumentNullException(nameof(console));
+    private readonly IRemoveEntryService _removeEntryService =
+        removeEntryService ?? throw new ArgumentNullException(nameof(removeEntryService));
+    private readonly ILogger<RemoveEntryCommand> _logger =
+        logger ?? throw new ArgumentNullException(nameof(logger));
+
+    public override int Execute(CommandContext context, RemoveEntrySettings settings)
+    {
+        _logger.LogDebug(
+            "RemoveEntryCommand executing for '{FileName}' in '{FilePath}'",
+            settings.FileName,
+            settings.FilePath
+        );
+
+        try
+        {
+            if (!settings.Force)
+            {
+                var confirmed = _console.Confirm(
+                    $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone.",
+                    defaultValue: false
+                );
+
+                if (!confirmed)
+                {
+                    _console.MarkupLine("Removal cancelled.");
+                    return 0;
+                }
+            }
+
+            var modifiedFiles = _removeEntryService.RemoveEntry(
+                settings.FilePath,
+                settings.FileName,
+                settings.CleanRefs
+            );
+
+            _console.MarkupLine($"[green]Removed:[/] '{settings.FileName.EscapeMarkup()}'");
+            _console.MarkupLine($"[dim]  - {settings.FileName.EscapeMarkup()} removed from config[/]");
+            _console.MarkupLine($"[dim]  - {settings.FileName.EscapeMarkup()} removed from tracking[/]");
+            _console.MarkupLine("[green]Table of contents updated.[/]");
+
+            if (settings.CleanRefs && modifiedFiles.Count > 0)
+            {
+                foreach (var relativePath in modifiedFiles)
+                {
+                    _console.MarkupLine($"[dim]  Stripped links: {relativePath.EscapeMarkup()}[/]");
+                }
+                _console.MarkupLine($"[green]Cleaned dead references in {modifiedFiles.Count} file(s).[/]");
+            }
+
+            _console.MarkupLine($"[green]Success:[/] Entry '{settings.FileName.EscapeMarkup()}' removed.");
+
+            _logger.LogDebug("RemoveEntryCommand completed successfully for '{FileName}'", settings.FileName);
+            return 0;
+        }
+        catch (JournalrcNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            return 1;
+        }
+        catch (TrackingIndexNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            return 1;
+        }
+        catch (ProtectedJournalFileException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            return 1;
+        }
+        catch (FileNotFoundException ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
+            return 1;
+        }
+    }
+}

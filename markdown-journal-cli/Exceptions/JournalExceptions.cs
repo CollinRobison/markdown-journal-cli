@@ -133,3 +133,17 @@ public class JournalEntryAlreadyExistsException(string entryName, string filePat
     /// </summary>
     public string FilePath { get; } = filePath;
 }
+
+/// <summary>
+/// Exception thrown when attempting to remove a protected journal infrastructure file
+/// (e.g. .journalrc, tracking index, or the table of contents).
+/// </summary>
+/// <param name="fileName">The protected filename that was targeted.</param>
+public class ProtectedJournalFileException(string fileName)
+    : JournalException(
+        $"'{fileName}' is a protected journal file and cannot be removed with 'remove entry'."
+    )
+{
+    /// <summary>Gets the protected filename that was targeted.</summary>
+    public string FileName { get; } = fileName;
+}

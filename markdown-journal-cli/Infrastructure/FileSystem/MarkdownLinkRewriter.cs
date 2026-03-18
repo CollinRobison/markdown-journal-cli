@@ -75,6 +75,40 @@ public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRe
         return modified;
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<string> StripLinksInDirectory(
+        string directory,
+        string fileName,
+        IReadOnlyCollection<string>? excludeFiles = null
+    )
+    {
+        var pattern = BuildLinkPattern(fileName);
+        var modified = new List<string>();
+
+        foreach (var relativePath in _fileSystem.GetMarkdownFiles(directory))
+        {
+            if (excludeFiles?.Contains(relativePath, StringComparer.OrdinalIgnoreCase) == true)
+                continue;
+
+            var absolutePath = _fileSystem.CombinePaths(directory, relativePath);
+            var content = _fileSystem.GetFileContent(absolutePath);
+            var updated = pattern.Replace(content, m => m.Groups["text"].Value);
+
+            if (string.Equals(content, updated, StringComparison.Ordinal))
+                continue;
+
+            var fileDir = _fileSystem.GetDirectoryName(absolutePath) ?? directory;
+            var fileNameOnly = _fileSystem.GetFileName(absolutePath);
+            if (fileNameOnly != null)
+                _fileSystem.UpdateFile(fileDir, fileNameOnly, updated);
+
+            _logger.LogDebug("Stripped links in '{RelativePath}': removed links to {FileName}", relativePath, fileName);
+            modified.Add(relativePath);
+        }
+
+        return modified;
+    }
+
     // (?<text>[^\]]*) — link text inside [ ]
     // (?<prefix>(?:[^)]*/)?) — optional path prefix ending with /
     // Regex.Escape(fileName) — literal filename anchored as the final URL segment
