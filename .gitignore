@@ -53,8 +53,6 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-# VS Code settings
-.vscode/
 
 # User-specific files
 *.user

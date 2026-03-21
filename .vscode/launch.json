@@ -1,0 +1,131 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Attach",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    },
+    {
+      "name": "new MyJournal",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["new", "MyJournal", "--path", "/tmp/journal-debug"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "init (existing dir)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["init", "--path", "/tmp/journal-debug/MyJournal"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "add entry",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["add", "--path", "/tmp/journal-debug/MyJournal", "entry", "Meeting_Notes", "--heading", "Work", "--subheading", "Team-Standup"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "add config (.journalrc)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["add", "--path", "/tmp/journal-debug/MyJournal", "config"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "add toc",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["add", "--path", "/tmp/journal-debug/MyJournal", "toc"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "add tracking",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["add", "--path", "/tmp/journal-debug/MyJournal", "tracking"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "update journal",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["update", "--path", "/tmp/journal-debug/MyJournal", "journal"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "update entry (rename)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["update", "--path", "/tmp/journal-debug/MyJournal", "entry", "Meeting_Notes", "--name", "Standup_Notes"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "remove entry",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["remove", "--path", "/tmp/journal-debug/MyJournal", "entry", "Work-Team-Standup-Meeting_Notes", "--force"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "remove entry (with --clean-refs)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["remove", "--path", "/tmp/journal-debug/MyJournal", "entry", "Work-Team-Standup-Meeting_Notes", "--force", "--clean-refs"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    }
+  ]
+}
