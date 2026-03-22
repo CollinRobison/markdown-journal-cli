@@ -546,6 +546,7 @@ public class JournalConfiguration(
         foreach (var entry in config.TableOfContents.RootEntries)
             configFiles.Add(entry.File);
         CollectTopicEntryFiles(config.TableOfContents.Structure.Topics, configFiles);
+        configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
 
         _logger.LogDebug(
             "Detecting config changes: {TrackedCount} tracked files, {ConfigCount} config entries",

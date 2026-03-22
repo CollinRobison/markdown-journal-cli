@@ -45,6 +45,29 @@ Program.cs
                                     └── Custom Exceptions
 ```
 
+### File Infrastructure
+
+Two metadata files (`.journalrc` and `.mdjournal`) are kept in sync with the journal directory's markdown files via a continuous loop when `mdjournal update journal` runs:
+
+![File infrastructure diagram](mdjournal_file_infrastructure.png)
+
+| Component | Role |
+|---|---|
+| `.journalrc` | Config file. Defines the TOC structure, topic hierarchy, custom entry display names, and the `ignoreFiles` list |
+| `.mdjournal` | Tracking file. Stores SHA256 hashes and last-checked timestamps for every tracked `.md` file |
+| Journal Directory | The actual markdown entry files and generated Table of Contents on disk |
+
+**Sync loop (automatic on `update journal`):**
+
+1. **Disk → `.mdjournal`** — `FileTracking.DetectChangesWithoutUpdate()` walks the directory and compares file hashes against the stored index to identify added, modified, and deleted files.
+2. **`.mdjournal` → Journal Directory** — Last-edited metadata is stamped into modified entry files; the tracking index is updated with new hashes.
+3. **`.mdjournal` → `.journalrc`** — `JournalConfiguration.DetectConfigChanges()` diffs the tracking index keys against `.journalrc` entries and adds or removes entries to keep them in sync.
+4. **`.journalrc` → Journal Directory** — `TableOfContentsService` reads `.journalrc` and regenerates the Table of Contents markdown file.
+
+**User-driven (explicit commands only):**
+
+- **Journal Directory → `.journalrc`** — Custom entry display names (`update entry --name`) and ignore-file flags (`update entry --ignore`) are updated via explicit commands, not the automatic sync loop.
+
 ## 🔧 Dependency Injection Deep Dive
 
 ### The TypeRegistrar Pattern

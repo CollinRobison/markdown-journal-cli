@@ -15,7 +15,25 @@ mdjournal new WorkJournal --path ~/Documents/Journals
 mdjournal init MyNotes --path ~/Documents/Notes
 ```
 
-## 📋 Table of Contents
+## �️ How It Works
+
+When you create a journal, `mdjournal` manages three things in your journal folder:
+
+| File                 | What it is                                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Your `.md` files** | Your actual journal entries — plain markdown files you write in any editor                                                                           |
+| **`.journalrc`**     | A config file that knows the name of your journal, it's settings, how your entries are organized into topics, and which files to exclude from the Table of Contents |
+| **`.mdjournal`**     | A tracking file that stores a fingerprint (hash) of every entry so the tool can detect what's been added, changed, or deleted since the last update  |
+
+Running `mdjournal update journal` ties everything together:
+1. Compares your files against `.mdjournal` to find what changed
+2. Stamps a "Last Edited" date into any modified entries
+3. Syncs `.journalrc` so new files are registered and deleted ones are removed
+4. Regenerates the Table of Contents from `.journalrc`
+
+You never need to edit `.journalrc` or `.mdjournal` by hand — the CLI keeps them in sync.
+
+## �📋 Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -25,7 +43,7 @@ mdjournal init MyNotes --path ~/Documents/Notes
 
 ## 📚 Documentation
 
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture, design decisions, and system patterns
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture, design decisions, and system patterns (includes [file infrastructure diagram](docs/ARCHITECTURE.md#file-infrastructure))
 - **[Development Guide](docs/DEVELOPMENT.md)** - Setup, contribution workflow, coding standards, and testing
 
 ## Installation
@@ -429,7 +447,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
 - ⏳ make the repo collaborator ready and make public with correct license. **(finish before moving on)**
 - ⏳  LOOK INTO SETTING UP A ROLLBACK SYSTEM FOR WHEN A COMMAND FAILS. FOR EXAMPLE HOLDING EACH FILE TYPE IN MEMORY AND IF FILE CREATIONS DROPS THEN REVERT BACK. **(finish before moving on)**
-- ⏳ create flow chart from written notes on the flow between toc - journalrc - tracking file for docs **(finish before moving on)**
+- ⏳ clean up docs (finish before moving on)**
 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
