@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -71,13 +72,15 @@ internal class NaturalStringComparer : IComparer<string>
 public class JournalConfiguration(
     IFileSystem fileSystem,
     IOptions<JournalSettings> journalSettings,
-    ILogger<JournalConfiguration> logger
+    ILogger<JournalConfiguration> logger,
+    IFileTracking fileTracking
 ) : IJournalConfiguration
 {
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<JournalConfiguration> _logger = logger;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IFileTracking _fileTracking = fileTracking;
 
     public void Create(string directory, JournalConfig config)
     {
@@ -526,6 +529,54 @@ public class JournalConfiguration(
                     .ToArray();
             }
         });
+    }
+
+    public JournalConfigSyncResult DetectConfigChanges(string journalPath)
+    {
+        var config = Read(journalPath);
+        if (config is null)
+            return new JournalConfigSyncResult();
+
+        var trackedFiles = new HashSet<string>(
+            _fileTracking.LoadIndex(journalPath).Files.Keys,
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        var configFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in config.TableOfContents.RootEntries)
+            configFiles.Add(entry.File);
+        CollectTopicEntryFiles(config.TableOfContents.Structure.Topics, configFiles);
+        configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
+
+        _logger.LogDebug(
+            "Detecting config changes: {TrackedCount} tracked files, {ConfigCount} config entries",
+            trackedFiles.Count,
+            configFiles.Count
+        );
+
+        var tocFile = config.TableOfContents.File;
+
+        var filesToAdd = trackedFiles
+            .Where(f =>
+                !configFiles.Contains(f)
+                && !string.Equals(f, tocFile, StringComparison.OrdinalIgnoreCase)
+            )
+            .ToList();
+
+        var filesToRemove = configFiles.Where(f => !trackedFiles.Contains(f)).ToList();
+
+        return new JournalConfigSyncResult { FilesToAdd = filesToAdd, FilesToRemove = filesToRemove };
+    }
+
+    private static void CollectTopicEntryFiles(IEnumerable<Topic> topics, HashSet<string> fileSet)
+    {
+        foreach (var topic in topics)
+        {
+            foreach (var entry in topic.Entries)
+                fileSet.Add(entry.File);
+            if (topic.Subtopics is not null)
+                CollectTopicEntryFiles(topic.Subtopics, fileSet);
+        }
     }
 
     #region Private Helper Methods

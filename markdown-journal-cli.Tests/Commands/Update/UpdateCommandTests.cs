@@ -51,7 +51,8 @@ public class UpdateCommandTests
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             _journalSettings,
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            _fileTracking
         );
 
         _tableOfContentsGenerator = new TableOfContentsService(
@@ -83,7 +84,8 @@ public class UpdateCommandTests
             _fileSystem,
             _journalUpdateService,
             _fileTracking,
-            _journalSettings
+            _journalSettings,
+            _journalConfiguration
         );
     }
 
@@ -97,7 +99,7 @@ public class UpdateCommandTests
     [Fact]
     public void Execute_ReturnsZero_AndPrintsUpToDate_WhenNoChanges()
     {
-        // Arrange — create a file and build the index so there are no diffs
+        // Arrange — create a file, track it, and add it to config so everything is in sync
         var filePath = Path.Combine(_testPath, "note.md");
         _fileSystem.CreateFile(
             _testPath,
@@ -106,6 +108,9 @@ public class UpdateCommandTests
         );
         _hashService.SetHash(filePath, "hash-a");
         _fileTracking.UpdateIndex(_testPath);
+
+        // Ensure config is also in sync with tracking
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "note.md");
 
         var command = CreateCommand();
         var settings = new UpdateJournalSettings { FilePath = _testPath };
@@ -624,7 +629,8 @@ public class UpdateCommandTests
         var customConfig = new JournalConfiguration(
             _fileSystem,
             customSettings,
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            tracking
         );
         var customTocGen = new TableOfContentsService(
             _fileSystem,
@@ -647,7 +653,8 @@ public class UpdateCommandTests
             _fileSystem,
             customUpdateService,
             tracking,
-            customSettings
+            customSettings,
+            customConfig
         );
         var settings = new UpdateJournalSettings { FilePath = _testPath };
 
@@ -846,13 +853,18 @@ public class UpdateCommandTests
     [Fact]
     public void Execute_AddsNewFilesToConfig_WhenConfigFlagSet()
     {
-        // Arrange
+        // Arrange — file must be in the tracking index before config sync can detect it.
+        // This simulates the fixed bug scenario: tracking ran first (separate run),
+        // now config-only run should detect and add the file.
         SetupJournalConfig();
-        _fileTracking.UpdateIndex(_testPath); // empty index
+        _fileTracking.UpdateIndex(_testPath); // empty index (no .md files yet)
 
         var filePath = Path.Combine(_testPath, "Learning-Rust.md");
         _fileSystem.CreateFile(_testPath, "Learning-Rust.md", "# Rust\n\nContent");
         _hashService.SetHash(filePath, "hash-new");
+
+        // Simulate a prior --tracking run: manually add the file to the tracking index
+        _fileTracking.UpdateFileInIndex(_testPath, "Learning-Rust.md");
 
         var command = CreateCommand();
         var settings = new UpdateJournalSettings { FilePath = _testPath, ConfigFlag = true };
@@ -872,9 +884,11 @@ public class UpdateCommandTests
     }
 
     [Fact]
-    public void Execute_RemovesDeletedFilesFromConfig_WhenConfigFlagSet()
+    public void Execute_RemovesDeletedFilesFromConfig_WhenAllFlagsRun()
     {
-        // Arrange
+        // Arrange — with the new design, deletion from config requires tracking to be updated
+        // first (so the tracking index no longer contains the deleted file). Running with all
+        // flags (or at least tracking + config) handles this in a single run.
         SetupJournalConfig();
 
         var filePath = Path.Combine(_testPath, "Learning-Rust.md");
@@ -889,7 +903,7 @@ public class UpdateCommandTests
         _fileSystem.DeleteFile(filePath);
 
         var command = CreateCommand();
-        var settings = new UpdateJournalSettings { FilePath = _testPath, ConfigFlag = true };
+        var settings = new UpdateJournalSettings { FilePath = _testPath }; // all flags
 
         // Act
         var result = command.Execute(CreateCommandContext(), settings);
@@ -1468,6 +1482,126 @@ public class UpdateCommandTests
         // Assert — TOC is still under the original name
         _fileSystem.FileExists(Path.Combine(_testPath, "1a-TableOfContents.md")).ShouldBeTrue();
         _console.Output.ShouldNotContain("Renamed TOC:");
+    }
+
+    #endregion
+
+    #region Config Sync Regression and Behavioral Tests
+
+    [Fact]
+    public void Execute_TrackingOnly_ThenConfig_AddsNewFilesToConfig()
+    {
+        // Regression test for the original bug:
+        // --tracking run first → adds file to tracking index but NOT to config.
+        // Subsequent update (with config) must still detect and add the file.
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath); // empty index
+
+        var filePath = Path.Combine(_testPath, "Learning-Rust.md");
+        _fileSystem.CreateFile(_testPath, "Learning-Rust.md", "# Rust\n\nContent");
+        _hashService.SetHash(filePath, "hash-new");
+
+        // Run 1: --tracking only (simulates the bug-triggering scenario)
+        var trackingSettings = new UpdateJournalSettings
+        {
+            FilePath = _testPath,
+            Tracking = true,
+        };
+        CreateCommand().Execute(CreateCommandContext(), trackingSettings);
+
+        // Verify file is in tracking but NOT in config
+        var indexAfterTracking = _fileTracking.LoadIndex(_testPath);
+        indexAfterTracking.Files.ShouldContainKey("Learning-Rust.md");
+        _journalConfiguration.Read(_testPath)!.TableOfContents.Structure.Topics.ShouldBeEmpty();
+
+        // Run 2: config update (previously broken — would not add file since it's "known")
+        var configSettings = new UpdateJournalSettings
+        {
+            FilePath = _testPath,
+            ConfigFlag = true,
+        };
+        var result = CreateCommand().Execute(CreateCommandContext(), configSettings);
+
+        // Assert — file must now be in config
+        result.ShouldBe(0);
+        var config = _journalConfiguration.Read(_testPath);
+        config.ShouldNotBeNull();
+        var topic = config.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
+        topic.ShouldNotBeNull();
+        topic.Entries.Any(e => e.File == "Learning-Rust.md").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Execute_NoTrackingChanges_ButConfigDrift_StillUpdatesConfig()
+    {
+        // When file changes are all up-to-date (no hash drift) but config is missing entries,
+        // the command must still update config instead of returning early.
+        SetupJournalConfig();
+
+        var filePath = Path.Combine(_testPath, "Learning-Go.md");
+        _fileSystem.CreateFile(_testPath, "Learning-Go.md", "# Go\n\nContent");
+        _hashService.SetHash(filePath, "hash-go");
+        _fileTracking.UpdateIndex(_testPath); // file now tracked with hash-go
+
+        // File is tracked but NOT in config → config drift, no hash drift
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, ConfigFlag = true };
+
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        result.ShouldBe(0);
+        var config = _journalConfiguration.Read(_testPath);
+        var topic = config!.TableOfContents.Structure.Topics.FirstOrDefault(t =>
+            t.Name == "Learning"
+        );
+        topic.ShouldNotBeNull("Config drift should have been resolved even with no hash changes");
+        topic.Entries.Any(e => e.File == "Learning-Go.md").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Execute_TrackingFlag_DoesNotCallDetectConfigChanges()
+    {
+        // When only --tracking is set, config sync must NOT run.
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath);
+
+        var filePath = Path.Combine(_testPath, "Learning-Rust.md");
+        _fileSystem.CreateFile(_testPath, "Learning-Rust.md", "# Rust\n\nContent");
+        _hashService.SetHash(filePath, "hash-new");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
+
+        command.Execute(CreateCommandContext(), settings);
+
+        // Config must NOT have been updated
+        var config = _journalConfiguration.Read(_testPath);
+        config!.TableOfContents.Structure.Topics.ShouldBeEmpty();
+        _console.Output.ShouldNotContain("Journal configuration updated");
+        _console.Output.ShouldNotContain("No configuration changes needed");
+    }
+
+    [Fact]
+    public void Execute_NoChanges_InBothTrackingAndConfig_ReturnsZeroWithMessage()
+    {
+        // Both tracking index and config are fully in sync — must return "up to date"
+        SetupJournalConfig();
+
+        var filePath = Path.Combine(_testPath, "2a-Note.md");
+        _fileSystem.CreateFile(_testPath, "2a-Note.md", "# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "2a-Note.md");
+
+        var command = CreateCommand();
+        var settings = new UpdateJournalSettings { FilePath = _testPath }; // all flags
+
+        var result = command.Execute(CreateCommandContext(), settings);
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("up to date");
     }
 
     #endregion

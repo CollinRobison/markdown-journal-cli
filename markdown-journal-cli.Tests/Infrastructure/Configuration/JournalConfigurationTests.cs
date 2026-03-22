@@ -1,12 +1,13 @@
 using System.Text.Json;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Shouldly;
 using Xunit;
-
 namespace markdown_journal_cli.Tests.Infrastructure.Configuration;
 
 /// <summary>
@@ -29,7 +30,8 @@ public class JournalConfigurationTests
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             _journalSettings,
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            Mock.Of<IFileTracking>()
         );
         _testDirectory = "/test/directory";
     }
@@ -1777,7 +1779,8 @@ public class JournalConfigurationTests
         var journalConfig = new JournalConfiguration(
             _fileSystem,
             Options.Create(settings),
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            Mock.Of<IFileTracking>()
         );
 
         var config = CreateTestConfig();
@@ -2971,6 +2974,475 @@ public class JournalConfigurationTests
         var updated = _journalConfiguration.Read(_testDirectory);
         updated.ShouldNotBeNull();
         updated.TableOfContents.RootEntries[0].File.ShouldBe("renamed.md");
+    }
+
+    #endregion
+
+    #region DetectConfigChanges
+
+    private (JournalConfiguration config, FileTracking tracking) CreateConfigWithTracking(
+        string? appName = "testapp"
+    )
+    {
+        var settings = Options.Create(
+            new JournalSettings
+            {
+                JournalConfigFileName = ".journalrc",
+                AppName = appName ?? "testapp",
+                TableOfContentsFileName = "1a-TableOfContents",
+            }
+        );
+        var hashService = new markdown_journal_cli.Tests.Infrastructure.Tracking.TestHashService();
+        var tracking = new FileTracking(_fileSystem, settings, hashService);
+        var config = new JournalConfiguration(
+            _fileSystem,
+            settings,
+            NullLogger<JournalConfiguration>.Instance,
+            tracking
+        );
+        return (config, tracking);
+    }
+
+    private void SetupTrackingIndex(FileTracking tracking, string directory, params string[] files)
+    {
+        foreach (var file in files)
+        {
+            var fullPath = Path.Combine(directory, file);
+            if (!_fileSystem.FileExists(fullPath))
+                _fileSystem.CreateFile(directory, file, $"# {file}");
+        }
+        tracking.UpdateIndex(directory);
+    }
+
+    [Fact]
+    public void DetectConfigChanges_ReturnsFilesToAdd_WhenTrackedFilesNotInConfig()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "Learning-Rust.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert
+        result.FilesToAdd.ShouldContain("Learning-Rust.md");
+        result.FilesToRemove.ShouldBeEmpty();
+        result.HasChanges.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_ReturnsFilesToRemove_WhenConfigFilesNotInTracking()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        tracking.UpdateIndex(_testDirectory); // empty index
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new Entries { Name = "Note", File = "old-note.md" }],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert
+        result.FilesToRemove.ShouldContain("old-note.md");
+        result.FilesToAdd.ShouldBeEmpty();
+        result.HasChanges.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_ExcludesTocFile_FromFilesToAdd()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "1a-TableOfContents.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — the TOC file must never appear as a config entry to add
+        result.FilesToAdd.ShouldNotContain("1a-TableOfContents.md");
+        result.HasChanges.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_ReturnsEmpty_WhenConfigAndTrackingInSync()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "2a-NoteOne.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new Entries { Name = "NoteOne", File = "2a-NoteOne.md" }],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert
+        result.HasChanges.ShouldBeFalse();
+        result.FilesToAdd.ShouldBeEmpty();
+        result.FilesToRemove.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_ReturnsEmpty_WhenJournalrcDoesNotExist()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        // No .journalrc created
+
+        // Act — should not throw
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert
+        result.HasChanges.ShouldBeFalse();
+        result.FilesToAdd.ShouldBeEmpty();
+        result.FilesToRemove.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_HandlesEmptyTrackingIndex()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        tracking.UpdateIndex(_testDirectory); // empty index
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new Entries { Name = "A", File = "2a-EntryA.md" },
+                        new Entries { Name = "B", File = "2b-EntryB.md" },
+                    ],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — all config entries should appear in FilesToRemove
+        result.FilesToRemove.ShouldContain("2a-EntryA.md");
+        result.FilesToRemove.ShouldContain("2b-EntryB.md");
+        result.FilesToAdd.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_HandlesTopicEntries()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory);
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "Learning",
+                                Entries =
+                                [
+                                    new Entries { Name = "Rust", File = "Learning-Rust.md" },
+                                ],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                },
+            }
+        );
+        // "Learning-Rust.md" is in config but NOT in tracking (empty index)
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — topic entry should appear in FilesToRemove
+        result.FilesToRemove.ShouldContain("Learning-Rust.md");
+    }
+
+    [Fact]
+    public void DetectConfigChanges_HandlesSubtopicEntries()
+    {
+        // Arrange
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory);
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "Learning",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new Topic
+                                    {
+                                        Name = "Rust",
+                                        Entries =
+                                        [
+                                            new Entries
+                                            {
+                                                Name = "Ownership",
+                                                File = "Learning-Rust-Ownership.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                },
+            }
+        );
+        // "Learning-Rust-Ownership.md" is in config subtopic but NOT in tracking
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — subtopic entry should appear in FilesToRemove
+        result.FilesToRemove.ShouldContain("Learning-Rust-Ownership.md");
+    }
+
+    [Fact]
+    public void DetectConfigChanges_IsCaseInsensitive_ForFileComparison()
+    {
+        // Arrange — tracking has uppercase path, config has lowercase
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "2a-Note.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new Entries { Name = "Note", File = "2A-NOTE.MD" }],
+                },
+            }
+        );
+
+        // Act — "2a-Note.md" (tracking) vs "2A-NOTE.MD" (config) — same file, different casing
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — treated as the same file, so no drift
+        result.HasChanges.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_IgnoredFile_IsTracked_ShouldNotAppearInFilesToAdd()
+    {
+        // Arrange — "draft.md" is tracked (file exists) and in IgnoreFiles, but NOT in root entries or topics.
+        // The fix ensures it doesn't appear as a new file needing to be added to the config.
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "draft.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [],
+                    IgnoreFiles = ["draft.md"],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — ignored file is intentionally excluded from the TOC structure; it must not be
+        // flagged as missing from the config.
+        result.FilesToAdd.ShouldNotContain("draft.md");
+    }
+
+    [Fact]
+    public void DetectConfigChanges_IgnoredFile_IsTracked_ShouldNotAppearInFilesToRemove()
+    {
+        // Arrange — "draft.md" is tracked and in IgnoreFiles. Since it IS tracked, it shouldn't
+        // be reported as a stale config entry to remove.
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "draft.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [],
+                    IgnoreFiles = ["draft.md"],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert
+        result.FilesToRemove.ShouldNotContain("draft.md");
+        result.HasChanges.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DetectConfigChanges_MixedFiles_IgnoredFilesDoNotInterfereWithOtherChanges()
+    {
+        // Arrange — multiple files in different states:
+        //   "1a-Intro.md"  → tracked + in root entries (in sync, no change)
+        //   "draft.md"     → tracked + in IgnoreFiles (ignored, no change)
+        //   "new-note.md"  → tracked + absent from config entirely (should be in FilesToAdd)
+        //   "stale.md"     → in root entries + NOT tracked (should be in FilesToRemove)
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "1a-Intro.md", "draft.md", "new-note.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new Entries { Name = "Intro", File = "1a-Intro.md" },
+                        new Entries { Name = "Stale", File = "stale.md" },
+                    ],
+                    IgnoreFiles = ["draft.md"],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert
+        result.FilesToAdd.ShouldContain("new-note.md");
+        result.FilesToRemove.ShouldContain("stale.md");
+        result.FilesToAdd.ShouldNotContain("draft.md");
+        result.FilesToAdd.ShouldNotContain("1a-Intro.md");
+        result.FilesToRemove.ShouldNotContain("draft.md");
+        result.FilesToRemove.ShouldNotContain("1a-Intro.md");
+    }
+
+    [Fact]
+    public void DetectConfigChanges_MultipleIgnoredFiles_NoneAppearInFilesToAdd()
+    {
+        // Arrange — several tracked files are all in IgnoreFiles; none in root entries or topics.
+        var (config, tracking) = CreateConfigWithTracking();
+        _fileSystem.CreateDirectory(_testDirectory);
+        SetupTrackingIndex(tracking, _testDirectory, "draft1.md", "draft2.md", "private.md");
+        config.Create(
+            _testDirectory,
+            new JournalConfig
+            {
+                JournalName = "Test",
+                TableOfContents = new TableOfContents
+                {
+                    File = "1a-TableOfContents.md",
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [],
+                    IgnoreFiles = ["draft1.md", "draft2.md", "private.md"],
+                },
+            }
+        );
+
+        // Act
+        var result = config.DetectConfigChanges(_testDirectory);
+
+        // Assert — all ignored files are accounted for; no changes to report
+        result.FilesToAdd.ShouldBeEmpty();
+        result.FilesToRemove.ShouldBeEmpty();
+        result.HasChanges.ShouldBeFalse();
     }
 
     #endregion

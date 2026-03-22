@@ -20,7 +20,8 @@ public sealed class UpdateCommand(
     IFileSystem fileSystem,
     IJournalUpdateService journalUpdateService,
     IFileTracking fileTracking,
-    IOptions<JournalSettings> journalSettings
+    IOptions<JournalSettings> journalSettings,
+    IJournalConfiguration journalConfiguration
 ) : Command<UpdateJournalSettings>
 {
     private readonly IAnsiConsole _console =
@@ -31,6 +32,8 @@ public sealed class UpdateCommand(
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
     private readonly IJournalUpdateService _journalUpdateService =
         journalUpdateService ?? throw new ArgumentNullException(nameof(journalUpdateService));
+    private readonly IJournalConfiguration _journalConfiguration =
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
     public override int Execute(CommandContext context, UpdateJournalSettings settings)
@@ -75,7 +78,14 @@ public sealed class UpdateCommand(
             {
                 var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
 
-                if (!fileResults.HasChanges)
+                // Pre-detect config drift to include in the early-return check
+                var configDrift = (all || settings.ConfigFlag)
+                    ? _journalConfiguration.DetectConfigChanges(settings.FilePath)
+                    : null;
+
+                var hasAnythingToDo = fileResults.HasChanges || (configDrift?.HasChanges ?? false);
+
+                if (!hasAnythingToDo)
                 {
                     if (settings.RenameToc is null)
                         _console.MarkupLine("[green]Everything is up to date.[/]");
@@ -93,7 +103,9 @@ public sealed class UpdateCommand(
 
                 if (all || settings.ConfigFlag)
                 {
-                    _journalUpdateService.UpdateJournalConfig(settings.FilePath, fileResults);
+                    // Re-detect after tracking update so same-run additions/deletions are captured
+                    var configSyncResult = _journalConfiguration.DetectConfigChanges(settings.FilePath);
+                    _journalUpdateService.UpdateJournalConfig(settings.FilePath, configSyncResult);
                 }
 
                 if (all || settings.TocFlag)

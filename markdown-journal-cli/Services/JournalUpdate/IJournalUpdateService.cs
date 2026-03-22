@@ -1,4 +1,5 @@
 using System;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 
 namespace markdown_journal_cli.Services;
@@ -16,9 +17,10 @@ public interface IJournalUpdateService
     );
 
     /// <summary>
-    /// Incrementally updates the .journalrc configuration: adds new entries, removes deleted entries.
+    /// Incrementally updates the .journalrc configuration using a pre-computed config sync result:
+    /// adds new entries and removes deleted entries.
     /// </summary>
-    public void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults);
+    public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult);
 
     /// <summary>
     /// Regenerates the table of contents markdown file from the current journal configuration.
