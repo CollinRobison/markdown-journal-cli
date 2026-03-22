@@ -2,6 +2,7 @@ using System;
 using markdown_journal_cli.Exceptions;
 using Microsoft.Extensions.Logging;
 using markdown_journal_cli.Infrastructure.Configuration;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
@@ -37,29 +38,16 @@ public class JournalUpdateService(
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
-    public void UpdateJournalConfig(string journalPath, ChangeDetectionResult fileResults)
+    public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult)
     {
-        // Get the TOC filename to exclude it from being added as an entry
-        var config = _journalConfiguration.Read(journalPath);
-        var tocFile = config?.TableOfContents.File;
-
-        foreach (var relativePath in fileResults.AddedFiles)
+        foreach (var relativePath in syncResult.FilesToAdd)
         {
-            // Skip the TOC file - it should never be an entry
-            if (
-                !string.IsNullOrEmpty(tocFile)
-                && string.Equals(relativePath, tocFile, StringComparison.OrdinalIgnoreCase)
-            )
-            {
-                continue;
-            }
-
             _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
             _console.MarkupLine($"[dim]  + {relativePath}[/]");
             _logger.LogDebug("Config entry added: {RelativePath}", relativePath);
         }
 
-        foreach (var relativePath in fileResults.DeletedFiles)
+        foreach (var relativePath in syncResult.FilesToRemove)
         {
             var removed = _journalConfiguration.RemoveEntry(journalPath, relativePath);
             if (removed)
@@ -71,7 +59,7 @@ public class JournalUpdateService(
                 _console.MarkupLine($"[yellow]Warning:[/] config entry not found for deleted file: {relativePath}");
         }
 
-        if (fileResults.AddedFiles.Count > 0 || fileResults.DeletedFiles.Count > 0)
+        if (syncResult.HasChanges)
             _console.MarkupLine($"[green]Journal configuration updated.[/]");
         else
             _console.MarkupLine("[dim]No configuration changes needed.[/]");

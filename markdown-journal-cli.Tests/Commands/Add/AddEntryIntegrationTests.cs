@@ -63,8 +63,10 @@ public class AddEntryIntegrationTests : IDisposable
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             _journalSettings,
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            _fileTracking
         );
+
         _tocGenerator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,

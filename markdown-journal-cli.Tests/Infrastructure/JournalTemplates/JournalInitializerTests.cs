@@ -404,6 +404,12 @@ public class TestJournalConfiguration : IJournalConfiguration
         // Not implemented for tests - can be added if needed
         throw new NotImplementedException();
     }
+
+    public JournalConfigSyncResult DetectConfigChanges(string journalPath)
+    {
+        // Not implemented for tests - can be added if needed
+        throw new NotImplementedException();
+    }
 }
 
 /// <summary>

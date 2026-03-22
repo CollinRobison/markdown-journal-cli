@@ -2,9 +2,11 @@ using System.Text.Json;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Shouldly;
 using Spectre.Console.Testing;
 using Xunit;
@@ -47,7 +49,8 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             _journalSettings,
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            Mock.Of<IFileTracking>()
         );
         _tocGenerator = new TableOfContentsService(
             _fileSystem,

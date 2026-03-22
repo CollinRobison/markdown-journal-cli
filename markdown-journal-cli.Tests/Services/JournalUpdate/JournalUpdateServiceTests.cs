@@ -55,7 +55,8 @@ public class JournalUpdateServiceTests
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             _journalSettings,
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            _fileTracking
         );
 
         _tableOfContentsService = new TableOfContentsService(
@@ -191,10 +192,10 @@ public class JournalUpdateServiceTests
     public void UpdateJournalConfig_AddsNewFileToConfig_WhenFileIsAdded()
     {
         // Arrange
-        var fileResults = new ChangeDetectionResult { AddedFiles = ["2a-SomeNote.md"] };
+        var syncResult = new JournalConfigSyncResult { FilesToAdd = ["2a-SomeNote.md"] };
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         var config = _journalConfiguration.Read(_testPath);
@@ -206,13 +207,13 @@ public class JournalUpdateServiceTests
     public void UpdateJournalConfig_AddsMultipleFilesToConfig_WhenMultipleFilesAdded()
     {
         // Arrange
-        var fileResults = new ChangeDetectionResult
+        var syncResult = new JournalConfigSyncResult
         {
-            AddedFiles = ["2a-NoteOne.md", "3b-NoteTwo.md"],
+            FilesToAdd = ["2a-NoteOne.md", "3b-NoteTwo.md"],
         };
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         var config = _journalConfiguration.Read(_testPath);
@@ -226,10 +227,10 @@ public class JournalUpdateServiceTests
     {
         // Arrange
         _journalConfiguration.AddEntry(_testPath, string.Empty, "2a-SomeNote.md");
-        var fileResults = new ChangeDetectionResult { DeletedFiles = ["2a-SomeNote.md"] };
+        var syncResult = new JournalConfigSyncResult { FilesToRemove = ["2a-SomeNote.md"] };
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         var config = _journalConfiguration.Read(_testPath);
@@ -241,53 +242,23 @@ public class JournalUpdateServiceTests
     public void UpdateJournalConfig_PrintsConfigEntryNotFound_WhenDeletedFileNotInConfig()
     {
         // Arrange
-        var fileResults = new ChangeDetectionResult { DeletedFiles = ["nonexistent-file.md"] };
+        var syncResult = new JournalConfigSyncResult { FilesToRemove = ["nonexistent-file.md"] };
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         _console.Output.ShouldContain("Config entry not found for deleted file");
     }
 
     [Fact]
-    public void UpdateJournalConfig_SkipsTocFile_WhenTocFileIsAdded()
+    public void UpdateJournalConfig_PrintsNoChangesNeeded_WhenNeitherAddedNorRemoved()
     {
         // Arrange
-        var fileResults = new ChangeDetectionResult { AddedFiles = ["1a-TableOfContents.md"] };
+        var syncResult = new JournalConfigSyncResult();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
-
-        // Assert — the TOC file must never appear as a config entry
-        var config = _journalConfiguration.Read(_testPath);
-        config.ShouldNotBeNull();
-        config.TableOfContents.RootEntries.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public void UpdateJournalConfig_IsCaseInsensitive_WhenMatchingTocFile()
-    {
-        // Arrange — pass the TOC filename with different casing
-        var fileResults = new ChangeDetectionResult { AddedFiles = ["1A-TABLEOFCONTENTS.MD"] };
-
-        // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
-
-        // Assert — the differently-cased TOC filename must still be skipped
-        var config = _journalConfiguration.Read(_testPath);
-        config.ShouldNotBeNull();
-        config.TableOfContents.RootEntries.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public void UpdateJournalConfig_PrintsNoChangesNeeded_WhenNeitherAddedNorDeleted()
-    {
-        // Arrange
-        var fileResults = new ChangeDetectionResult();
-
-        // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         _console.Output.ShouldContain("No configuration changes needed");
@@ -297,10 +268,10 @@ public class JournalUpdateServiceTests
     public void UpdateJournalConfig_PrintsConfigUpdated_WhenChangesExist()
     {
         // Arrange
-        var fileResults = new ChangeDetectionResult { AddedFiles = ["2a-SomeNote.md"] };
+        var syncResult = new JournalConfigSyncResult { FilesToAdd = ["2a-SomeNote.md"] };
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         _console.Output.ShouldContain("Journal configuration updated");
@@ -309,16 +280,16 @@ public class JournalUpdateServiceTests
     [Fact]
     public void UpdateJournalConfig_HandlesAddedAndDeletedTogether()
     {
-        // Arrange — pre-populate config with the file that will be deleted
+        // Arrange — pre-populate config with the file that will be removed
         _journalConfiguration.AddEntry(_testPath, string.Empty, "2a-OldNote.md");
-        var fileResults = new ChangeDetectionResult
+        var syncResult = new JournalConfigSyncResult
         {
-            AddedFiles = ["3b-NewNote.md"],
-            DeletedFiles = ["2a-OldNote.md"],
+            FilesToAdd = ["3b-NewNote.md"],
+            FilesToRemove = ["2a-OldNote.md"],
         };
 
         // Act
-        _service.UpdateJournalConfig(_testPath, fileResults);
+        _service.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         var config = _journalConfiguration.Read(_testPath);

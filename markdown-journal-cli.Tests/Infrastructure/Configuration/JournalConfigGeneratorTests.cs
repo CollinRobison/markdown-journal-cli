@@ -35,7 +35,8 @@ public class JournalConfigGeneratorTests
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             Options.Create(_journalSettings),
-            NullLogger<JournalConfiguration>.Instance
+            NullLogger<JournalConfiguration>.Instance,
+            _fileTracking
         );
 
         _generator = new JournalConfigGenerator(
