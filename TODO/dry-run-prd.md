@@ -393,31 +393,46 @@ Neither receives any awareness of `trackingChanges.AddedFiles` or `trackingChang
 
 ### Fix Approach
 
-**Projected tracking set:** When `trackingChanges` is non-null, compute a projected view of the tracking index:
+The fix mirrors the live execution sequence: tracking feeds into config drift, and config drift feeds into the TOC. In dry-run mode, each upstream section projects its result in-memory so downstream sections see the post-change state — but only when those upstream sections are actually part of the dry run.
 
+**Projection chain:**
+
+| Dry-run flags | Tracking feeds config? | Config feeds TOC? | TOC projection source |
+|---|---|---|---|
+| `--toc` | — | — | current `.journalrc` as-is (no upstream changes in scope) |
+| `--toc --config` | — | ✓ | config after applying current config drift |
+| `--toc --tracking` | — (config not in scope) | — | current `.journalrc` as-is |
+| `--toc --config --tracking` / `--dry-run` (all) | ✓ | ✓ | config after applying projected config drift from pending tracking |
+
+**Step 1 — Projected config drift (when `includeTracking` and `includeConfig` are both true):**
+
+Compute a projected tracking set in memory:
 ```
 projected = (committed tracking index files)
           + trackingChanges.AddedFiles
           - trackingChanges.DeletedFiles
 ```
+Compare `projected` against `.journalrc` entries to produce a `JournalConfigSyncResult` that reflects what sync would look like *after* tracking is committed. This replaces the naively-detected `configChanges` for both the Config Changes display and the TOC preview input.
 
-**Projected config drift:** Compare `projected` against current `.journalrc` entries to produce a `JournalConfigSyncResult` that reflects what sync would look like *after* tracking is committed. Use this instead of the naively-detected `configChanges` for both the Config Changes display and the TOC preview inputs.
+When `includeConfig` is true but `includeTracking` is false, `configChanges` is computed from the current committed index as before — no projection needed.
 
-**Projected TOC preview:** Add a second overload to `ITableOfContentsService`:
+**Step 2 — Projected TOC preview (when `includeToc` is true and `includeConfig` is true):**
+
+Add a second overload to `ITableOfContentsService`:
 
 ```csharp
 // Generates TOC preview using a caller-supplied projected config (no disk reads for config).
 string PreviewTableOfContents(string journalDirectory, JournalConfig projectedConfig);
 ```
 
-In `BuildDryRunReport`, when `includeToc` is true and `trackingChanges` is non-null:
+In `BuildDryRunReport`, when `includeToc` and `includeConfig` are both true:
 1. Load the current `JournalConfig`.
-2. Apply the projected config sync result to an in-memory clone of the config:
+2. Apply the effective config sync result (projected or current, per Step 1) to an in-memory clone of the config:
    - Append `FilesToAdd` files as new `RootEntries` (skip files already present; skip the TOC file).
    - Remove any `RootEntries` / topic `Entries` whose `File` matches a path in `FilesToRemove`.
 3. Call `PreviewTableOfContents(journalDirectory, projectedConfig)`.
 
-**Scope:** This only applies when `trackingChanges` is present. When `includeToc` is true but `includeTracking` is false (e.g., `--dry-run --toc`), the current behavior (preview from current config) is correct and unchanged.
+When `includeToc` is true but `includeConfig` is false (e.g., `--dry-run --toc` alone), call the existing `PreviewTableOfContents(journalDirectory)` overload as before — current config is the correct source since nothing upstream is changing.
 
 ### Files to Modify (additions to existing table)
 
@@ -429,19 +444,21 @@ In `BuildDryRunReport`, when `includeToc` is true and `trackingChanges` is non-n
 
 ### New Tests (additions to existing testing strategy)
 
-- `BuildDryRunReport` config section uses projected tracking when `trackingChanges` is non-null — added files appear in `FilesToAdd`, deleted files appear in `FilesToRemove`
-- `BuildDryRunReport` TOC preview includes pending-added files and excludes pending-deleted files
-- `BuildDryRunReport` with `--toc` only (no tracking) continues to use current config unchanged
+- `BuildDryRunReport` with `--tracking --config --toc` (all): config section uses projected tracking; TOC preview includes pending-added files and excludes pending-deleted files
+- `BuildDryRunReport` with `--config --toc` (no tracking): config section uses current index; TOC preview reflects pending config drift (files in index but not in `.journalrc` appear in TOC)
+- `BuildDryRunReport` with `--tracking --toc` (no config): TOC preview uses current `.journalrc` unchanged (tracking alone without config doesn't mutate `.journalrc`)
+- `BuildDryRunReport` with `--toc` only: TOC preview uses current `.journalrc` unchanged
 - `PreviewTableOfContents(journalDirectory, projectedConfig)` overload generates correct output from the supplied config without reading `.journalrc` from disk
 
 ### New Todos (additions to existing list)
 
 19. Add `PreviewTableOfContents(string, JournalConfig)` overload to `ITableOfContentsService` and implement in `TableOfContentsService`
-20. Update `BuildDryRunReport` in `JournalUpdateService` to compute projected config drift from pending tracking changes when `trackingChanges` is non-null
-21. Update `BuildDryRunReport` to call the projected-config `PreviewTableOfContents` overload when both `includeToc` and `trackingChanges` are active
-22. Add unit tests: `BuildDryRunReport` config and TOC sections reflect pending tracking additions and deletions
-23. Add unit test: `PreviewTableOfContents(string, JournalConfig)` overload generates correct output without reading `.journalrc`
-24. Add unit test: `--dry-run --toc` (no tracking) continues to produce preview from current config (no regression)
+20. Update `BuildDryRunReport` in `JournalUpdateService`: when `includeTracking` and `includeConfig` are both true, compute projected config drift from the pending tracking changes instead of using the raw `configChanges`
+21. Update `BuildDryRunReport`: when `includeToc` and `includeConfig` are both true, apply the effective config sync result to an in-memory config clone and call the projected-config `PreviewTableOfContents` overload
+22. Add unit tests: `BuildDryRunReport` with `--tracking --config --toc` — config and TOC both reflect pending tracking additions/deletions
+23. Add unit tests: `BuildDryRunReport` with `--config --toc` (no tracking) — TOC reflects current config drift
+24. Add unit tests: `BuildDryRunReport` with `--tracking --toc` (no config) and `--toc` alone — TOC uses current config (no regression)
+25. Add unit test: `PreviewTableOfContents(string, JournalConfig)` overload generates correct output without reading `.journalrc`
 
 ---
 
