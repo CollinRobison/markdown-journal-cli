@@ -38,6 +38,80 @@ public class JournalUpdateService(
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
+    public UpdateDryRunReport BuildDryRunReport(
+        string journalPath,
+        ChangeDetectionResult? trackingChanges,
+        JournalConfigSyncResult? configChanges,
+        bool includeToc,
+        string? renameTocTarget
+    )
+    {
+        TocDiffResult? tocPreview = null;
+        TocRenameDryRunResult? renamePreview = null;
+
+        if (includeToc)
+        {
+            var config = _journalConfiguration.Read(journalPath);
+            var tocFile =
+                config?.TableOfContents.File
+                ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var tocFilePath = _fileSystem.CombinePaths(journalPath, tocFile);
+
+            var currentContent = _fileSystem.FileExists(tocFilePath)
+                ? _fileSystem.GetFileContent(tocFilePath)
+                : string.Empty;
+
+            var previewContent = _tableOfContentsService.PreviewTableOfContents(journalPath);
+
+            tocPreview = new TocDiffResult
+            {
+                CurrentContent = currentContent,
+                PreviewContent = previewContent,
+            };
+
+            _logger.LogDebug(
+                "TOC preview computed: hasChanges={HasChanges}",
+                tocPreview.HasChanges
+            );
+        }
+
+        if (renameTocTarget is not null)
+        {
+            var config = _journalConfiguration.Read(journalPath);
+            var currentTocFile =
+                config?.TableOfContents.File
+                ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var newTocFile = renameTocTarget + FileConstants.MarkdownExtension;
+
+            var filesWithBacklinks = _markdownLinkRewriter.FindFilesWithLinkTo(
+                journalPath,
+                currentTocFile
+            );
+
+            renamePreview = new TocRenameDryRunResult
+            {
+                CurrentName = currentTocFile,
+                NewName = newTocFile,
+                FilesWithBacklinks = filesWithBacklinks,
+            };
+
+            _logger.LogDebug(
+                "Rename preview: {Current} → {New}, {Count} backlink file(s)",
+                currentTocFile,
+                newTocFile,
+                filesWithBacklinks.Count
+            );
+        }
+
+        return new UpdateDryRunReport
+        {
+            TrackingChanges = trackingChanges,
+            ConfigChanges = configChanges,
+            TocPreview = tocPreview,
+            RenamePreview = renamePreview,
+        };
+    }
+
     public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult)
     {
         foreach (var relativePath in syncResult.FilesToAdd)

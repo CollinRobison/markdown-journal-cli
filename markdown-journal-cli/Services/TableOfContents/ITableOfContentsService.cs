@@ -16,4 +16,13 @@ public interface ITableOfContentsService
         DateTime? createdDate = null,
         DateTime? lastEditedDate = null
     );
+
+    /// <summary>
+    /// Generates and returns the TOC markdown content without writing to disk.
+    /// Preserves existing Created/Last Edited dates from the current TOC file (if present).
+    /// Useful for dry-run previews and diffing against the current file.
+    /// </summary>
+    /// <param name="journalDirectory">The directory containing the journal.</param>
+    /// <returns>The generated TOC markdown content as a string.</returns>
+    string PreviewTableOfContents(string journalDirectory);
 }

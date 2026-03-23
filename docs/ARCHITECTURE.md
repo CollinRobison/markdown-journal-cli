@@ -752,7 +752,8 @@ public class NewCommandTests
 - **Async file operations** - For large journals with many files
 - **Global configuration** - User-level defaults (default editor, date format, etc.)
 - **Plugin/extension points** - Custom template generators and entry processors
-- **`--check` flag** - Dry-run preview of changes before applying them
+- **~~`--check` flag~~ ✅ Implemented** - Dry-run preview of changes before applying them (shipped as `--dry-run|--check` on `update journal`)
+- **Rollback wiring** - Wire `IInMemoryFileBuffer.Snapshot()` before each write in `JournalUpdateService` for transactional rollback on partial failure. Infrastructure is in place (`IInMemoryFileBuffer`); integration into write path is future work.
 
 ## 📋 Design Decisions Log
 
@@ -819,3 +820,15 @@ public class NewCommandTests
 ### Decision: `StripLinksInDirectory` as a First-Class `IMarkdownLinkRewriter` Method
 **Rationale:** The removal use case (strip `[text](file.md)` → `text`) is structurally identical to the rename use case (`ReplaceLinksInDirectory`) but semantically different — no new filename, just link removal. Adding it to the existing interface keeps all link-rewriting behaviour in one place and allows `RemoveEntryService` to remain free of regex and file-enumeration details. It is tested in complete isolation in `MarkdownLinkRewriterTests`.  
 **Alternatives:** Implement stripping inline in `RemoveEntryService` — duplicates the scan-rewrite-persist loop and couples the service to regex internals.
+
+### Decision: `--dry-run` (alias `--check`) on `update journal`
+**Rationale:** Users need a way to audit pending changes before they are applied, especially on large or shared journals. `--dry-run` is the dominant CLI convention (git, terraform, rsync). `--check` is retained as an alias per UX preference. The flag is a pure read path: detection helpers (`DetectChangesWithoutUpdate`, `DetectConfigChanges`) are already non-mutating; `BuildDryRunReport` builds a structured model; `UpdateCommand.ExecuteDryRun` renders it via `IAnsiConsole`. Zero writes occur. Rendering is scoped by the same flags as the live path (`--tracking`, `--config`, `--toc`, `--rename-toc`). Exit code is always `0` on success.  
+**Alternatives:** A separate `mdjournal diff` command — more discoverable but requires duplicating all detection logic and a separate command registration.
+
+### Decision: `IInMemoryFileBuffer` as Foundational Infrastructure
+**Rationale:** The dry-run `PreviewTableOfContents()` path needed a place to stage generated content without touching disk. Rather than a one-off local variable, a general-purpose Snapshot/Stage/Commit/Restore contract was created in `Infrastructure/FileSystem/`. This serves the dry-run preview now and is designed to be wired into `JournalUpdateService` in the future for transactional rollback when a multi-step update fails partway through. Registered as singleton in DI.  
+**Alternatives:** Inline string staging in each service method — simpler now but would require a larger refactor when rollback semantics are needed.
+
+### Decision: `PreviewTableOfContents()` on `ITableOfContentsService`
+**Rationale:** The dry-run path needed the TOC generation logic without the `_fileSystem.UpdateFile()` call. Rather than duplicating the generation logic, a new public method extracts the read-and-generate path: it reads existing dates from the current TOC file on disk (to preserve them), calls the private `GenerateTableOfContents()` helper, and returns the string. This keeps generation logic in one place and makes the service testable for both write and preview paths in isolation.  
+**Alternatives:** Make `GenerateTableOfContents()` public — exposes an internal helper that callers would need to manage manually (config reading, date preservation).

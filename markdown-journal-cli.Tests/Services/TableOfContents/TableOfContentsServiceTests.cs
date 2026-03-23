@@ -624,3 +624,134 @@ public class TableOfContentsServiceTests
 
     #endregion
 }
+
+// ---------------------------------------------------------------------------
+// PreviewTableOfContents tests (separate class for clarity)
+// ---------------------------------------------------------------------------
+
+public class TableOfContentsServicePreviewTests
+{
+    private readonly Mock<IFileSystem> _mockFileSystem;
+    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
+    private readonly IOptions<JournalSettings> _journalSettings;
+    private readonly TableOfContentsService _service;
+
+    private const string JournalDirectory = "/test/journal";
+    private const string TocFile = "1a-TableOfContents.md";
+    private string TocFilePath => Path.Combine(JournalDirectory, TocFile);
+
+    public TableOfContentsServicePreviewTests()
+    {
+        _mockFileSystem = new Mock<IFileSystem>();
+        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
+
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                CapitalizeTopicHeadings = true,
+            }
+        );
+
+        _mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns(BuildConfig());
+
+        _service = new TableOfContentsService(
+            _mockFileSystem.Object,
+            _mockJournalConfiguration.Object,
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
+        );
+    }
+
+    private static JournalConfig BuildConfig(
+        Entries[]? rootEntries = null,
+        Topic[]? topics = null
+    ) =>
+        new()
+        {
+            JournalName = "Test",
+            TableOfContents = new TableOfContents
+            {
+                File = TocFile,
+                Structure = new Structure { Topics = topics ?? [] },
+                RootEntries = rootEntries ?? [],
+            },
+        };
+
+    [Fact]
+    public void PreviewTableOfContents_ReturnsGeneratedContent_WithoutWritingToDisk()
+    {
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns(
+                BuildConfig(
+                    rootEntries: [new Entries { Name = "My Entry", File = "my-entry.md" }]
+                )
+            );
+
+        var result = _service.PreviewTableOfContents(JournalDirectory);
+
+        result.ShouldContain("# Table of Contents");
+        result.ShouldContain("[My Entry](my-entry.md)");
+        _mockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never,
+            "PreviewTableOfContents must not write to disk"
+        );
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_PreservesExistingDatesFromTocFile()
+    {
+        var existingTocContent = "Created: 01/15/2024\nLast Edited: 03/01/2024\n\n# Table of Contents\n";
+        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
+        _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
+        _mockFileSystem.Setup(fs => fs.GetFileContent(TocFilePath)).Returns(existingTocContent);
+
+        var result = _service.PreviewTableOfContents(JournalDirectory);
+
+        result.ShouldContain("Created: 01/15/2024");
+        result.ShouldContain("Last Edited: 03/01/2024");
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_ReturnsValidContent_WhenNoEntries()
+    {
+        var result = _service.PreviewTableOfContents(JournalDirectory);
+
+        result.ShouldContain("# Table of Contents");
+        result.ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_OutputMatchesUpdateTableOfContents_OnIdenticalState()
+    {
+        var entries = new[] { new Entries { Name = "Note", File = "note.md" } };
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns(BuildConfig(rootEntries: entries));
+
+        // Capture what UpdateTableOfContents would write
+        string? writtenContent = null;
+        _mockFileSystem
+            .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((_, _, c) => writtenContent = c);
+
+        _service.UpdateTableOfContents(JournalDirectory);
+        var previewContent = _service.PreviewTableOfContents(JournalDirectory);
+
+        writtenContent.ShouldNotBeNull();
+        previewContent.ShouldBe(writtenContent, "Preview must produce the same output as live update");
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_ThrowsArgumentException_ForNullOrWhitespaceDirectory()
+    {
+        Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents(string.Empty));
+        Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents("   "));
+    }
+}

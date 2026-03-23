@@ -42,6 +42,7 @@ public static class Program
 
         // Register services
         host.Services.AddSingleton<IFileSystem, FileSystem>();
+        host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();
         host.Services.AddSingleton<ITemplateManager, TemplateManager>();
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
         host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -57,6 +58,7 @@ public static class Program
         host.Services.AddSingleton<IJournalFileUpdateService, JournalFileUpdateService>();
         host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
         host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();
+        host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();

@@ -1,6 +1,7 @@
 using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
@@ -79,13 +80,20 @@ public class UpdateCommandTests
 
     private UpdateCommand CreateCommand()
     {
+        var renderer = new DryRunRenderer(
+            _console,
+            _journalConfiguration,
+            _journalSettings
+        );
         return new UpdateCommand(
             _console,
             _fileSystem,
             _journalUpdateService,
             _fileTracking,
             _journalSettings,
-            _journalConfiguration
+            _journalConfiguration,
+            NullLogger<UpdateCommand>.Instance,
+            renderer
         );
     }
 
@@ -654,7 +662,9 @@ public class UpdateCommandTests
             customUpdateService,
             tracking,
             customSettings,
-            customConfig
+            customConfig,
+            NullLogger<UpdateCommand>.Instance,
+            new DryRunRenderer(_console, customConfig, customSettings)
         );
         var settings = new UpdateJournalSettings { FilePath = _testPath };
 
@@ -1602,6 +1612,282 @@ public class UpdateCommandTests
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("up to date");
+    }
+
+    #endregion
+
+    // =========================================================================
+    // Dry-run tests
+    // =========================================================================
+
+    #region DryRun — general
+
+    [Fact]
+    public void Execute_DryRun_ReturnsZero_AndShowsNothingToDo_WhenTrackingAndConfigInSync()
+    {
+        // Tests the "nothing to do" path for tracking + config sections.
+        // (TOC sync requires exact content matching which is covered by unit tests.)
+        SetupJournalConfig();
+        var filePath = Path.Combine(_testPath, "note.md");
+        _fileSystem.CreateFile(_testPath, "note.md", "# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "note.md");
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings
+            {
+                FilePath = _testPath,
+                DryRun = true,
+                Tracking = true,
+                ConfigFlag = true,
+            }
+        );
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("up to date");
+        _console.Output.ShouldContain("--dry-run");
+    }
+
+    [Fact]
+    public void Execute_DryRun_DoesNotWriteAnyFiles_WhenChangesDetected()
+    {
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath); // empty index
+
+        // Introduce a new file not yet tracked
+        var filePath = Path.Combine(_testPath, "Learning-Rust.md");
+        _fileSystem.CreateFile(_testPath, "Learning-Rust.md", "# Rust");
+        _hashService.SetHash(filePath, "hash-new");
+
+        var snapshotBefore = _fileSystem.GetAllFiles()
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+        );
+
+        result.ShouldBe(0);
+        // All file contents must be identical to before the dry-run
+        foreach (var (path, content) in snapshotBefore)
+            _fileSystem.GetAllFiles()[path].ShouldBe(content, $"File '{path}' was unexpectedly modified by --dry-run");
+    }
+
+    [Fact]
+    public void Execute_DryRun_ShowsFooterMessage()
+    {
+        SetupJournalConfig();
+        var filePath = Path.Combine(_testPath, "new.md");
+        _fileSystem.CreateFile(_testPath, "new.md", "# New");
+        _hashService.SetHash(filePath, "hash-x");
+        _fileTracking.UpdateIndex(_testPath);
+        // Mark it as new (not yet tracked)
+        _fileSystem.DeleteFile(filePath);
+        _fileTracking.UpdateIndex(_testPath); // remove from index
+        _fileSystem.CreateFile(_testPath, "new.md", "# New");
+        _hashService.SetHash(filePath, "hash-x");
+
+        CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+        );
+
+        _console.Output.ShouldContain("No changes were applied");
+    }
+
+    [Fact]
+    public void Execute_DryRun_MissingTrackingFile_ReturnsOne()
+    {
+        // No tracking file created → should fail with error
+        SetupJournalConfig();
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+        );
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+    }
+
+    [Fact]
+    public void Execute_DryRun_MissingJournalrc_ReturnsOne_WhenConfigRequested()
+    {
+        // Tracking file exists but no .journalrc — config flag requires journalrc.
+        // Constructor calls SetupJournalConfig(), so we must delete it first.
+        SetupTrackingFile();
+        _fileSystem.DeleteFile(Path.Combine(_testPath, ".journalrc"));
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, ConfigFlag = true }
+        );
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+    }
+
+    #endregion
+
+    #region DryRun — flag scoping
+
+    [Fact]
+    public void Execute_DryRun_TrackingOnly_ShowsTrackingSection()
+    {
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath);
+        var filePath = Path.Combine(_testPath, "new-entry.md");
+        _fileSystem.CreateFile(_testPath, "new-entry.md", "# New");
+        _hashService.SetHash(filePath, "hash-new");
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, Tracking = true }
+        );
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("Tracking Changes");
+        _console.Output.ShouldContain("new-entry.md");
+    }
+
+    [Fact]
+    public void Execute_DryRun_ConfigOnly_ShowsConfigSection()
+    {
+        SetupJournalConfig();
+        var filePath = Path.Combine(_testPath, "unregistered.md");
+        _fileSystem.CreateFile(_testPath, "unregistered.md", "# File");
+        _hashService.SetHash(filePath, "hash-u");
+        _fileTracking.UpdateIndex(_testPath); // file IS tracked
+
+        // Config has no entries → drift exists
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, ConfigFlag = true }
+        );
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("Config Changes");
+        _console.Output.ShouldContain("unregistered.md");
+    }
+
+    [Fact]
+    public void Execute_DryRun_TocOnly_ShowsTocSection()
+    {
+        SetupJournalConfig();
+        var filePath = Path.Combine(_testPath, "note.md");
+        _fileSystem.CreateFile(_testPath, "note.md", "# Note");
+        _hashService.SetHash(filePath, "hash-a");
+        _fileTracking.UpdateIndex(_testPath);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "note.md");
+        // Current TOC is stale (missing the new entry)
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# Table of Contents\n");
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, TocFlag = true }
+        );
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("Table of Contents Preview");
+    }
+
+    [Fact]
+    public void Execute_DryRun_MultiFlag_TrackingAndConfig_ShowsBothSections()
+    {
+        // Tracking change: a file whose hash in the index is stale (simulates modification).
+        // Config drift: tracked files not yet added to .journalrc.
+        SetupJournalConfig(); // .journalrc with no entries
+        var filePath = Path.Combine(_testPath, "entry.md");
+        _fileSystem.CreateFile(_testPath, "entry.md", "# Entry");
+        _hashService.SetHash(filePath, "old-hash");
+        _fileTracking.UpdateIndex(_testPath); // entry.md added to index with "old-hash"
+        _hashService.SetHash(filePath, "new-hash"); // simulate file modification
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings
+            {
+                FilePath = _testPath,
+                DryRun = true,
+                Tracking = true,
+                ConfigFlag = true,
+            }
+        );
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("Tracking Changes");
+        _console.Output.ShouldContain("Config Changes");
+    }
+
+    [Fact]
+    public void Execute_DryRun_RenameToc_ShowsRenamePreview()
+    {
+        SetupJournalConfig();
+        SetupTrackingFile();
+        _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
+        _fileTracking.UpdateFileInIndex(_testPath, "1a-TableOfContents.md");
+
+        var result = CreateCommand().Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings
+            {
+                FilePath = _testPath,
+                DryRun = true,
+                RenameToc = "MyNotes",
+            }
+        );
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("TOC Rename Preview");
+        _console.Output.ShouldContain("MyNotes.md");
+        // Must NOT have actually renamed the file
+        _fileSystem.FileExists(Path.Combine(_testPath, "MyNotes.md")).ShouldBeFalse();
+        _fileSystem.FileExists(Path.Combine(_testPath, "1a-TableOfContents.md")).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Execute_DryRun_DoesNotCallMutatingServiceMethods()
+    {
+        // Verify via mock that UpdateLastEditedDatesAndTracking, UpdateJournalConfig,
+        // and UpdateTableOfContents are never called when --dry-run is active.
+        SetupJournalConfig();
+        _fileTracking.UpdateIndex(_testPath);
+        var filePath = Path.Combine(_testPath, "file.md");
+        _fileSystem.CreateFile(_testPath, "file.md", "# File");
+        _hashService.SetHash(filePath, "hash-f");
+
+        var mockService = new Mock<IJournalUpdateService>();
+        mockService
+            .Setup(s => s.BuildDryRunReport(
+                It.IsAny<string>(),
+                It.IsAny<ChangeDetectionResult?>(),
+                It.IsAny<JournalConfigSyncResult?>(),
+                It.IsAny<bool>(),
+                It.IsAny<string?>()))
+            .Returns(new UpdateDryRunReport
+            {
+                TrackingChanges = new ChangeDetectionResult { AddedFiles = ["file.md"] },
+            });
+
+        var command = new UpdateCommand(
+            _console, _fileSystem, mockService.Object, _fileTracking,
+            _journalSettings, _journalConfiguration, NullLogger<UpdateCommand>.Instance,
+            new DryRunRenderer(_console, _journalConfiguration, _journalSettings)
+        );
+
+        command.Execute(
+            CreateCommandContext(),
+            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+        );
+
+        mockService.Verify(s => s.UpdateLastEditedDatesAndTracking(
+            It.IsAny<string>(), It.IsAny<ChangeDetectionResult>(), It.IsAny<bool>()), Times.Never);
+        mockService.Verify(s => s.UpdateJournalConfig(
+            It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()), Times.Never);
+        mockService.Verify(s => s.UpdateTableOfContents(It.IsAny<string>()), Times.Never);
+        mockService.Verify(s => s.RenameToc(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     #endregion

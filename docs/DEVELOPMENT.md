@@ -66,6 +66,8 @@ markdown-journal-cli/
 │   │   ├── FileSystem/           # File system abstraction
 │   │   │   ├── IFileSystem.cs
 │   │   │   ├── FileSystem.cs
+│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview + future rollback)
+│   │   │   ├── InMemoryFileBuffer.cs   # Snapshot/Stage/Commit/Restore implementation
 │   │   │   ├── IMarkdownLinkRewriter.cs   # Inline link rewriting interface
 │   │   │   ├── MarkdownLinkRewriter.cs    # Compiled-regex link rewriter implementation
 │   │   │   └── MarkdownMetadataParser.cs
@@ -735,6 +737,7 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ `update entry` command for renaming, relocating, and ignoring entries
 - ✅ `--no-backlinks` flag on `update entry` — backlink rewriting on rename enabled by default; opt-out via `--nb|--no-backlinks`
 - ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
+- ✅ `--dry-run|--check` flag on `update journal` — preview all pending changes without any writes; color-coded Spectre.Console tables for tracking, config, TOC diff, and rename-toc preview; scoped by the same flags as the live path (`--tracking`, `--config`, `--toc`, `--rename-toc`)
 - ✅ **`remove entry` command** — delete an entry file, remove config/tracking records, regenerate TOC; `--clean-refs` strips dead inline links across the journal; `rm` alias supported
 - ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting and link stripping
 - ✅ Exception handling architecture

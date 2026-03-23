@@ -278,6 +278,7 @@ mdjournal update journal [options]
 - `-t|--tracking` - Only update tracking index without modifying "Last Edited:" metadata (overrides `--dates`)
 - `--toc|--tableofcontents` - Only regenerate the table of contents
 - `--rename-toc <name>` - Rename the TOC file to `<name>.md`, update `.journalrc`, rewrite all inline link references across the journal, and stamp "Last Edited" on every changed file
+- `--dry-run|--check` - Preview all changes that would be applied without making any writes (dry-run mode)
 
 **Behavior:**
 - **Without flags**: Updates configuration, dates, and TOC (equivalent to `--config --dates --toc`)
@@ -286,11 +287,18 @@ mdjournal update journal [options]
 - **Change Detection**: Uses SHA256 hashing to identify added, modified, and deleted files. 
 - **TOC File Exclusion**: Automatically prevents the TOC file from appearing as an entry in its own contents
 - **`--rename-toc` is independent**: Runs before change-detection operations; can be combined with other flags
+- **`--dry-run` / `--check`**: Runs all detection logic and renders a preview of changes using color-coded Spectre.Console tables. No files are written. Can be combined with any other flag to scope the preview (e.g. `--dry-run --config` shows only config changes). Always exits with code `0`.
 
 **Examples:**
 ```bash
 # Update everything (config, dates, and TOC)
 mdjournal update journal --path ~/Documents/MyJournal
+
+# Preview all changes without applying (dry-run)
+mdjournal update journal --path ~/Documents/MyJournal --dry-run
+
+# Preview only config and tracking changes
+mdjournal update journal --path ~/Documents/MyJournal --dry-run --config --tracking
 
 # Only update configuration with new/deleted entries
 mdjournal update journal --path ~/Documents/MyJournal --config
@@ -427,6 +435,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **`remove entry` command** — delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead inline links (`--clean-refs`); `rm` alias supported
 - ✅ Exception handling with custom exception hierarchy
 - ✅ **882 passing unit tests** covering core functionality
+- ✅ **`--dry-run` / `--check` flag** on `update journal` — previews all changes (tracking, config, TOC, rename-toc) without any writes, with Spectre.Console color-coded tables
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
 - ✅ **Automatic table of contents generation** with smart parent-child detection
@@ -440,7 +449,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Nested topic hierarchy support
 
 **Planned Features:**
-- ⏳ Pre-update change preview (`--check` flag) **(finish before moving on)**
 - ⏳ look through and clean up all tests **(finish before moving on)**
 - ⏳ `--version` flag **(finish before moving on)**
 - ⏳ Global tool installation **(finish before moving on)**
