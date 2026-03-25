@@ -116,6 +116,42 @@ public class TableOfContentsService(
         return GenerateTableOfContents(config, createdDate, lastEditedDate);
     }
 
+    /// <inheritdoc />
+    public string PreviewTableOfContents(string journalDirectory, JournalConfig projectedConfig)
+    {
+        if (string.IsNullOrWhiteSpace(journalDirectory))
+        {
+            throw new ArgumentException(
+                "Journal directory cannot be null or whitespace.",
+                nameof(journalDirectory)
+            );
+        }
+        ArgumentNullException.ThrowIfNull(projectedConfig);
+
+        var tocFile = projectedConfig.TableOfContents.File;
+        var tocFilePath = _fileSystem.CombinePaths(journalDirectory, tocFile);
+
+        DateTime? createdDate = null;
+        DateTime? lastEditedDate = null;
+
+        if (_fileSystem.FileExists(tocFilePath))
+        {
+            var existingContent = _fileSystem.GetFileContent(tocFilePath);
+            var (existingCreated, existingEdited) = MarkdownMetadataParser.ParseDates(
+                existingContent
+            );
+            createdDate = existingCreated;
+            lastEditedDate = existingEdited;
+        }
+
+        _logger.LogDebug(
+            "Previewing table of contents with projected config for journal at '{JournalDirectory}' (no writes)",
+            journalDirectory
+        );
+
+        return GenerateTableOfContents(projectedConfig, createdDate, lastEditedDate);
+    }
+
     private string GenerateTableOfContents(
         JournalConfig config,
         DateTime? createdDate,
