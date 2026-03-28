@@ -38,6 +38,236 @@ public class JournalUpdateService(
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
+    public UpdateDryRunReport BuildDryRunReport(
+        string journalPath,
+        ChangeDetectionResult? trackingChanges,
+        JournalConfigSyncResult? configChanges,
+        bool includeToc,
+        string? renameTocTarget
+    )
+    {
+        // When both tracking and config are in scope, recompute config drift from the projected
+        // tracking state (committed + added - deleted) so Config and TOC sections reflect
+        // pending tracking changes rather than the stale committed index.
+        var effectiveConfigChanges = configChanges;
+        if (trackingChanges is not null && configChanges is not null)
+        {
+            effectiveConfigChanges = ComputeProjectedConfigDrift(journalPath, trackingChanges);
+            _logger.LogDebug(
+                "Projected config drift: {Add} to add, {Remove} to remove",
+                effectiveConfigChanges.FilesToAdd.Count,
+                effectiveConfigChanges.FilesToRemove.Count
+            );
+        }
+
+        TocDiffResult? tocPreview = null;
+        TocRenameDryRunResult? renamePreview = null;
+
+        if (includeToc)
+        {
+            var config = _journalConfiguration.Read(journalPath);
+            var tocFile =
+                config?.TableOfContents.File
+                ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var tocFilePath = _fileSystem.CombinePaths(journalPath, tocFile);
+
+            var currentContent = _fileSystem.FileExists(tocFilePath)
+                ? _fileSystem.GetFileContent(tocFilePath)
+                : string.Empty;
+
+            string previewContent;
+            if (config is not null && effectiveConfigChanges is not null)
+            {
+                // Apply the effective config drift to an in-memory config clone so the TOC
+                // preview reflects what the TOC would look like after config sync is applied.
+                var projectedConfig = ProjectConfig(config, effectiveConfigChanges);
+                previewContent = _tableOfContentsService.PreviewTableOfContents(
+                    journalPath,
+                    projectedConfig
+                );
+            }
+            else
+            {
+                previewContent = _tableOfContentsService.PreviewTableOfContents(journalPath);
+            }
+
+            tocPreview = new TocDiffResult
+            {
+                CurrentContent = currentContent,
+                PreviewContent = previewContent,
+            };
+
+            _logger.LogDebug(
+                "TOC preview computed: hasChanges={HasChanges}",
+                tocPreview.HasChanges
+            );
+        }
+
+        if (renameTocTarget is not null)
+        {
+            var config = _journalConfiguration.Read(journalPath);
+            var currentTocFile =
+                config?.TableOfContents.File
+                ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var newTocFile = renameTocTarget + FileConstants.MarkdownExtension;
+
+            var filesWithBacklinks = _markdownLinkRewriter.FindFilesWithLinkTo(
+                journalPath,
+                currentTocFile
+            );
+
+            renamePreview = new TocRenameDryRunResult
+            {
+                CurrentName = currentTocFile,
+                NewName = newTocFile,
+                FilesWithBacklinks = filesWithBacklinks,
+            };
+
+            _logger.LogDebug(
+                "Rename preview: {Current} → {New}, {Count} backlink file(s)",
+                currentTocFile,
+                newTocFile,
+                filesWithBacklinks.Count
+            );
+        }
+
+        return new UpdateDryRunReport
+        {
+            TrackingChanges = trackingChanges,
+            ConfigChanges = effectiveConfigChanges,
+            TocPreview = tocPreview,
+            RenamePreview = renamePreview,
+        };
+    }
+
+    /// <summary>
+    /// Computes what the config drift would look like after applying the pending tracking changes,
+    /// without touching disk. Mirrors the logic in <see cref="JournalConfiguration.DetectConfigChanges"/>
+    /// but operates against a projected tracking set instead of the committed index.
+    /// </summary>
+    private JournalConfigSyncResult ComputeProjectedConfigDrift(
+        string journalPath,
+        ChangeDetectionResult pendingTracking
+    )
+    {
+        var config = _journalConfiguration.Read(journalPath);
+        if (config is null)
+            return new JournalConfigSyncResult();
+
+        // Project: committed tracking index + pending adds - pending deletes
+        var projectedFiles = new HashSet<string>(
+            _fileTracking.LoadIndex(journalPath).Files.Keys,
+            StringComparer.OrdinalIgnoreCase
+        );
+        projectedFiles.UnionWith(pendingTracking.AddedFiles);
+        projectedFiles.ExceptWith(pendingTracking.DeletedFiles);
+
+        // All files currently registered in .journalrc
+        var configFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in config.TableOfContents.RootEntries)
+            configFiles.Add(entry.File);
+        CollectConfigEntryFiles(config.TableOfContents.Structure.Topics, configFiles);
+        configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
+
+        var tocFile = config.TableOfContents.File;
+
+        var filesToAdd = projectedFiles
+            .Where(f =>
+                !configFiles.Contains(f)
+                && !string.Equals(f, tocFile, StringComparison.OrdinalIgnoreCase)
+            )
+            .ToList();
+
+        var filesToRemove = configFiles.Where(f => !projectedFiles.Contains(f)).ToList();
+
+        return new JournalConfigSyncResult { FilesToAdd = filesToAdd, FilesToRemove = filesToRemove };
+    }
+
+    private static void CollectConfigEntryFiles(IEnumerable<Topic> topics, HashSet<string> fileSet)
+    {
+        foreach (var topic in topics)
+        {
+            foreach (var entry in topic.Entries)
+                fileSet.Add(entry.File);
+            if (topic.Subtopics is not null)
+                CollectConfigEntryFiles(topic.Subtopics, fileSet);
+        }
+    }
+
+    /// <summary>
+    /// Returns an in-memory clone of <paramref name="original"/> with the given config drift applied:
+    /// files in <see cref="JournalConfigSyncResult.FilesToAdd"/> are appended as root entries and
+    /// files in <see cref="JournalConfigSyncResult.FilesToRemove"/> are stripped from root entries
+    /// and all topic entries. No disk I/O occurs.
+    /// </summary>
+    private static JournalConfig ProjectConfig(
+        JournalConfig original,
+        JournalConfigSyncResult configSync
+    )
+    {
+        var tocFile = original.TableOfContents.File;
+
+        // Remove deleted files from root entries
+        var rootEntries = original.TableOfContents.RootEntries
+            .Where(e =>
+                !configSync.FilesToRemove.Any(f =>
+                    string.Equals(f, e.File, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            .ToList();
+
+        // Append newly tracked files as root entries (skip already present; skip the TOC file)
+        foreach (var file in configSync.FilesToAdd)
+        {
+            var alreadyPresent = rootEntries.Any(e =>
+                string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase)
+            );
+            if (!alreadyPresent && !string.Equals(file, tocFile, StringComparison.OrdinalIgnoreCase))
+                rootEntries.Add(new Entries { Name = Path.GetFileNameWithoutExtension(file), File = file });
+        }
+
+        // Remove deleted files from topic structure recursively
+        var topics = ProjectTopics(original.TableOfContents.Structure.Topics, configSync.FilesToRemove);
+
+        return new JournalConfig
+        {
+            JournalName = original.JournalName,
+            TableOfContents = new TableOfContents
+            {
+                File = original.TableOfContents.File,
+                Extensions = original.TableOfContents.Extensions,
+                IgnoreFiles = original.TableOfContents.IgnoreFiles,
+                Structure = new Structure { Topics = topics },
+                RootEntries = rootEntries.ToArray(),
+            },
+        };
+    }
+
+    private static Topic[] ProjectTopics(Topic[] topics, IReadOnlyList<string> filesToRemove)
+        => topics.Select(t => ProjectTopic(t, filesToRemove)).ToArray();
+
+    private static Topic ProjectTopic(Topic topic, IReadOnlyList<string> filesToRemove)
+    {
+        var filteredEntries = topic.Entries
+            .Where(e =>
+                !filesToRemove.Any(f =>
+                    string.Equals(f, e.File, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            .ToArray();
+
+        var filteredSubtopics = topic.Subtopics is not null
+            ? ProjectTopics(topic.Subtopics, filesToRemove)
+            : null;
+
+        return new Topic
+        {
+            Name = topic.Name,
+            Entries = filteredEntries,
+            Subtopics = filteredSubtopics,
+        };
+    }
+
     public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult)
     {
         foreach (var relativePath in syncResult.FilesToAdd)

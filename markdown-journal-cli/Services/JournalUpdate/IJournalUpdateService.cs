@@ -40,4 +40,22 @@ public interface IJournalUpdateService
     /// Thrown when a file named <paramref name="newTocName"/>.md already exists and is not the current TOC.
     /// </exception>
     public void RenameToc(string journalPath, string newTocName);
+
+    /// <summary>
+    /// Builds a dry-run preview report without performing any writes.
+    /// Sections are populated only for the flags requested (null means "not requested").
+    /// </summary>
+    /// <param name="journalPath">The root path of the journal.</param>
+    /// <param name="trackingChanges">Pre-detected file tracking changes, or null to skip.</param>
+    /// <param name="configChanges">Pre-detected config drift, or null to skip.</param>
+    /// <param name="includeToc">When true, generates a TOC preview and diff.</param>
+    /// <param name="renameTocTarget">When non-null, lists files whose backlinks would be updated.</param>
+    /// <returns>A <see cref="UpdateDryRunReport"/> describing all pending changes.</returns>
+    public UpdateDryRunReport BuildDryRunReport(
+        string journalPath,
+        ChangeDetectionResult? trackingChanges,
+        JournalConfigSyncResult? configChanges,
+        bool includeToc,
+        string? renameTocTarget
+    );
 }

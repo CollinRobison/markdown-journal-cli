@@ -624,3 +624,219 @@ public class TableOfContentsServiceTests
 
     #endregion
 }
+
+// ---------------------------------------------------------------------------
+// PreviewTableOfContents tests (separate class for clarity)
+// ---------------------------------------------------------------------------
+
+public class TableOfContentsServicePreviewTests
+{
+    private readonly Mock<IFileSystem> _mockFileSystem;
+    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
+    private readonly IOptions<JournalSettings> _journalSettings;
+    private readonly TableOfContentsService _service;
+
+    private const string JournalDirectory = "/test/journal";
+    private const string TocFile = "1a-TableOfContents.md";
+    private string TocFilePath => Path.Combine(JournalDirectory, TocFile);
+
+    public TableOfContentsServicePreviewTests()
+    {
+        _mockFileSystem = new Mock<IFileSystem>();
+        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
+
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                CapitalizeTopicHeadings = true,
+            }
+        );
+
+        _mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns(BuildConfig());
+
+        _service = new TableOfContentsService(
+            _mockFileSystem.Object,
+            _mockJournalConfiguration.Object,
+            _journalSettings,
+            NullLogger<TableOfContentsService>.Instance
+        );
+    }
+
+    private static JournalConfig BuildConfig(
+        Entries[]? rootEntries = null,
+        Topic[]? topics = null
+    ) =>
+        new()
+        {
+            JournalName = "Test",
+            TableOfContents = new TableOfContents
+            {
+                File = TocFile,
+                Structure = new Structure { Topics = topics ?? [] },
+                RootEntries = rootEntries ?? [],
+            },
+        };
+
+    [Fact]
+    public void PreviewTableOfContents_ReturnsGeneratedContent_WithoutWritingToDisk()
+    {
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns(
+                BuildConfig(
+                    rootEntries: [new Entries { Name = "My Entry", File = "my-entry.md" }]
+                )
+            );
+
+        var result = _service.PreviewTableOfContents(JournalDirectory);
+
+        result.ShouldContain("# Table of Contents");
+        result.ShouldContain("[My Entry](my-entry.md)");
+        _mockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never,
+            "PreviewTableOfContents must not write to disk"
+        );
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_PreservesExistingDatesFromTocFile()
+    {
+        var existingTocContent = "Created: 01/15/2024\nLast Edited: 03/01/2024\n\n# Table of Contents\n";
+        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
+        _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
+        _mockFileSystem.Setup(fs => fs.GetFileContent(TocFilePath)).Returns(existingTocContent);
+
+        var result = _service.PreviewTableOfContents(JournalDirectory);
+
+        result.ShouldContain("Created: 01/15/2024");
+        result.ShouldContain("Last Edited: 03/01/2024");
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_ReturnsValidContent_WhenNoEntries()
+    {
+        var result = _service.PreviewTableOfContents(JournalDirectory);
+
+        result.ShouldContain("# Table of Contents");
+        result.ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_OutputMatchesUpdateTableOfContents_OnIdenticalState()
+    {
+        var entries = new[] { new Entries { Name = "Note", File = "note.md" } };
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns(BuildConfig(rootEntries: entries));
+
+        // Capture what UpdateTableOfContents would write
+        string? writtenContent = null;
+        _mockFileSystem
+            .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((_, _, c) => writtenContent = c);
+
+        _service.UpdateTableOfContents(JournalDirectory);
+        var previewContent = _service.PreviewTableOfContents(JournalDirectory);
+
+        writtenContent.ShouldNotBeNull();
+        previewContent.ShouldBe(writtenContent, "Preview must produce the same output as live update");
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_ThrowsArgumentException_ForNullOrWhitespaceDirectory()
+    {
+        Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents(string.Empty));
+        Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents("   "));
+    }
+
+    // ── todo 25: PreviewTableOfContents(string, JournalConfig) overload ──────
+
+    [Fact]
+    public void PreviewTableOfContents_WithProjectedConfig_GeneratesOutputWithoutReadingJournalrc()
+    {
+        // Arrange — projected config has different entries than what's on disk in .journalrc
+        var projectedConfig = BuildConfig(
+            rootEntries:
+            [
+                new Entries { Name = "Projected Entry", File = "projected-entry.md" },
+            ]
+        );
+
+        // Verify the mock returns NO config (so we know the overload doesn't call Read())
+        _mockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns((JournalConfig?)null);
+
+        // Act
+        var content = _service.PreviewTableOfContents(JournalDirectory, projectedConfig);
+
+        // Assert — output is driven entirely by projectedConfig
+        content.ShouldContain("projected-entry.md");
+
+        // The projected-config overload must NOT call IJournalConfiguration.Read()
+        _mockJournalConfiguration.Verify(jc => jc.Read(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_WithProjectedConfig_PreservesExistingTocDates()
+    {
+        // Arrange — existing TOC file with known dates
+        _mockFileSystem
+            .Setup(fs => fs.FileExists(TocFilePath))
+            .Returns(true);
+        _mockFileSystem
+            .Setup(fs => fs.GetFileContent(TocFilePath))
+            .Returns("Created: 01/15/2024\nLast Edited: 06/01/2024\n\n# Table of Contents\n");
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
+            .Returns(TocFilePath);
+
+        var projectedConfig = BuildConfig();
+
+        // Act
+        var content = _service.PreviewTableOfContents(JournalDirectory, projectedConfig);
+
+        // Assert — existing dates are preserved
+        content.ShouldContain("Created: 01/15/2024");
+        content.ShouldContain("Last Edited: 06/01/2024");
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_WithProjectedConfig_DoesNotCallUpdateFile()
+    {
+        var projectedConfig = BuildConfig(
+            rootEntries: [new Entries { Name = "Note", File = "note.md" }]
+        );
+
+        _service.PreviewTableOfContents(JournalDirectory, projectedConfig);
+
+        _mockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_WithProjectedConfig_ThrowsForNullOrWhitespaceDirectory()
+    {
+        var config = BuildConfig();
+        Should.Throw<ArgumentException>(() =>
+            _service.PreviewTableOfContents(string.Empty, config)
+        );
+        Should.Throw<ArgumentException>(() =>
+            _service.PreviewTableOfContents("   ", config)
+        );
+    }
+
+    [Fact]
+    public void PreviewTableOfContents_WithProjectedConfig_ThrowsForNullConfig()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            _service.PreviewTableOfContents(JournalDirectory, null!)
+        );
+    }
+}

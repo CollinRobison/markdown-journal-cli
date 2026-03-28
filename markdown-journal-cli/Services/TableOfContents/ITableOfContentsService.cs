@@ -1,3 +1,5 @@
+using markdown_journal_cli.Infrastructure.Configuration.Models;
+
 namespace markdown_journal_cli.Services;
 
 /// <summary>
@@ -16,4 +18,24 @@ public interface ITableOfContentsService
         DateTime? createdDate = null,
         DateTime? lastEditedDate = null
     );
+
+    /// <summary>
+    /// Generates and returns the TOC markdown content without writing to disk.
+    /// Preserves existing Created/Last Edited dates from the current TOC file (if present).
+    /// Useful for dry-run previews and diffing against the current file.
+    /// </summary>
+    /// <param name="journalDirectory">The directory containing the journal.</param>
+    /// <returns>The generated TOC markdown content as a string.</returns>
+    string PreviewTableOfContents(string journalDirectory);
+
+    /// <summary>
+    /// Generates and returns the TOC markdown content using a caller-supplied projected config,
+    /// without writing to disk and without reading .journalrc from disk.
+    /// Preserves existing Created/Last Edited dates from the current TOC file on disk (if present).
+    /// Used by the dry-run path to preview the TOC after applying in-memory config drift.
+    /// </summary>
+    /// <param name="journalDirectory">The directory containing the journal.</param>
+    /// <param name="projectedConfig">The in-memory config to use for TOC generation.</param>
+    /// <returns>The generated TOC markdown content as a string.</returns>
+    string PreviewTableOfContents(string journalDirectory, JournalConfig projectedConfig);
 }

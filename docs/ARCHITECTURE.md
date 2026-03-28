@@ -18,12 +18,15 @@ This document provides detailed technical information about the Markdown Journal
                     │  • IJournalConfiguration               │
                     │  • IJournalConfigGenerator            │
                     │  • ITableOfContentsGenerator          │
+                    │  • ITableOfContentsService            │
                     │  • ITableOfContentsMarkdownParser     │
                     │  • IFileTracking / IHashService       │
                     │  • IEntryFormatterService             │
                     │  • IFileSystem                        │
+                    │  • IInMemoryFileBuffer                │
                     │  • IMarkdownLinkRewriter              │
                     │  • ITemplateManager                   │
+                    │  • IDryRunRenderer                    │
                     └─────────────────────────────────────────┘
 ```
 
@@ -110,15 +113,18 @@ public sealed class TypeRegistrar : ITypeRegistrar
 1. **Startup** - `Program.cs` creates `TypeRegistrar`
 2. **Registration** - Core services registered:
    - `IFileSystem` → `FileSystem` (File operations)
+   - `IInMemoryFileBuffer` → `InMemoryFileBuffer` (Dry-run staging + future rollback)
    - `ITemplateManager` → `TemplateManager` (Template processing)
    - `IJournalConfiguration` → `JournalConfiguration` (Config management)
-   - `IJournalInitializer` → `JournalInitializer` (Journal creation orchestration)
+   - `ITableOfContentsService` → `TableOfContentsService` (TOC generation + preview)
    - `ITableOfContentsGenerator` → `TableOfContentsGenerator` (TOC generation)
    - `IFileTracking` → `FileTracking` (Change detection)
    - `IHashService` → `HashService` (SHA256 hashing)
    - `IEntryFormatterService` → `EntryFormatterService` (Entry name formatting)
    - `IJournalFileUpdateService` → `JournalFileUpdateService` (Entry rename/move/ignore)
+   - `IJournalUpdateService` → `JournalUpdateService` (Journal sync + dry-run report)
    - `IMarkdownLinkRewriter` → `MarkdownLinkRewriter` (Inline link rewriting)
+   - `IDryRunRenderer` → `DryRunRenderer` (Dry-run terminal output)
 3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
@@ -126,6 +132,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
 ```csharp
 // Core services
 host.Services.AddSingleton<IFileSystem, FileSystem>();
+host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging + future rollback
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -133,9 +140,14 @@ host.Services.AddSingleton<IInitJournalService, InitJournalService>();  // ← i
 host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
 host.Services.AddSingleton<IHashService, HashService>();
 host.Services.AddSingleton<IFileTracking, FileTracking>();
+host.Services.AddSingleton<ITableOfContentsService, TableOfContentsService>();
 host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
+host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
+host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
+host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
+host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();          // ← dry-run rendering
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -328,6 +340,74 @@ public interface IMarkdownLinkRewriter
 - Matches only inline links `[text](path/file.md)`; reference-style links are out of scope for this iteration
 - Uses `RegexOptions.Compiled` — the pattern is JIT-compiled once and reused across every `.md` file in the journal
 
+**`IJournalUpdateService`** - Orchestrates `update journal` operations
+```csharp
+public interface IJournalUpdateService
+{
+    void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult);
+    void UpdateTableOfContents(string journalPath);
+    void RenameToc(string journalPath, string newBaseName);
+    UpdateDryRunReport BuildDryRunReport(
+        string journalPath,
+        ChangeDetectionResult? trackingChanges,
+        JournalConfigSyncResult? configChanges,
+        bool includeToc,
+        string? renameTocTarget);
+}
+```
+- `BuildDryRunReport` is a pure read path: projects pending tracking/config drift into an in-memory `UpdateDryRunReport` without any disk writes
+- When both tracking and config are in scope, config drift is re-computed against the projected tracking state so TOC preview reflects pending changes
+- Each section of the report is `null` when its corresponding flag was not requested (scoped by the same flags as the live path)
+
+**`ITableOfContentsService`** - TOC generation with preview support
+```csharp
+public interface ITableOfContentsService
+{
+    void UpdateTableOfContents(string journalDirectory, ...);
+    string PreviewTableOfContents(string journalDirectory);
+    string PreviewTableOfContents(string journalDirectory, JournalConfig projectedConfig);
+}
+```
+- `PreviewTableOfContents()` generates the TOC markdown and returns it as a string without writing to disk
+- The overload accepting a `projectedConfig` bypasses disk-based `.journalrc` reading — used by the dry-run path to preview the TOC after in-memory config drift is applied
+- Both preview overloads preserve existing `Created`/`Last Edited` dates from the current TOC file on disk
+
+**`IInMemoryFileBuffer`** - In-memory file staging and snapshot service
+```csharp
+public interface IInMemoryFileBuffer
+{
+    void Snapshot(string absolutePath);        // capture current disk content for rollback
+    void Stage(string absolutePath, string content); // store generated content without disk I/O
+    string? GetStaged(string absolutePath);
+    string? GetSnapshot(string absolutePath);
+    void Commit(string absolutePath);          // write staged content to disk
+    void Restore(string absolutePath);         // restore from snapshot (rollback)
+    bool HasStaged(string absolutePath);
+    bool HasSnapshot(string absolutePath);
+    void Clear();
+}
+```
+- Registered as singleton in DI; case-insensitive path keys
+- Used by the dry-run path to stage and read generated TOC content without touching disk
+- Designed to be wired into `JournalUpdateService` write operations in the future for transactional rollback on partial failure (infrastructure is in place; write-path integration is future work)
+
+**`IDryRunRenderer`** - Renders an `UpdateDryRunReport` to the terminal
+```csharp
+public interface IDryRunRenderer
+{
+    void Render(UpdateDryRunReport report, string journalPath);
+}
+```
+- All output is read-only — no file writes occur here
+- Renders color-coded Spectre.Console tables per section: tracking changes (added/modified/deleted), config changes (will be added/removed), TOC diff (LCS line-level diff panel), and rename-toc preview with backlink file list
+- Each section is rendered only when the corresponding report property is non-null and has changes
+- `TextDiffer` (internal `static` class) provides the LCS-based line diff consumed by the TOC section
+
+**Dry-Run Data Models** — `Infrastructure/Tracking/Models/UpdateDryRunReport.cs`
+- `UpdateDryRunReport` — top-level aggregate; each section is `null` when not requested
+- `TocDiffResult` — holds `CurrentContent` and `PreviewContent` for line-level diffing at render time; `HasChanges` is a string equality check
+- `TocRenameDryRunResult` — describes a pending `--rename-toc` without applying it; carries `CurrentName`, `NewName`, and the list of files with backlinks to update
+
 ### Service Interaction Flow
 ```
 NewCommand
@@ -357,7 +437,15 @@ AddEntry
     └── ITableOfContentsGenerator.UpdateTableOfContents()
 
 UpdateJournal
-    ├── IFileTracking.DetectChangesWithoutUpdate()
+    ├── [--dry-run path] → ExecuteDryRun()
+    │       ├── IFileTracking.DetectChangesWithoutUpdate()  (when tracking in scope)
+    │       ├── IJournalConfiguration.DetectConfigChanges()  (when config in scope)
+    │       ├── IJournalUpdateService.BuildDryRunReport()
+    │       │       ├── ComputeProjectedConfigDrift()        (projects config drift from pending tracking)
+    │       │       ├── ITableOfContentsService.PreviewTableOfContents()  (no disk write)
+    │       │       └── IMarkdownLinkRewriter.FindFilesWithLinkTo()  (rename preview backlinks)
+    │       └── IDryRunRenderer.Render()                    (zero writes; exit 0)
+    ├── [live path] IFileTracking.DetectChangesWithoutUpdate()
     ├── MarkdownMetadataParser.UpdateLastEditedDate()
     ├── IJournalConfiguration.AddEntry() / RemoveEntry()
     └── ITableOfContentsGenerator.UpdateTableOfContents()
@@ -663,7 +751,7 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (882 tests)
+markdown-journal-cli.Tests/ (941 tests)
 ├── Commands/
 │   ├── NewCommandTests.cs
 │   ├── Init/
@@ -674,13 +762,14 @@ markdown-journal-cli.Tests/ (882 tests)
 │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   └── AddTableOfContentsIntegrationTests.cs
 │   ├── Remove/
-│   │   └── RemoveEntryCommandTests.cs   ← new: remove entry command tests
+│   │   └── RemoveEntryCommandTests.cs   ← remove entry command tests
 │   └── Update/
-│       ├── UpdateCommandTests.cs        ← extended: --rename-toc dispatch tests added
+│       ├── UpdateCommandTests.cs        ← extended: --rename-toc and --dry-run dispatch tests added
 │       └── UpdateEntryCommandTests.cs
 ├── Infrastructure/
 │   ├── FileSystem/
 │   │   ├── FileSystemTests.cs
+│   │   ├── InMemoryFileBufferTests.cs    ← new: Snapshot/Stage/Commit/Restore tests
 │   │   ├── MarkdownLinkRewriterTests.cs  ← extended: StripLinksInDirectory tests added
 │   │   ├── MarkdownMetadataParserTests.cs
 │   │   └── TestFileSystem.cs
@@ -704,13 +793,13 @@ markdown-journal-cli.Tests/ (882 tests)
     ├── JournalFileUpdate/
     │   └── JournalFileUpdateServiceTests.cs
     ├── JournalUpdate/
-    │   └── JournalUpdateServiceTests.cs      ← extended: RenameToc test cases added
+    │   └── JournalUpdateServiceTests.cs      ← extended: RenameToc + BuildDryRunReport test cases added
     ├── NewJournal/
     │   └── NewJournalServiceTests.cs
     ├── RemoveEntry/
-    │   └── RemoveEntryServiceTests.cs        ← new: remove entry service tests
+    │   └── RemoveEntryServiceTests.cs        ← remove entry service tests
     └── TableOfContents/
-        └── TableOfContentsServiceTests.cs
+        └── TableOfContentsServiceTests.cs    ← extended: PreviewTableOfContents tests added
 ```
 
 ### Testing Strategy
@@ -752,7 +841,8 @@ public class NewCommandTests
 - **Async file operations** - For large journals with many files
 - **Global configuration** - User-level defaults (default editor, date format, etc.)
 - **Plugin/extension points** - Custom template generators and entry processors
-- **`--check` flag** - Dry-run preview of changes before applying them
+- **~~`--check` flag~~ ✅ Implemented** - Dry-run preview of changes before applying them (shipped as `--dry-run|--check` on `update journal`)
+- **Rollback wiring** - Wire `IInMemoryFileBuffer.Snapshot()` before each write in `JournalUpdateService` for transactional rollback on partial failure. Infrastructure is in place (`IInMemoryFileBuffer`); integration into write path is future work.
 
 ## 📋 Design Decisions Log
 
@@ -819,3 +909,15 @@ public class NewCommandTests
 ### Decision: `StripLinksInDirectory` as a First-Class `IMarkdownLinkRewriter` Method
 **Rationale:** The removal use case (strip `[text](file.md)` → `text`) is structurally identical to the rename use case (`ReplaceLinksInDirectory`) but semantically different — no new filename, just link removal. Adding it to the existing interface keeps all link-rewriting behaviour in one place and allows `RemoveEntryService` to remain free of regex and file-enumeration details. It is tested in complete isolation in `MarkdownLinkRewriterTests`.  
 **Alternatives:** Implement stripping inline in `RemoveEntryService` — duplicates the scan-rewrite-persist loop and couples the service to regex internals.
+
+### Decision: `--dry-run` (alias `--check`) on `update journal`
+**Rationale:** Users need a way to audit pending changes before they are applied, especially on large or shared journals. `--dry-run` is the dominant CLI convention (git, terraform, rsync). `--check` is retained as an alias per UX preference. The flag is a pure read path: detection helpers (`DetectChangesWithoutUpdate`, `DetectConfigChanges`) are already non-mutating; `BuildDryRunReport` builds a structured model; `UpdateCommand.ExecuteDryRun` renders it via `IAnsiConsole`. Zero writes occur. Rendering is scoped by the same flags as the live path (`--tracking`, `--config`, `--toc`, `--rename-toc`). Exit code is always `0` on success.  
+**Alternatives:** A separate `mdjournal diff` command — more discoverable but requires duplicating all detection logic and a separate command registration.
+
+### Decision: `IInMemoryFileBuffer` as Foundational Infrastructure
+**Rationale:** The dry-run `PreviewTableOfContents()` path needed a place to stage generated content without touching disk. Rather than a one-off local variable, a general-purpose Snapshot/Stage/Commit/Restore contract was created in `Infrastructure/FileSystem/`. This serves the dry-run preview now and is designed to be wired into `JournalUpdateService` in the future for transactional rollback when a multi-step update fails partway through. Registered as singleton in DI.  
+**Alternatives:** Inline string staging in each service method — simpler now but would require a larger refactor when rollback semantics are needed.
+
+### Decision: `PreviewTableOfContents()` on `ITableOfContentsService`
+**Rationale:** The dry-run path needed the TOC generation logic without the `_fileSystem.UpdateFile()` call. Rather than duplicating the generation logic, a new public method extracts the read-and-generate path: it reads existing dates from the current TOC file on disk (to preserve them), calls the private `GenerateTableOfContents()` helper, and returns the string. This keeps generation logic in one place and makes the service testable for both write and preview paths in isolation.  
+**Alternatives:** Make `GenerateTableOfContents()` public — exposes an internal helper that callers would need to manage manually (config reading, date preservation).

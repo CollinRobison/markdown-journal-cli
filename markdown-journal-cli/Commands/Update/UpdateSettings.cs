@@ -46,6 +46,15 @@ public class UpdateJournalSettings : UpdateSettings
     )]
     public string? RenameToc { get; set; }
 
+    [CommandOption("--dry-run|--check")]
+    [Description(
+        "Preview what would change without applying any updates. "
+            + "Shows added, modified, and removed files for each requested section. "
+            + "Respects all other flags for scoping (e.g. --dry-run --config shows only config drift). "
+            + "--check is an alias."
+    )]
+    public bool DryRun { get; set; }
+
     public override ValidationResult Validate()
     {
         if (RenameToc is not null && RenameToc.EndsWith(".md", StringComparison.OrdinalIgnoreCase))

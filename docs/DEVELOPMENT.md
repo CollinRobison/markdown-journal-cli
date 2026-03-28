@@ -47,6 +47,9 @@ markdown-journal-cli/
 │   │   │   ├── RemoveEntryCommand.cs
 │   │   │   └── RemoveSettings.cs
 │   │   ├── Update/                # Update journal/entry commands
+│   │   │   ├── DryRunRenderer.cs       # Spectre.Console dry-run output renderer
+│   │   │   ├── IDryRunRenderer.cs      # Renderer interface
+│   │   │   ├── TextDiffer.cs           # LCS-based line-level diff (internal)
 │   │   │   ├── UpdateCommand.cs
 │   │   │   ├── UpdateEntryCommand.cs
 │   │   │   └── UpdateSettings.cs
@@ -66,6 +69,8 @@ markdown-journal-cli/
 │   │   ├── FileSystem/           # File system abstraction
 │   │   │   ├── IFileSystem.cs
 │   │   │   ├── FileSystem.cs
+│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview + future rollback)
+│   │   │   ├── InMemoryFileBuffer.cs   # Snapshot/Stage/Commit/Restore implementation
 │   │   │   ├── IMarkdownLinkRewriter.cs   # Inline link rewriting interface
 │   │   │   ├── MarkdownLinkRewriter.cs    # Compiled-regex link rewriter implementation
 │   │   │   └── MarkdownMetadataParser.cs
@@ -75,6 +80,7 @@ markdown-journal-cli/
 │   │       ├── IHashService.cs
 │   │       ├── HashService.cs
 │   │       └── Models/
+│   │           └── UpdateDryRunReport.cs  # Dry-run report aggregate + TocDiffResult + TocRenameDryRunResult
 │   ├── JournalTemplates/          # Template and initialization services
 │   │   ├── Templates/            # Template implementations
 │   │   ├── IJournalInitializer.cs # Journal creation orchestration
@@ -97,8 +103,8 @@ markdown-journal-cli/
 │   │   │   ├── IJournalFileUpdateService.cs
 │   │   │   └── JournalFileUpdateService.cs
 │   │   ├── JournalUpdate/
-│   │   │   ├── IJournalUpdateService.cs    # + RenameToc method
-│   │   │   └── JournalUpdateService.cs     # + RenameToc implementation; IMarkdownLinkRewriter injected
+│   │   │   ├── IJournalUpdateService.cs    # + BuildDryRunReport method
+│   │   │   └── JournalUpdateService.cs     # + BuildDryRunReport, RenameToc; IMarkdownLinkRewriter injected
 │   │   ├── NewJournal/
 │   │   │   ├── INewJournalService.cs
 │   │   │   └── NewJournalService.cs
@@ -106,12 +112,12 @@ markdown-journal-cli/
 │   │   │   ├── IRemoveEntryService.cs      # Remove entry orchestration
 │   │   │   └── RemoveEntryService.cs
 │   │   └── TableOfContents/
-│   │       ├── ITableOfContentsService.cs
+│   │       ├── ITableOfContentsService.cs  # + PreviewTableOfContents overloads (no disk write)
 │   │       └── TableOfContentsService.cs
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (882 tests)
+├── markdown-journal-cli.Tests/    # Unit tests (941 tests)
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
 │   │   ├── Init/
@@ -125,11 +131,12 @@ markdown-journal-cli/
 │   │   ├── Remove/
 │   │   │   └── RemoveEntryCommandTests.cs     # remove entry command tests
 │   │   └── Update/
-│   │       ├── UpdateCommandTests.cs          # + --rename-toc dispatch tests
+│   │       ├── UpdateCommandTests.cs          # + --rename-toc and --dry-run dispatch tests
 │   │       └── UpdateEntryCommandTests.cs
 │   ├── Infrastructure/           # Infrastructure service tests
 │   │   ├── FileSystem/
 │   │   │   ├── FileSystemTests.cs
+│   │   │   ├── InMemoryFileBufferTests.cs     # new: Snapshot/Stage/Commit/Restore tests
 │   │   │   ├── MarkdownLinkRewriterTests.cs   # extended: StripLinksInDirectory tests added
 │   │   │   ├── MarkdownMetadataParserTests.cs
 │   │   │   └── TestFileSystem.cs
@@ -153,13 +160,13 @@ markdown-journal-cli/
 │       ├── JournalFileUpdate/
 │       │   └── JournalFileUpdateServiceTests.cs
 │       ├── JournalUpdate/
-│       │   └── JournalUpdateServiceTests.cs   # + RenameToc test cases
+│       │   └── JournalUpdateServiceTests.cs   # + RenameToc + BuildDryRunReport test cases
 │       ├── NewJournal/
 │       │   └── NewJournalServiceTests.cs
 │       ├── RemoveEntry/
 │       │   └── RemoveEntryServiceTests.cs     # remove entry service tests
 │       └── TableOfContents/
-│           └── TableOfContentsServiceTests.cs
+│           └── TableOfContentsServiceTests.cs  # extended: PreviewTableOfContents tests added
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
 ```
@@ -586,18 +593,22 @@ The following areas need detailed documentation (you should write these based on
 ```csharp
 // Core services
 host.Services.AddSingleton<IFileSystem, FileSystem>();
+host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging + future rollback
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
-host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
-host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
-host.Services.AddSingleton<IJournalInitializer, JournalInitializer>();
+host.Services.AddSingleton<INewJournalService, NewJournalService>();
 host.Services.AddSingleton<IInitJournalService, InitJournalService>();  // ← init command
 host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
 host.Services.AddSingleton<IHashService, HashService>(); 
 host.Services.AddSingleton<IFileTracking, FileTracking>();
+host.Services.AddSingleton<ITableOfContentsService, TableOfContentsService>();
 host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
+host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
+host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
+host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
+host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();          // ← dry-run rendering
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -636,7 +647,19 @@ Implemented in `TableOfContentsGenerator.cs`:
 - **Benefits**: Reusable across future rename operations (e.g. `update entry --name`); keeps service orchestrators free of file-enumeration and regex details
 - **Features**: Pure string `RewriteLinks`, read-only `FindFilesWithLinkTo`, bulk `ReplaceLinksInDirectory` that scans/rewrites/persists in one call; `RegexOptions.Compiled` for multi-file performance
 - **Scope**: Inline links only — reference-style links (`[text][ref]`) are out of scope for this iteration
-- **Example**: Used by `JournalUpdateService.RenameToc` to rewrite all references to the old TOC filename
+- **Example**: Used by `JournalUpdateService.RenameToc` to rewrite all references to the old TOC filename; also used by `BuildDryRunReport` (via `FindFilesWithLinkTo`) to list affected backlink files in the rename-toc dry-run preview
+
+**IInMemoryFileBuffer Pattern**
+- **Purpose**: In-memory file staging and snapshot service; two use cases: (1) stage generated content for preview/diff without disk I/O (dry-run), (2) snapshot-before-write for transactional rollback (future)
+- **Benefits**: Separates content generation from disk I/O; enables testable dry-run logic; lays groundwork for rollback semantics
+- **Registered as**: singleton — keys are case-insensitive absolute paths; call `Clear()` between operations if reused
+- **Example**: `JournalUpdateService.BuildDryRunReport` calls `ITableOfContentsService.PreviewTableOfContents` which uses the buffer internally to stage the generated TOC string
+
+**IDryRunRenderer Pattern**
+- **Purpose**: Renders an `UpdateDryRunReport` to the terminal using Spectre.Console — no file writes
+- **Benefits**: Keeps rendering concerns out of `UpdateCommand` and `JournalUpdateService`; independently testable
+- **Features**: Color-coded tables for tracking (✚/~/✖), config (will add/remove), TOC diff (LCS panel), rename-toc preview with backlink list; each section rendered only when non-null and has changes
+- **Example**: `UpdateCommand.ExecuteDryRun` calls `_dryRunRenderer.Render(report, journalPath)` after building the report
 
 ## 🏗️ Service Architecture Patterns
 
@@ -735,10 +758,11 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ `update entry` command for renaming, relocating, and ignoring entries
 - ✅ `--no-backlinks` flag on `update entry` — backlink rewriting on rename enabled by default; opt-out via `--nb|--no-backlinks`
 - ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
+- ✅ `--dry-run|--check` flag on `update journal` — preview all pending changes without any writes; color-coded Spectre.Console tables for tracking, config, TOC diff, and rename-toc preview; scoped by the same flags as the live path (`--tracking`, `--config`, `--toc`, `--rename-toc`)
 - ✅ **`remove entry` command** — delete an entry file, remove config/tracking records, regenerate TOC; `--clean-refs` strips dead inline links across the journal; `rm` alias supported
 - ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting and link stripping
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (882 tests passing)
+- ✅ Testing framework setup (941 tests passing)
 - ✅ Configuration system with generation from multiple sources
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing
