@@ -434,6 +434,32 @@ In `BuildDryRunReport`, when `includeToc` and `includeConfig` are both true:
 
 When `includeToc` is true but `includeConfig` is false (e.g., `--dry-run --toc` alone), call the existing `PreviewTableOfContents(journalDirectory)` overload as before — current config is the correct source since nothing upstream is changing.
 
+### Scenario Outcomes After Fix
+
+Every supported flag combination, what sections are rendered, what was broken before the fix, and what the outcome is after.
+
+> **Legend**
+> - **Committed index** — the tracking file as it exists on disk (pre-pending changes)
+> - **Projected index** — committed index + `AddedFiles` − `DeletedFiles` from the pending `ChangeDetectionResult`
+> - **Projected config** — an in-memory `JournalConfig` clone with `FilesToAdd` appended and `FilesToRemove` stripped out
+> - ✅ Fixed · ➖ Not affected (no bug in this path) · 🔒 Intentional (by design, not a bug)
+
+| Flags | Sections Rendered | `includeTracking` | `includeConfig` | `includeToc` | Config source **before** fix | Config source **after** fix | TOC projection source **before** fix | TOC projection source **after** fix | Bug fixed? |
+|---|---|:---:|:---:|:---:|---|---|---|---|:---:|
+| `--dry-run` (implicit all) | Tracking + Config + TOC | ✓ | ✓ | ✓ | Committed index — pending adds/deletes invisible to config | **Projected index** (pending adds/deletes reflected) | Current `.journalrc` — pending tracking + config changes invisible to TOC | **Projected config** (pending tracking + config drift both applied) | ✅ |
+| `--dry-run --tracking` | Tracking only | ✓ | ✗ | ✗ | — | — | — | — | ➖ |
+| `--dry-run --date` | Tracking only (`--date` is downstream of tracking) | ✓ | ✗ | ✗ | — | — | — | — | ➖ |
+| `--dry-run --config` | Config only | ✗ | ✓ | ✗ | Committed index (correct — no pending tracking in scope) | Committed index (unchanged) | — | — | ➖ |
+| `--dry-run --toc` | TOC only | ✗ | ✗ | ✓ | — | — | Current `.journalrc` (correct — nothing upstream in scope) | Current `.journalrc` (unchanged) | ➖ |
+| `--dry-run --rename-toc <name>` | Rename preview only | ✗ | ✗ | ✗ | — | — | — | — | ➖ |
+| `--dry-run --tracking --config` | Tracking + Config | ✓ | ✓ | ✗ | Committed index — pending adds/deletes invisible to config | **Projected index** (pending adds/deletes reflected) | — | — | ✅ |
+| `--dry-run --date --config` | Tracking + Config (`--date` implies tracking detection) | ✓ | ✓ | ✗ | Committed index — pending adds/deletes invisible to config | **Projected index** (pending adds/deletes reflected) | — | — | ✅ |
+| `--dry-run --tracking --toc` | Tracking + TOC | ✓ | ✗ | ✓ | — | — | Current `.journalrc` (config not in scope; tracking alone doesn't mutate `.journalrc`) | Current `.journalrc` (unchanged — intentional) | 🔒 |
+| `--dry-run --config --toc` | Config + TOC | ✗ | ✓ | ✓ | Committed index (correct) | Committed index (unchanged) | Current `.journalrc` — pending config drift not yet applied to TOC | **Projected config** (current config drift applied to in-memory clone) | ✅ |
+| `--dry-run --tracking --config --toc` | Tracking + Config + TOC (equivalent to `--dry-run` alone) | ✓ | ✓ | ✓ | Committed index — pending adds/deletes invisible to config | **Projected index** (pending adds/deletes reflected) | Current `.journalrc` — pending tracking + config changes invisible to TOC | **Projected config** (pending tracking + config drift both applied) | ✅ |
+
+**Summary:** Five combinations contain the bug. All five are resolved by the fix. Six combinations are unaffected (either the relevant sections aren't rendered, or by-design the current state is the correct projection source).
+
 ### Files to Modify (additions to existing table)
 
 | File | Change |

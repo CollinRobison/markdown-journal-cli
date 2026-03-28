@@ -823,4 +823,186 @@ public class JournalUpdateServiceTests
     }
 
     #endregion
+
+    #region BuildDryRunReport
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Creates a minimal .testapp tracking index and .journalrc for a fresh journal,
+    /// then optionally adds extra files to each.
+    /// Returns the relative path of the TOC file.
+    /// </summary>
+    private string SetupDryRunJournal(
+        string[]? trackedFiles = null,
+        string[]? configFiles = null
+    )
+    {
+        const string tocFile = "1a-TableOfContents.md";
+
+        // Create and track the TOC file
+        _fileSystem.CreateFile(_testPath, tocFile, "# Table of Contents\n");
+        _fileTracking.UpdateFileInIndex(_testPath, tocFile);
+
+        // Add extra tracked files
+        foreach (var f in trackedFiles ?? [])
+        {
+            _fileSystem.CreateFile(_testPath, f, $"# {f}\n");
+            _fileTracking.UpdateFileInIndex(_testPath, f);
+        }
+
+        // Ensure .journalrc always exists (required for BuildDryRunReport paths that read config)
+        if (!_fileSystem.FileExists(Path.Combine(_testPath, ".journalrc")))
+            SetupJournalConfig();
+
+        // Add extra config entries beyond the defaults
+        foreach (var f in configFiles ?? [])
+            _journalConfiguration.AddEntry(_testPath, string.Empty, f);
+
+        return tocFile;
+    }
+
+    // ── todo 22: tracking + config + toc (implicit --dry-run all) ─────────────
+
+    [Fact]
+    public void BuildDryRunReport_AllSections_ConfigReflectsPendingTrackingAddition()
+    {
+        // Arrange — journal with one existing entry; a new file exists on disk but is not yet tracked
+        SetupDryRunJournal(trackedFiles: ["existing.md"]);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "existing.md");
+
+        // Simulate a new file on disk that tracking will detect as "added"
+        _fileSystem.CreateFile(_testPath, "new-entry.md", "# New Entry\n");
+        var trackingChanges = new ChangeDetectionResult
+        {
+            AddedFiles = ["new-entry.md"],
+        };
+        var naiveConfigChanges = _journalConfiguration.DetectConfigChanges(_testPath);
+
+        // Act
+        var report = _service.BuildDryRunReport(
+            _testPath,
+            trackingChanges,
+            naiveConfigChanges,
+            includeToc: true,
+            renameTocTarget: null
+        );
+
+        // Assert — projected config drift includes the pending addition
+        report.ConfigChanges.ShouldNotBeNull();
+        report.ConfigChanges!.FilesToAdd.ShouldContain("new-entry.md");
+
+        // TOC preview should include the new entry
+        report.TocPreview.ShouldNotBeNull();
+        report.TocPreview!.PreviewContent.ShouldContain("new-entry.md");
+    }
+
+    [Fact]
+    public void BuildDryRunReport_AllSections_ConfigReflectsPendingTrackingDeletion()
+    {
+        // Arrange — journal with a file tracked and in config; file is deleted from disk
+        SetupDryRunJournal(trackedFiles: ["going-away.md"]);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "going-away.md");
+
+        var trackingChanges = new ChangeDetectionResult
+        {
+            DeletedFiles = ["going-away.md"],
+        };
+        var naiveConfigChanges = _journalConfiguration.DetectConfigChanges(_testPath);
+
+        // Act
+        var report = _service.BuildDryRunReport(
+            _testPath,
+            trackingChanges,
+            naiveConfigChanges,
+            includeToc: true,
+            renameTocTarget: null
+        );
+
+        // Assert — projected config drift includes the pending removal
+        report.ConfigChanges.ShouldNotBeNull();
+        report.ConfigChanges!.FilesToRemove.ShouldContain("going-away.md");
+
+        // TOC preview should NOT include the deleted entry
+        report.TocPreview.ShouldNotBeNull();
+        report.TocPreview!.PreviewContent.ShouldNotContain("going-away.md");
+    }
+
+    // ── todo 23: config + toc (no tracking) ──────────────────────────────────
+
+    [Fact]
+    public void BuildDryRunReport_ConfigAndTocNoTracking_TocReflectsCurrentConfigDrift()
+    {
+        // Arrange — file is tracked but not yet in .journalrc (config drift exists)
+        SetupDryRunJournal(trackedFiles: ["unregistered.md"]);
+        // deliberately do NOT add "unregistered.md" to journalrc
+
+        var configChanges = _journalConfiguration.DetectConfigChanges(_testPath);
+        configChanges.FilesToAdd.ShouldContain("unregistered.md");
+
+        // Act — no tracking changes passed (null)
+        var report = _service.BuildDryRunReport(
+            _testPath,
+            trackingChanges: null,
+            configChanges: configChanges,
+            includeToc: true,
+            renameTocTarget: null
+        );
+
+        // Assert — TOC preview includes the file that config drift would add
+        report.TocPreview.ShouldNotBeNull();
+        report.TocPreview!.PreviewContent.ShouldContain("unregistered.md");
+    }
+
+    // ── todo 24a: tracking + toc (no config) — TOC unchanged ─────────────────
+
+    [Fact]
+    public void BuildDryRunReport_TrackingAndTocNoConfig_TocUsesCurrentConfig()
+    {
+        // Arrange — a new file would be added to tracking but config is NOT in scope
+        SetupDryRunJournal(trackedFiles: ["existing.md"]);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "existing.md");
+
+        _fileSystem.CreateFile(_testPath, "pending.md", "# Pending\n");
+        var trackingChanges = new ChangeDetectionResult { AddedFiles = ["pending.md"] };
+
+        // Act — configChanges is null (--tracking --toc, no --config)
+        var report = _service.BuildDryRunReport(
+            _testPath,
+            trackingChanges,
+            configChanges: null,
+            includeToc: true,
+            renameTocTarget: null
+        );
+
+        // Assert — TOC preview uses current .journalrc; "pending.md" is NOT in the preview
+        // because config is out of scope (tracking alone doesn't mutate .journalrc)
+        report.TocPreview.ShouldNotBeNull();
+        report.TocPreview!.PreviewContent.ShouldNotContain("pending.md");
+    }
+
+    // ── todo 24b: toc only — TOC uses current config ─────────────────────────
+
+    [Fact]
+    public void BuildDryRunReport_TocOnly_TocUsesCurrentConfig()
+    {
+        // Arrange
+        SetupDryRunJournal(trackedFiles: ["note.md"]);
+        _journalConfiguration.AddEntry(_testPath, string.Empty, "note.md");
+
+        // Act — no tracking changes, no config changes (--toc only)
+        var report = _service.BuildDryRunReport(
+            _testPath,
+            trackingChanges: null,
+            configChanges: null,
+            includeToc: true,
+            renameTocTarget: null
+        );
+
+        // Assert — TOC preview reflects only what's currently in .journalrc
+        report.TocPreview.ShouldNotBeNull();
+        report.TocPreview!.PreviewContent.ShouldContain("note.md");
+    }
+
+    #endregion
 }

@@ -43,7 +43,7 @@ public sealed class DryRunRenderer(
     private void RenderTrackingTable(ChangeDetectionResult changes)
     {
         var table = new Table()
-            .Title("[bold]Tracking Changes[/]")
+            .Title($"[bold]Tracking Changes (.{_journalSettings.AppName})[/]")
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey);
 
@@ -67,7 +67,7 @@ public sealed class DryRunRenderer(
     private void RenderConfigTable(JournalConfigSyncResult configChanges)
     {
         var table = new Table()
-            .Title("[bold]Config Changes (.journalrc)[/]")
+            .Title($"[bold]Config Changes ({_journalSettings.JournalConfigFileName})[/]")
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey);
 
@@ -83,7 +83,7 @@ public sealed class DryRunRenderer(
     }
 
     private void RenderTocPreview(TocDiffResult diff, string journalPath)
-    {
+    {   
         var config = _journalConfiguration.Read(journalPath);
         var tocFileName =
             config?.TableOfContents.File
@@ -115,15 +115,21 @@ public sealed class DryRunRenderer(
                 }
             );
         }
-
+        
         var panel = new Panel(new Markup(diffMarkup.ToString().TrimEnd()))
         {
-            Header = new PanelHeader("[bold] Table of Contents Preview [/]"),
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(Color.Grey),
         };
 
-        _console.Write(panel);
+        var tocWrapper = new Table()
+            .Title($"[bold]Table of Contents Changes ({tocFileName.EscapeMarkup()})[/]")
+            .HideHeaders()
+            .Border(TableBorder.None)
+            .AddColumn(new TableColumn(""))
+            .AddRow(panel);
+
+        _console.Write(tocWrapper);
         _console.MarkupLine($"[dim]{added} line(s) added · {removed} line(s) removed[/]");
     }
 
@@ -135,11 +141,18 @@ public sealed class DryRunRenderer(
 
         var renamePanel = new Panel(new Markup(renameText))
         {
-            Header = new PanelHeader("[bold] TOC Rename Preview [/]"),
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(Color.Grey),
         };
-        _console.Write(renamePanel);
+
+        var renameWrapper = new Table()
+            .Title("[bold]TOC Rename Preview[/]")
+            .HideHeaders()
+            .Border(TableBorder.None)
+            .AddColumn(new TableColumn(""))
+            .AddRow(renamePanel);
+
+        _console.Write(renameWrapper);
 
         if (rename.FilesWithBacklinks.Count == 0)
         {

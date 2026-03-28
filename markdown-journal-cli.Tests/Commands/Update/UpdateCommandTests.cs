@@ -1790,7 +1790,8 @@ public class UpdateCommandTests
         );
 
         result.ShouldBe(0);
-        _console.Output.ShouldContain("Table of Contents Preview");
+        _console.Output.ShouldContain("Table of Contents Changes");
+        _console.Output.ShouldContain("1a-TableOfContents.md");
     }
 
     [Fact]
