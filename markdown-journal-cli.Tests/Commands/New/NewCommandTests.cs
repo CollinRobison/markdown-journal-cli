@@ -2,6 +2,7 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
@@ -808,6 +809,8 @@ public class NewCommandTests
             testJournalConfig,
             mockFileTracking.Object,
             customSettings,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<NewJournalService>.Instance
         );
 
@@ -901,6 +904,11 @@ public class NewCommandTests
         }
 
         public void DeleteFile(string filePath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteDirectory(string path)
         {
             throw new NotImplementedException();
         }
@@ -1293,6 +1301,11 @@ public class NewCommandTests
             throw new NotImplementedException();
         }
 
+        public void DeleteDirectory(string path)
+        {
+            throw new NotImplementedException();
+        }
+
         public void RenameFile(string oldPath, string newPath)
         {
             throw new NotImplementedException();
@@ -1339,6 +1352,8 @@ public class NewCommandTests
         // depend on ILogger<T> can resolve correctly inside the TypeRegistrar's ServiceProvider.
         registrar.RegisterInstance(typeof(ILoggerFactory), NullLoggerFactory.Instance);
         registrar.Register(typeof(ILogger<>), typeof(Logger<>));
+        registrar.RegisterInstance(typeof(IFileTransactionCoordinator), NoOpFileTransactionCoordinator.Instance);
+        registrar.RegisterInstance(typeof(IRollbackReporter), NoOpRollbackReporter.Instance);
 
         foreach (var service in services)
         {

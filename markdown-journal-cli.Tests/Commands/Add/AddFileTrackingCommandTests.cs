@@ -3,6 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -43,6 +44,8 @@ public class AddFileTrackingCommandTests
         services.AddSingleton(_mockFileSystem.Object);
         services.AddSingleton(_mockFileTracking.Object);
         services.AddSingleton(_journalSettings);
+        services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
+        services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
         services.AddSingleton<AddFileTracking>();
 
         var registrar = new TypeRegistrar();

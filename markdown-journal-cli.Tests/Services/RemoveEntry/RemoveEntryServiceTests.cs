@@ -2,6 +2,7 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Services.RemoveEntry;
@@ -57,6 +58,8 @@ public class RemoveEntryServiceTests
             _mockTocService.Object,
             _mockLinkRewriter.Object,
             _journalSettings,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<RemoveEntryService>.Instance
         );
     }
@@ -67,8 +70,8 @@ public class RemoveEntryServiceTests
         _mockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(true);
         _mockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(true);
         _mockFileSystem
-            .Setup(fs => fs.CombinePaths(JournalPath, EntryFileName))
-            .Returns(EntryFilePath);
+            .Setup(fs => fs.CombinePaths(It.IsAny<string[]>()))
+            .Returns((string[] paths) => Path.Combine(paths));
 
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalPath))

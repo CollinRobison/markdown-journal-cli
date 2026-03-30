@@ -1,6 +1,7 @@
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
@@ -57,6 +58,8 @@ public class JournalEntryServiceTests
             _mockTemplateManager.Object,
             _mockFileTracking.Object,
             _mockTocService.Object,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalEntryService>.Instance
         );
     }
@@ -94,6 +97,10 @@ public class JournalEntryServiceTests
                 tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>())
             )
             .Returns("# Entry Content");
+
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(It.IsAny<string[]>()))
+            .Returns((string[] paths) => Path.Combine(paths));
     }
 
     #region Positive Cases

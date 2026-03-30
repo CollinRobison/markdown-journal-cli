@@ -6,12 +6,13 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 
 namespace markdown_journal_cli.Services;
 
-public class JournalUpdateService(
+public sealed class JournalUpdateService(
     IAnsiConsole console,
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
@@ -19,6 +20,8 @@ public class JournalUpdateService(
     ITableOfContentsService tableOfContentsService,
     IOptions<JournalSettings> journalSettings,
     IMarkdownLinkRewriter markdownLinkRewriter,
+    IFileTransactionCoordinator txCoordinator,
+    IRollbackReporter rollbackReporter,
     ILogger<JournalUpdateService> logger
 ) : IJournalUpdateService
 {
@@ -34,6 +37,10 @@ public class JournalUpdateService(
         tableOfContentsService ?? throw new ArgumentNullException(nameof(tableOfContentsService));
     private readonly IMarkdownLinkRewriter _markdownLinkRewriter =
         markdownLinkRewriter ?? throw new ArgumentNullException(nameof(markdownLinkRewriter));
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+    private readonly IRollbackReporter _rollbackReporter =
+        rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
     private readonly ILogger<JournalUpdateService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
@@ -270,43 +277,77 @@ public class JournalUpdateService(
 
     public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult)
     {
-        foreach (var relativePath in syncResult.FilesToAdd)
+        using var tx = _txCoordinator.BeginOrJoin();
+        try
         {
-            _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
-            _console.MarkupLine($"[dim]  + {relativePath}[/]");
-            _logger.LogDebug("Config entry added: {RelativePath}", relativePath);
-        }
+            var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
+            if (_fileSystem.FileExists(journalrcPath))
+                tx.Track(journalrcPath);
 
-        foreach (var relativePath in syncResult.FilesToRemove)
-        {
-            var removed = _journalConfiguration.RemoveEntry(journalPath, relativePath);
-            if (removed)
+            foreach (var relativePath in syncResult.FilesToAdd)
             {
-                _console.MarkupLine($"[dim]  - {relativePath}[/]");
-                _logger.LogDebug("Config entry removed: {RelativePath}", relativePath);
+                _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
+                _console.MarkupLine($"[dim]  + {relativePath}[/]");
+                _logger.LogDebug("Config entry added: {RelativePath}", relativePath);
             }
-            else
-                _console.MarkupLine($"[yellow]Warning:[/] config entry not found for deleted file: {relativePath}");
-        }
 
-        if (syncResult.HasChanges)
-            _console.MarkupLine($"[green]Journal configuration updated.[/]");
-        else
-            _console.MarkupLine("[dim]No configuration changes needed.[/]");
+            foreach (var relativePath in syncResult.FilesToRemove)
+            {
+                var removed = _journalConfiguration.RemoveEntry(journalPath, relativePath);
+                if (removed)
+                {
+                    _console.MarkupLine($"[dim]  - {relativePath}[/]");
+                    _logger.LogDebug("Config entry removed: {RelativePath}", relativePath);
+                }
+                else
+                {
+                    _console.MarkupLine($"[yellow]Warning:[/] config entry not found for deleted file: {relativePath}");
+                }
+            }
+
+            if (syncResult.HasChanges)
+                _console.MarkupLine($"[green]Journal configuration updated.[/]");
+            else
+                _console.MarkupLine("[dim]No configuration changes needed.[/]");
+
+            tx.Commit();
+        }
+        catch (Exception ex)
+        {
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update journal configuration", journalPath, ex);
+        }
     }
 
     public void UpdateTableOfContents(string journalPath)
     {
-        _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+        using var tx = _txCoordinator.BeginOrJoin();
+        try
+        {
+            var config = _journalConfiguration.Read(journalPath);
+            var tocFile =
+                config?.TableOfContents.File
+                ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var tocAbsPath = _fileSystem.CombinePaths(journalPath, tocFile);
 
-        // Track the TOC file so it doesn't show as "added" on next run
-        var config = _journalConfiguration.Read(journalPath);
-        var tocFile =
-            config?.TableOfContents.File
-            ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
-        _fileTracking.UpdateFileInIndex(journalPath, tocFile);
+            if (_fileSystem.FileExists(tocAbsPath))
+                tx.Track(tocAbsPath);
+            else
+                tx.TrackNew(tocAbsPath);
 
-        _console.MarkupLine($"[green]Table of contents updated.[/]");
+            var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
+            if (_fileSystem.FileExists(trackingPath))
+                tx.Track(trackingPath);
+
+            _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+            _fileTracking.UpdateFileInIndex(journalPath, tocFile);
+
+            _console.MarkupLine($"[green]Table of contents updated.[/]");
+            tx.Commit();
+        }
+        catch (Exception ex)
+        {
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update table of contents", journalPath, ex);
+        }
     }
 
     public void UpdateLastEditedDatesAndTracking(
@@ -315,128 +356,165 @@ public class JournalUpdateService(
         bool trackingOnly
     )
     {
-        // Update "Last Edited:" for modified files and re-hash
-        foreach (var relativePath in fileResults.ModifiedFiles)
+        using var tx = _txCoordinator.BeginOrJoin();
+        try
         {
-            if (!trackingOnly)
+            var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
+            if (_fileSystem.FileExists(trackingPath))
+                tx.Track(trackingPath);
+
+            foreach (var relativePath in fileResults.ModifiedFiles)
             {
                 var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
-                var content = _fileSystem.GetFileContent(absolutePath);
+                if (!trackingOnly)
+                    tx.Track(absolutePath);
 
-                var updatedContent = MarkdownMetadataParser.UpdateLastEditedDate(
-                    content,
-                    DateTime.Now,
-                    _journalSettings.DateFormat
+                if (!trackingOnly)
+                {
+                    var content = _fileSystem.GetFileContent(absolutePath);
+
+                    var updatedContent = MarkdownMetadataParser.UpdateLastEditedDate(
+                        content,
+                        DateTime.Now,
+                        _journalSettings.DateFormat
+                    );
+
+                    var directory = _fileSystem.GetDirectoryName(absolutePath) ?? journalPath;
+                    var fileName = _fileSystem.GetFileName(absolutePath);
+                    if (fileName != null)
+                    {
+                        _fileSystem.UpdateFile(directory, fileName, updatedContent);
+                    }
+                }
+                _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+                _console.MarkupLine($"[dim]  Updated: {relativePath}[/]");
+                _logger.LogDebug("Updated Last Edited date: {RelativePath}", relativePath);
+            }
+
+            foreach (var relativePath in fileResults.AddedFiles)
+            {
+                _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+                _console.MarkupLine($"[dim]  Tracked: {relativePath}[/]");
+                _logger.LogDebug("Tracked new file: {RelativePath}", relativePath);
+            }
+
+            foreach (var relativePath in fileResults.DeletedFiles)
+            {
+                _fileTracking.RemoveFileFromIndex(journalPath, relativePath);
+                _console.MarkupLine($"[dim]  Removed: {relativePath}[/]");
+                _logger.LogDebug("Removed from tracking: {RelativePath}", relativePath);
+            }
+
+            if (fileResults.ModifiedFiles.Count > 0)
+                _console.MarkupLine(
+                    $"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]"
+                );
+            if (fileResults.AddedFiles.Count > 0)
+                _console.MarkupLine($"[green]Tracked {fileResults.AddedFiles.Count} new file(s).[/]");
+            if (fileResults.DeletedFiles.Count > 0)
+                _console.MarkupLine(
+                    $"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]"
                 );
 
-                var directory = _fileSystem.GetDirectoryName(absolutePath) ?? journalPath;
-                var fileName = _fileSystem.GetFileName(absolutePath);
-                if (fileName != null)
-                {
-                    _fileSystem.UpdateFile(directory, fileName, updatedContent);
-                }
-            }
-            _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-            _console.MarkupLine($"[dim]  Updated: {relativePath}[/]");
-            _logger.LogDebug("Updated Last Edited date: {RelativePath}", relativePath);
+            tx.Commit();
         }
-
-        // Track newly added files
-        foreach (var relativePath in fileResults.AddedFiles)
+        catch (Exception ex)
         {
-            _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-            _console.MarkupLine($"[dim]  Tracked: {relativePath}[/]");
-            _logger.LogDebug("Tracked new file: {RelativePath}", relativePath);
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update dates and tracking", journalPath, ex);
         }
-
-        // Remove deleted files from tracking
-        foreach (var relativePath in fileResults.DeletedFiles)
-        {
-            _fileTracking.RemoveFileFromIndex(journalPath, relativePath);
-            _console.MarkupLine($"[dim]  Removed: {relativePath}[/]");
-            _logger.LogDebug("Removed from tracking: {RelativePath}", relativePath);
-        }
-
-        if (fileResults.ModifiedFiles.Count > 0)
-            _console.MarkupLine(
-                $"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]"
-            );
-        if (fileResults.AddedFiles.Count > 0)
-            _console.MarkupLine($"[green]Tracked {fileResults.AddedFiles.Count} new file(s).[/]");
-        if (fileResults.DeletedFiles.Count > 0)
-            _console.MarkupLine(
-                $"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]"
-            );
     }
 
     public void RenameToc(string journalPath, string newTocName)
     {
-        var config = _journalConfiguration.Read(journalPath)
-            ?? throw new JournalrcNotFoundException(journalPath);
-
-        var currentTocFile = config.TableOfContents.File;
-        var newTocFile = newTocName + FileConstants.MarkdownExtension;
-        var isAlreadyNamed = string.Equals(
-            currentTocFile,
-            newTocFile,
-            StringComparison.OrdinalIgnoreCase
-        );
-
-        if (!isAlreadyNamed)
+        using var tx = _txCoordinator.BeginOrJoin();
+        try
         {
-            var newTocAbsPath = _fileSystem.CombinePaths(journalPath, newTocFile);
-            if (_fileSystem.FileExists(newTocAbsPath))
-                throw new TocRenameConflictException(journalPath, newTocFile);
+            var config = _journalConfiguration.Read(journalPath)
+                ?? throw new JournalrcNotFoundException(journalPath);
 
-            var currentTocAbsPath = _fileSystem.CombinePaths(journalPath, currentTocFile);
-            _fileSystem.RenameFile(currentTocAbsPath, newTocAbsPath);
-            _console.MarkupLine($"Renamed TOC: {currentTocFile} → {newTocFile}");
-
-            _journalConfiguration.Update(
-                journalPath,
-                cfg => cfg.TableOfContents.File = newTocFile
-            );
-            _console.MarkupLine($"[green]Updated .journalrc table-of-contents filename to '{newTocFile}'.[/]");
-            _fileTracking.RenameFileInIndex(journalPath, currentTocFile, newTocFile);
-        }
-
-        // Rewrite links in all other markdown files that reference the old TOC filename
-        var modifiedFiles = _markdownLinkRewriter.ReplaceLinksInDirectory(
-            journalPath,
-            currentTocFile,
-            newTocFile,
-            excludeFiles: [currentTocFile, newTocFile]
-        );
-
-        if (modifiedFiles.Count == 0)
-        {
-            _console.MarkupLine("No link references needed updating.");
-            return;
-        }
-
-        foreach (var relativePath in modifiedFiles)
-        {
-            var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
-            var content = _fileSystem.GetFileContent(absolutePath);
-
-            var stamped = MarkdownMetadataParser.UpdateLastEditedDate(
-                content,
-                DateTime.Now,
-                _journalSettings.DateFormat
+            var currentTocFile = config.TableOfContents.File;
+            var newTocFile = newTocName + FileConstants.MarkdownExtension;
+            var isAlreadyNamed = string.Equals(
+                currentTocFile,
+                newTocFile,
+                StringComparison.OrdinalIgnoreCase
             );
 
-            var directory = _fileSystem.GetDirectoryName(absolutePath) ?? journalPath;
-            var fileName = _fileSystem.GetFileName(absolutePath);
-            if (fileName != null)
-                _fileSystem.UpdateFile(directory, fileName, stamped);
+            var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
+            var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
+            if (_fileSystem.FileExists(journalrcPath))
+                tx.Track(journalrcPath);
+            if (_fileSystem.FileExists(trackingPath))
+                tx.Track(trackingPath);
 
-            _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-            _console.MarkupLine($"[dim]  Rewrote links: {relativePath}[/]");
-            _logger.LogDebug("Rewrote TOC links in: {RelativePath}", relativePath);
+            if (!isAlreadyNamed)
+            {
+                foreach (var relative in _markdownLinkRewriter.FindFilesWithLinkTo(journalPath, currentTocFile))
+                    tx.Track(_fileSystem.CombinePaths(journalPath, relative));
+
+                var newTocAbsPath = _fileSystem.CombinePaths(journalPath, newTocFile);
+                if (_fileSystem.FileExists(newTocAbsPath))
+                    throw new TocRenameConflictException(journalPath, newTocFile);
+
+                var currentTocAbsPath = _fileSystem.CombinePaths(journalPath, currentTocFile);
+                tx.TrackRename(currentTocAbsPath, newTocAbsPath);
+
+                _fileSystem.RenameFile(currentTocAbsPath, newTocAbsPath);
+                _console.MarkupLine($"Renamed TOC: {currentTocFile} → {newTocFile}");
+
+                _journalConfiguration.Update(
+                    journalPath,
+                    cfg => cfg.TableOfContents.File = newTocFile
+                );
+                _console.MarkupLine($"[green]Updated .journalrc table-of-contents filename to '{newTocFile}'.[/]");
+                _fileTracking.RenameFileInIndex(journalPath, currentTocFile, newTocFile);
+
+                var modifiedFiles = _markdownLinkRewriter.ReplaceLinksInDirectory(
+                    journalPath,
+                    currentTocFile,
+                    newTocFile,
+                    excludeFiles: [currentTocFile, newTocFile]
+                );
+
+                if (modifiedFiles.Count == 0)
+                {
+                    _console.MarkupLine("No link references needed updating.");
+                    tx.Commit();
+                    return;
+                }
+
+                foreach (var relativePath in modifiedFiles)
+                {
+                    var absolutePath = _fileSystem.CombinePaths(journalPath, relativePath);
+                    var content = _fileSystem.GetFileContent(absolutePath);
+
+                    var stamped = MarkdownMetadataParser.UpdateLastEditedDate(
+                        content,
+                        DateTime.Now,
+                        _journalSettings.DateFormat
+                    );
+
+                    var directory = _fileSystem.GetDirectoryName(absolutePath) ?? journalPath;
+                    var fileName = _fileSystem.GetFileName(absolutePath);
+                    if (fileName != null)
+                        _fileSystem.UpdateFile(directory, fileName, stamped);
+
+                    _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+                    _console.MarkupLine($"[dim]  Rewrote links: {relativePath}[/]");
+                    _logger.LogDebug("Rewrote TOC links in: {RelativePath}", relativePath);
+                }
+
+                _console.MarkupLine(
+                    $"[green]Last Edited updated for {modifiedFiles.Count} file(s).[/]"
+                );
+            }
+
+            tx.Commit();
         }
-
-        _console.MarkupLine(
-            $"[green]Last Edited updated for {modifiedFiles.Count} file(s).[/]"
-        );
+        catch (Exception ex)
+        {
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "rename table of contents", journalPath, ex);
+        }
     }
+
 }

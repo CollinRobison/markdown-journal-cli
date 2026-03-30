@@ -69,7 +69,7 @@ markdown-journal-cli/
 │   │   ├── FileSystem/           # File system abstraction
 │   │   │   ├── IFileSystem.cs
 │   │   │   ├── FileSystem.cs
-│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview + future rollback)
+│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview)
 │   │   │   ├── InMemoryFileBuffer.cs   # Snapshot/Stage/Commit/Restore implementation
 │   │   │   ├── IMarkdownLinkRewriter.cs   # Inline link rewriting interface
 │   │   │   ├── MarkdownLinkRewriter.cs    # Compiled-regex link rewriter implementation
@@ -593,7 +593,7 @@ The following areas need detailed documentation (you should write these based on
 ```csharp
 // Core services
 host.Services.AddSingleton<IFileSystem, FileSystem>();
-host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging + future rollback
+host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -770,3 +770,10 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ Multi-layer TOC self-reference prevention
 - ⏳ Additional commands (list, open, search, rename)
 - ⏳ Documentation completion
+
+
+### Rollback Infrastructure
+
+- `IFileTransactionCoordinator`: starts or joins ambient file transactions across services/commands.
+- `IRollbackReporter`: renders rollback status and summaries to the console.
+- `IDeletionRollbackStrategy`: captures deleted file contents and restores them during rollback.

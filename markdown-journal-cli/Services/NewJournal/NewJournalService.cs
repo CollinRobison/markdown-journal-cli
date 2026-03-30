@@ -3,6 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -11,41 +12,32 @@ namespace markdown_journal_cli.Services;
 /// <summary>
 /// Default implementation of IJournalInitializer that creates a new journal with standard files and configuration.
 /// </summary>
-public class NewJournalService : INewJournalService
+public sealed class NewJournalService(
+    IFileSystem fileSystem,
+    ITemplateManager templateManager,
+    IJournalConfiguration journalConfiguration,
+    IFileTracking fileTracking,
+    IOptions<JournalSettings> journalSettings,
+    IFileTransactionCoordinator txCoordinator,
+    IRollbackReporter rollbackReporter,
+    ILogger<NewJournalService> logger
+) : INewJournalService
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly ITemplateManager _templateManager;
-    private readonly IJournalConfiguration _journalConfiguration;
-    private readonly IFileTracking _fileTracking;
-    private readonly ILogger<NewJournalService> _logger;
-    private readonly JournalSettings _journalSettings;
-
-    /// <summary>
-    /// Initializes a new instance of the JournalInitializer class.
-    /// </summary>
-    /// <param name="fileSystem">The file system service for creating directories and files.</param>
-    /// <param name="templateManager">The template manager for generating content from templates.</param>
-    /// <param name="journalConfiguration">The configuration service for creating journalrc files.</param>
-    /// <param name="logger">The logger for diagnostic output.</param>
-    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
-    public NewJournalService(
-        IFileSystem fileSystem,
-        ITemplateManager templateManager,
-        IJournalConfiguration journalConfiguration,
-        IFileTracking fileTracking,
-        IOptions<JournalSettings> journalSettings,
-        ILogger<NewJournalService> logger
-    )
-    {
-        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _templateManager =
-            templateManager ?? throw new ArgumentNullException(nameof(templateManager));
-        _journalConfiguration =
-            journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
-        _fileTracking = fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _journalSettings = journalSettings.Value;
-    }
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+    private readonly ITemplateManager _templateManager =
+        templateManager ?? throw new ArgumentNullException(nameof(templateManager));
+    private readonly IJournalConfiguration _journalConfiguration =
+        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    private readonly IFileTracking _fileTracking =
+        fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
+    private readonly ILogger<NewJournalService> _logger =
+        logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+    private readonly IRollbackReporter _rollbackReporter =
+        rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
 
     /// <inheritdoc />
     public void Initialize(string journalDirectory, string journalName)
@@ -72,26 +64,61 @@ public class NewJournalService : INewJournalService
             journalDirectory
         );
 
-        // Create the journal directory
-        _fileSystem.CreateDirectory(journalDirectory);
+        var directoryAlreadyExisted = _fileSystem.DirectoryExists(journalDirectory);
 
-        // Create default files
-        CreateTableOfContents(journalDirectory);
-        CreateIntroduction(journalDirectory);
-        CreateJournalEntryTemplate(journalDirectory);
-        CreateAllMyJournals(journalDirectory);
+        using var tx = _txCoordinator.Begin();
+        try
+        {
+            var tocAbsPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}"
+            );
+            var introAbsPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                $"{_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension}"
+            );
+            var templateAbsPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}"
+            );
+            var allJournalsAbsPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}"
+            );
+            var journalrcAbsPath = _fileSystem.CombinePaths(journalDirectory, _journalSettings.JournalConfigFileName);
+            var mdjournalAbsPath = _fileSystem.CombinePaths(journalDirectory, $".{_journalSettings.AppName}");
 
-        // Create journal configuration
-        CreateJournalConfiguration(journalDirectory, journalName);
+            if (!directoryAlreadyExisted)
+                tx.TrackNewDirectory(journalDirectory);
 
-        // create file tracking
-        CreateFileTrackingIndex(journalDirectory);
+            tx.TrackNew(tocAbsPath);
+            tx.TrackNew(introAbsPath);
+            tx.TrackNew(templateAbsPath);
+            tx.TrackNew(allJournalsAbsPath);
+            tx.TrackNew(journalrcAbsPath);
+            tx.TrackNew(mdjournalAbsPath);
 
-        _logger.LogDebug(
-            "Journal '{JournalName}' initialized successfully at '{JournalDirectory}'",
-            journalName,
-            journalDirectory
-        );
+            _fileSystem.CreateDirectory(journalDirectory);
+
+            CreateTableOfContents(journalDirectory);
+            CreateIntroduction(journalDirectory);
+            CreateJournalEntryTemplate(journalDirectory);
+            CreateAllMyJournals(journalDirectory);
+            CreateJournalConfiguration(journalDirectory, journalName);
+            CreateFileTrackingIndex(journalDirectory);
+
+            tx.Commit();
+
+            _logger.LogDebug(
+                "Journal '{JournalName}' initialized successfully at '{JournalDirectory}'",
+                journalName,
+                journalDirectory
+            );
+        }
+        catch (Exception ex)
+        {
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "create new journal", journalDirectory, ex);
+        }
     }
 
     private void CreateTableOfContents(string journalDirectory)

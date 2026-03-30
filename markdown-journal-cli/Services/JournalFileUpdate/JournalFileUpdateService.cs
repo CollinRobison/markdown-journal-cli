@@ -3,12 +3,13 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services;
 
-public class JournalFileUpdateService(
+public sealed class JournalFileUpdateService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
     IEntryFormatterService entryFormatter,
@@ -16,7 +17,9 @@ public class JournalFileUpdateService(
     IOptions<JournalSettings> journalSettings,
     ILogger<JournalFileUpdateService> logger,
     IFileTracking fileTracking,
-    IMarkdownLinkRewriter markdownLinkRewriter
+    IMarkdownLinkRewriter markdownLinkRewriter,
+    IFileTransactionCoordinator txCoordinator,
+    IRollbackReporter rollbackReporter
 ) : IJournalFileUpdateService
 {
     private readonly IFileSystem _fileSystem =
@@ -34,6 +37,10 @@ public class JournalFileUpdateService(
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
     private readonly IMarkdownLinkRewriter _markdownLinkRewriter =
         markdownLinkRewriter ?? throw new ArgumentNullException(nameof(markdownLinkRewriter));
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+    private readonly IRollbackReporter _rollbackReporter =
+        rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
 
     public void UpdateEntry(
         string directory,
@@ -95,43 +102,78 @@ public class JournalFileUpdateService(
             }
         }
 
-        // 6. Apply the changes
-        ApplyFileRename(directory, currentFile, targetFile, isRenaming);
-
-        if (isRenaming && updateBacklinks)
+        using var tx = _txCoordinator.Begin();
+        try
         {
-            var tocFile = _journalSettings.TableOfContentsFileName + FileConstants.MarkdownExtension;
-            _markdownLinkRewriter.ReplaceLinksInDirectory(
-                directory,
+            var journalrcPath = _fileSystem.CombinePaths(directory, _journalSettings.JournalConfigFileName);
+            if (_fileSystem.FileExists(journalrcPath))
+                tx.Track(journalrcPath);
+
+            var tocFile = $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var tocAbsPath = _fileSystem.CombinePaths(directory, tocFile);
+            if (_fileSystem.FileExists(tocAbsPath))
+                tx.Track(tocAbsPath);
+            else
+                tx.TrackNew(tocAbsPath);
+
+            if (isRenaming)
+            {
+                var currentAbsPath = _fileSystem.CombinePaths(directory, currentFile);
+                var targetAbsPath = _fileSystem.CombinePaths(directory, targetFile);
+                tx.TrackRename(currentAbsPath, targetAbsPath);
+            }
+
+            if (isRenaming && updateBacklinks)
+            {
+                var backlinks = _markdownLinkRewriter.FindFilesWithLinkTo(directory, currentFile) ?? [];
+                foreach (var relative in backlinks)
+                    tx.Track(_fileSystem.CombinePaths(directory, relative));
+            }
+
+            // 6. Apply the changes
+            ApplyFileRename(directory, currentFile, targetFile, isRenaming);
+
+            if (isRenaming && updateBacklinks)
+            {
+                var backlinkTocFile = _journalSettings.TableOfContentsFileName + FileConstants.MarkdownExtension;
+                _markdownLinkRewriter.ReplaceLinksInDirectory(
+                    directory,
+                    currentFile,
+                    targetFile,
+                    excludeFiles: [targetFile, backlinkTocFile]
+                );
+            }
+
+            // Skip config updates if we're ignoring - they'll be removed anyway
+            if (!ignoreFile)
+            {
+                ApplyConfigUpdates(
+                    directory,
+                    isRenaming ? targetFile : currentFile,
+                    targetTopicPath,
+                    targetDisplayName,
+                    isChangingHeadings,
+                    isChangingDisplayName
+                );
+            }
+
+            ApplyIgnoreStatusChange(directory, targetFile, ignoreFile, unignoreFile);
+
+            // 7. Regenerate table of contents
+            _tableOfContentsService.UpdateTableOfContents(directory, lastEditedDate: DateTime.Now);
+
+            tx.Commit();
+
+            _logger.LogDebug(
+                "Successfully updated entry '{CurrentFile}' to '{TargetFile}'",
                 currentFile,
-                targetFile,
-                excludeFiles: [targetFile, tocFile]
+                targetFile
             );
         }
-
-        // Skip config updates if we're ignoring - they'll be removed anyway
-        if (!ignoreFile)
+        catch (Exception ex)
         {
-            ApplyConfigUpdates(
-                directory,
-                isRenaming ? targetFile : currentFile,
-                targetTopicPath,
-                targetDisplayName,
-                isChangingHeadings,
-                isChangingDisplayName
-            );
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update entry", directory, ex);
         }
-        
-        ApplyIgnoreStatusChange(directory, targetFile, ignoreFile, unignoreFile);
-
-        // 7. Regenerate table of contents
-        _tableOfContentsService.UpdateTableOfContents(directory, lastEditedDate: DateTime.Now);
-
-        _logger.LogDebug(
-            "Successfully updated entry '{CurrentFile}' to '{TargetFile}'",
-            currentFile,
-            targetFile
-        );
     }
 
     private string ValidateAndNormalizeFile(string directory, string fileName)

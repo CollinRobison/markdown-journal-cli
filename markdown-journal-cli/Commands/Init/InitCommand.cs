@@ -2,6 +2,8 @@ using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -14,7 +16,7 @@ public sealed class InitCommand(
     IFileSystem fileSystem,
     IInitJournalService initJournalService,
     IOptions<JournalSettings> journalSettings
-) : Command<InitSettings>
+) : JournalCommand<InitSettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -26,7 +28,7 @@ public sealed class InitCommand(
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
-    public override int Execute(CommandContext context, InitSettings settings)
+    protected override int ExecuteCore(CommandContext context, InitSettings settings)
     {
         var filePath = settings.FilePath ?? ".";
         var resolvedPath = _fileSystem.GetFullPath(filePath);
@@ -68,6 +70,7 @@ public sealed class InitCommand(
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
         }
+        catch (RollbackCompletedException) { throw; }
         catch (Exception ex)
         {
             _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");

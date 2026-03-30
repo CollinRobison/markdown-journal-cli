@@ -2,18 +2,21 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services.RemoveEntry;
 
-public class RemoveEntryService(
+public sealed class RemoveEntryService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
     IFileTracking fileTracking,
     ITableOfContentsService tableOfContentsService,
     IMarkdownLinkRewriter markdownLinkRewriter,
     IOptions<JournalSettings> journalSettings,
+    IFileTransactionCoordinator txCoordinator,
+    IRollbackReporter rollbackReporter,
     ILogger<RemoveEntryService> logger
 ) : IRemoveEntryService
 {
@@ -28,6 +31,10 @@ public class RemoveEntryService(
     private readonly IMarkdownLinkRewriter _markdownLinkRewriter =
         markdownLinkRewriter ?? throw new ArgumentNullException(nameof(markdownLinkRewriter));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+    private readonly IRollbackReporter _rollbackReporter =
+        rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
     private readonly ILogger<RemoveEntryService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -41,7 +48,7 @@ public class RemoveEntryService(
             : $"{fileName}{FileConstants.MarkdownExtension}";
 
         // 2. Validate .journalrc exists
-        var journalrcPath = $"{journalPath}/{_journalSettings.JournalConfigFileName}";
+        var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
         if (!_fileSystem.FileExists(journalrcPath))
         {
             _logger.LogWarning("Journal config not found at '{JournalPath}'", journalPath);
@@ -50,7 +57,7 @@ public class RemoveEntryService(
 
         // 3. Validate tracking index exists
         var trackingFileName = $".{_journalSettings.AppName}";
-        var trackingFilePath = $"{journalPath}/{trackingFileName}";
+        var trackingFilePath = _fileSystem.CombinePaths(journalPath, trackingFileName);
         if (!_fileSystem.FileExists(trackingFilePath))
         {
             _logger.LogWarning("Tracking index '{TrackingFileName}' not found at '{JournalPath}'", trackingFileName, journalPath);
@@ -87,43 +94,72 @@ public class RemoveEntryService(
             );
         }
 
-        // 6. Delete the file
-        _logger.LogDebug("Deleting file '{AbsoluteEntryPath}'", absoluteEntryPath);
-        _fileSystem.DeleteFile(absoluteEntryPath);
-
-        // 7. Remove from config
-        _logger.LogDebug("Removing '{FileName}' from journal config", resolvedFileName);
-        _journalConfiguration.RemoveEntry(journalPath, resolvedFileName);
-
-        // 8. Remove from tracking index
-        _logger.LogDebug("Removing '{FileName}' from tracking index", resolvedFileName);
-        _fileTracking.RemoveFileFromIndex(journalPath, resolvedFileName);
-
-        // 9. Regenerate TOC
-        _logger.LogDebug("Regenerating table of contents");
-        _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
-
-        // 10. Optionally strip dead links across the journal
-        if (cleanRefs)
+        using var tx = _txCoordinator.Begin();
+        try
         {
-            _logger.LogDebug("Stripping dead links to '{FileName}' across journal", resolvedFileName);
-            var modifiedFiles = _markdownLinkRewriter.StripLinksInDirectory(journalPath, resolvedFileName);
+            var trackingAbsPath = _fileSystem.CombinePaths(journalPath, trackingFileName);
+            var tocAbsPath = _fileSystem.CombinePaths(journalPath, tocFile);
 
-            foreach (var relativePath in modifiedFiles)
+            if (cleanRefs)
             {
-                _logger.LogDebug("Re-hashing '{RelativePath}' after link strip", relativePath);
-                _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+                var backlinkFiles = _markdownLinkRewriter.FindFilesWithLinkTo(journalPath, resolvedFileName) ?? [];
+                foreach (var relative in backlinkFiles)
+                    tx.Track(_fileSystem.CombinePaths(journalPath, relative));
             }
 
-            _logger.LogDebug(
-                "Successfully removed entry '{FileName}' and stripped dead links in {Count} file(s)",
-                resolvedFileName,
-                modifiedFiles.Count
-            );
-            return modifiedFiles;
-        }
+            if (_fileSystem.FileExists(journalrcPath))
+                tx.Track(journalrcPath);
+            if (_fileSystem.FileExists(trackingAbsPath))
+                tx.Track(trackingAbsPath);
+            if (_fileSystem.FileExists(tocAbsPath))
+                tx.Track(tocAbsPath);
+            tx.TrackDelete(absoluteEntryPath);
 
-        _logger.LogDebug("Successfully removed entry '{FileName}'", resolvedFileName);
-        return [];
+            // 6. Delete the file
+            _logger.LogDebug("Deleting file '{AbsoluteEntryPath}'", absoluteEntryPath);
+            _fileSystem.DeleteFile(absoluteEntryPath);
+
+            // 7. Remove from config
+            _logger.LogDebug("Removing '{FileName}' from journal config", resolvedFileName);
+            _journalConfiguration.RemoveEntry(journalPath, resolvedFileName);
+
+            // 8. Remove from tracking index
+            _logger.LogDebug("Removing '{FileName}' from tracking index", resolvedFileName);
+            _fileTracking.RemoveFileFromIndex(journalPath, resolvedFileName);
+
+            // 9. Regenerate TOC
+            _logger.LogDebug("Regenerating table of contents");
+            _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+
+            // 10. Optionally strip dead links across the journal
+            if (cleanRefs)
+            {
+                _logger.LogDebug("Stripping dead links to '{FileName}' across journal", resolvedFileName);
+                var modifiedFiles = _markdownLinkRewriter.StripLinksInDirectory(journalPath, resolvedFileName);
+
+                foreach (var relativePath in modifiedFiles)
+                {
+                    _logger.LogDebug("Re-hashing '{RelativePath}' after link strip", relativePath);
+                    _fileTracking.UpdateFileInIndex(journalPath, relativePath);
+                }
+
+                tx.Commit();
+
+                _logger.LogDebug(
+                    "Successfully removed entry '{FileName}' and stripped dead links in {Count} file(s)",
+                    resolvedFileName,
+                    modifiedFiles.Count
+                );
+                return modifiedFiles;
+            }
+
+            tx.Commit();
+            _logger.LogDebug("Successfully removed entry '{FileName}'", resolvedFileName);
+            return [];
+        }
+        catch (Exception ex)
+        {
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "remove entry", journalPath, ex);
+        }
     }
 }

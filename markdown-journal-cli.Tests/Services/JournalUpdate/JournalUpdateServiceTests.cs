@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Exceptions;
@@ -74,6 +75,8 @@ public class JournalUpdateServiceTests
             _tableOfContentsService,
             _journalSettings,
             new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalUpdateService>.Instance
         );
 
@@ -111,6 +114,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -128,6 +133,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -145,6 +152,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -162,6 +171,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -179,6 +190,46 @@ public class JournalUpdateServiceTests
                 null!,
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
+                NullLogger<JournalUpdateService>.Instance
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_ThrowsArgumentNullException_WhenTxCoordinatorIsNull()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new JournalUpdateService(
+                _console,
+                Mock.Of<IFileSystem>(),
+                Mock.Of<IJournalConfiguration>(),
+                Mock.Of<IFileTracking>(),
+                Mock.Of<ITableOfContentsService>(),
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>(),
+                null!,
+                NoOpRollbackReporter.Instance,
+                NullLogger<JournalUpdateService>.Instance
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_ThrowsArgumentNullException_WhenRollbackReporterIsNull()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new JournalUpdateService(
+                _console,
+                Mock.Of<IFileSystem>(),
+                Mock.Of<IJournalConfiguration>(),
+                Mock.Of<IFileTracking>(),
+                Mock.Of<ITableOfContentsService>(),
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                null!,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -652,6 +703,8 @@ public class JournalUpdateServiceTests
             mockTocService.Object,
             _journalSettings,
             new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalUpdateService>.Instance
         );
 

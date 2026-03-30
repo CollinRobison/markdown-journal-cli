@@ -3,6 +3,8 @@ using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -14,8 +16,10 @@ public sealed class AddFileTracking(
     IAnsiConsole console,
     IFileSystem fileSystem,
     IFileTracking fileTracking,
-    IOptions<JournalSettings> journalSettings
-) : Command<AddFileTrackingSettings>
+    IOptions<JournalSettings> journalSettings,
+    IFileTransactionCoordinator txCoordinator,
+    IRollbackReporter rollbackReporter
+) : JournalCommand<AddFileTrackingSettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -26,8 +30,12 @@ public sealed class AddFileTracking(
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+    private readonly IRollbackReporter _rollbackReporter =
+        rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
 
-    public override int Execute(CommandContext context, AddFileTrackingSettings settings)
+    protected override int ExecuteCore(CommandContext context, AddFileTrackingSettings settings)
     {
         var journalrc = Path.Combine(settings.FilePath, _journalSettings.JournalConfigFileName);
         var trackingFile = $".{_journalSettings.AppName}";
@@ -50,14 +58,26 @@ public sealed class AddFileTracking(
                 return 0;
             }
 
-            // Create file tracking file with all md files in directory
-            _fileTracking.LoadIndex(settings.FilePath);
-            _fileTracking.UpdateIndex(settings.FilePath);
+            using var tx = _txCoordinator.Begin();
+            try
+            {
+                tx.TrackNew(trackingFilePath);
 
-            _console.MarkupLine(
-                $"[green]Success:[/] Created tracking file '{trackingFile}' at '{settings.FilePath}'"
-            );
-            return 0;
+                // Create file tracking file with all md files in directory
+                _fileTracking.LoadIndex(settings.FilePath);
+                _fileTracking.UpdateIndex(settings.FilePath);
+
+                tx.Commit();
+
+                _console.MarkupLine(
+                    $"[green]Success:[/] Created tracking file '{trackingFile}' at '{settings.FilePath}'"
+                );
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "add file tracking", settings.FilePath, ex);
+            }
         }
         catch (JournalrcNotFoundException ex)
         {
@@ -66,6 +86,7 @@ public sealed class AddFileTracking(
             );
             return 1;
         }
+        catch (RollbackCompletedException) { throw; }
         catch (Exception ex)
         {
             _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");

@@ -412,6 +412,19 @@ mdjournal update entry draft_thoughts --ignore
 mdjournal update entry draft_thoughts --unignore
 ```
 
+## Exit Codes
+
+All `mdjournal` commands follow a consistent exit-code contract:
+
+| Code | Meaning |
+|---|---|
+| `0` | Command succeeded |
+| `1` | Command failed — pre-flight check or unexpected error; no writes started |
+| `2` | Command failed mid-write; **all writes fully rolled back** — safe to retry |
+| `3` | Command failed mid-write; **rollback had errors** — manual inspection recommended |
+
+> **Note:** `--dry-run` always exits with code `0` — it never writes files.
+
 ## Contributing
 
 Interested in contributing? Check out the **[Development Guide](docs/DEVELOPMENT.md)** for:

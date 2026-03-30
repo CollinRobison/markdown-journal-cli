@@ -64,6 +64,12 @@ public class FileSystem : IFileSystem
         }
     }
 
+    public void DeleteDirectory(string path)
+    {
+        Directory.Delete(path, recursive: true);
+        _logger.LogDebug("Directory deleted at {DirectoryPath}", path);
+    }
+
     public void RenameFile(string oldPath, string newPath)
     {
         if (!FileExists(oldPath))

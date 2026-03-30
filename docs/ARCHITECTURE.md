@@ -113,7 +113,10 @@ public sealed class TypeRegistrar : ITypeRegistrar
 1. **Startup** - `Program.cs` creates `TypeRegistrar`
 2. **Registration** - Core services registered:
    - `IFileSystem` → `FileSystem` (File operations)
-   - `IInMemoryFileBuffer` → `InMemoryFileBuffer` (Dry-run staging + future rollback)
+   - `IInMemoryFileBuffer` → `InMemoryFileBuffer` (Dry-run staging)
+   - `IDeletionRollbackStrategy` → `InMemoryDeletionRollbackStrategy` (delete restoration snapshots)
+   - `IFileTransactionCoordinator` → `FileTransactionCoordinator` (ambient rollback transactions)
+   - `IRollbackReporter` → `RollbackReporter` (rollback UX reporting)
    - `ITemplateManager` → `TemplateManager` (Template processing)
    - `IJournalConfiguration` → `JournalConfiguration` (Config management)
    - `ITableOfContentsService` → `TableOfContentsService` (TOC generation + preview)
@@ -132,7 +135,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
 ```csharp
 // Core services
 host.Services.AddSingleton<IFileSystem, FileSystem>();
-host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging + future rollback
+host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -921,3 +924,13 @@ public class NewCommandTests
 ### Decision: `PreviewTableOfContents()` on `ITableOfContentsService`
 **Rationale:** The dry-run path needed the TOC generation logic without the `_fileSystem.UpdateFile()` call. Rather than duplicating the generation logic, a new public method extracts the read-and-generate path: it reads existing dates from the current TOC file on disk (to preserve them), calls the private `GenerateTableOfContents()` helper, and returns the string. This keeps generation logic in one place and makes the service testable for both write and preview paths in isolation.  
 **Alternatives:** Make `GenerateTableOfContents()` public — exposes an internal helper that callers would need to manage manually (config reading, date preservation).
+
+
+## Exit Codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Command succeeded |
+| `1` | Command failed — pre-flight check or unexpected error; no writes started |
+| `2` | Command failed mid-write; all writes fully rolled back (safe to retry) |
+| `3` | Command failed mid-write; rollback had errors (manual inspection required) |

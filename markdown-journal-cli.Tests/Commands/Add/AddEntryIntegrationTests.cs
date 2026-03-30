@@ -2,6 +2,7 @@ using System.Diagnostics;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
@@ -87,6 +88,8 @@ public class AddEntryIntegrationTests : IDisposable
             _templateManager,
             _fileTracking,
             _tocGenerator,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalEntryService>.Instance
         );
         _addEntryCommand = new AddEntry(console, journalEntryService);

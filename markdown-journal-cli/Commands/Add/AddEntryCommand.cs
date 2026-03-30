@@ -1,12 +1,9 @@
 using System;
 using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.JournalTemplates;
-using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
-using Microsoft.Extensions.Options;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -14,7 +11,7 @@ namespace markdown_journal_cli.Commands.Add;
 
 [Description("Creates a new journal entry")]
 public sealed class AddEntry(IAnsiConsole console, IJournalEntryService journalEntryService)
-    : Command<AddEntrySettings>
+    : JournalCommand<AddEntrySettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -22,7 +19,7 @@ public sealed class AddEntry(IAnsiConsole console, IJournalEntryService journalE
     private readonly IJournalEntryService _journalEntryService =
         journalEntryService ?? throw new ArgumentNullException(nameof(journalEntryService));
 
-    public override int Execute(CommandContext context, AddEntrySettings settings)
+    protected override int ExecuteCore(CommandContext context, AddEntrySettings settings)
     {
         try
         {
@@ -51,6 +48,7 @@ public sealed class AddEntry(IAnsiConsole console, IJournalEntryService journalE
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
         }
+        catch (RollbackCompletedException) { throw; }
         catch (Exception ex)
         {
             _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");

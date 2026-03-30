@@ -126,6 +126,144 @@
       "cwd": "${workspaceFolder}/markdown-journal-cli",
       "stopAtEntry": false,
       "console": "integratedTerminal"
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rollback Manual Tests
+    //
+    // Each entry below auto-runs: build → teardown → create fresh journal → (lock file)
+    // then launches the CLI command that will fail mid-write.
+    //
+    // Test journal: /tmp/rollback-test/RollbackTest/
+    // Entries:      Alpha.md, Beta.md
+    // Key files:    .journalrc  |  .mdjournal  |  1a-TableOfContents.md
+    //
+    // Exit codes:
+    //   0 = success
+    //   1 = pre-flight failure (no writes started)
+    //   2 = mid-write failure, ALL changes fully rolled back  ← safe to retry
+    //   3 = mid-write failure, rollback had errors            ← inspect manually
+    // ─────────────────────────────────────────────────────────────────────────
+
+    {
+      // Verify happy path on a clean journal — should print Success and exit 0.
+      // Useful to confirm the test setup itself is working before running failure scenarios.
+      "name": "[Rollback] ✓ Fresh setup — update journal (expect exit 0)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: ready",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["update", "--path", "/tmp/rollback-test/RollbackTest", "journal"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+
+    {
+      // add entry with the journal DIRECTORY locked (chmod 555).
+      // CreateFile fails immediately — no writes to any existing file.
+      // Rollback: NewEntry.md never existed (no-op), Track snapshots of journalrc/
+      //           mdjournal/toc restored successfully (existing files stay writable).
+      // Expected: Rollback Summary shows 4 restored entries, exit 2 (fully rolled back).
+      "name": "[Rollback] 1. add entry — dir locked (expect exit 2)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: ready-dir-locked",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["add", "--path", "/tmp/rollback-test/RollbackTest", "entry", "NewEntry"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+
+    {
+      // remove entry with the TOC file locked (chmod 444).
+      // Steps: delete Alpha.md ✓ → update .journalrc ✓ → update .mdjournal ✓ → write TOC ✗
+      // Rollback: TOC write fails (still locked) → .mdjournal ✓ → .journalrc ✓ → re-create Alpha.md ✓
+      // Expected: Alpha.md is restored on disk, Rollback Summary shows TOC as failed, exit 3.
+      // Verify: ls /tmp/rollback-test/RollbackTest/Alpha.md should exist after the command.
+      "name": "[Rollback] 2. remove entry — TOC locked (expect exit 3)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: ready-toc-locked",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["remove", "--path", "/tmp/rollback-test/RollbackTest", "entry", "Alpha", "--force"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+
+    {
+      // update entry rename with .journalrc locked (chmod 444).
+      // Steps: rename Alpha.md → AlphaRenamed.md ✓ → update .journalrc ✗
+      // Rollback: .journalrc restore fails (still locked, but was never written) →
+      //           rename back AlphaRenamed.md → Alpha.md ✓
+      // Expected: Alpha.md exists again (rename reversed), exit 3.
+      // Note: .journalrc is in the SAME original state since the write never succeeded —
+      //       this illustrates that exit 3 doesn't always mean the journal is broken,
+      //       just that the rollback system couldn't guarantee an idempotent restore.
+      "name": "[Rollback] 3. update entry rename — .journalrc locked (expect exit 3)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: ready-journalrc-locked",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["update", "--path", "/tmp/rollback-test/RollbackTest", "entry", "Alpha", "--name", "AlphaRenamed"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+
+    {
+      // update journal (ambient outer transaction) with TOC locked.
+      // UpdateLastEditedDates ✓ → UpdateJournalConfig ✓ → UpdateTableOfContents ✗
+      // Because all four service methods share the same ambient scope (BeginOrJoin),
+      // the entire outer tx rolls back: .mdjournal and .journalrc are restored,
+      // but TOC restore also fails (locked).
+      // Expected: .journalrc and .mdjournal show Restored in summary, TOC shows Failed, exit 3.
+      "name": "[Rollback] 4. update journal — TOC locked (expect exit 3)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: ready-toc-locked",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["update", "--path", "/tmp/rollback-test/RollbackTest", "journal"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+
+    {
+      // Run after scenario 2 or 3. Unlocks all files in-place (no teardown), then retries
+      // the same command. Demonstrates that after a rollback the journal is intact and
+      // the operation succeeds on retry with exit 0.
+      "name": "[Rollback] ✓ Retry: unlock then remove Alpha (expect exit 0)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: unlock",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["remove", "--path", "/tmp/rollback-test/RollbackTest", "entry", "Alpha", "--force"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+
+    {
+      // Run after scenario 4. Unlocks all files in-place, then retries update journal.
+      "name": "[Rollback] ✓ Retry: unlock then update journal (expect exit 0)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "rollback-test: unlock",
+      "program": "${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll",
+      "args": ["update", "--path", "/tmp/rollback-test/RollbackTest", "journal"],
+      "env": { "Logging__LogLevel__Default": "Debug", "Logging__LogLevel__markdown_journal_cli": "Debug" },
+      "cwd": "${workspaceFolder}/markdown-journal-cli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
     }
   ]
 }

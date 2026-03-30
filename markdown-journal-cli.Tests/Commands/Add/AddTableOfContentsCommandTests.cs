@@ -4,6 +4,7 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,7 +45,9 @@ public class AddTableOfContentsCommandTests
             _fileSystem,
             _mockJournalConfiguration.Object,
             _mockTocGenerator.Object,
-            Options.Create(_journalSettings)
+            Options.Create(_journalSettings),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance
         );
     }
 
