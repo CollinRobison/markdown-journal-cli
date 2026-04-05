@@ -38,61 +38,21 @@ public sealed class RemoveEntryService(
     private readonly ILogger<RemoveEntryService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
 
+    public void ValidatePreconditions(string journalPath, string fileName) =>
+        ResolveAndValidate(journalPath, fileName);
+
     public IReadOnlyList<string> RemoveEntry(string journalPath, string fileName, bool cleanRefs)
     {
         _logger.LogDebug("RemoveEntry called for '{FileName}' in '{JournalPath}'", fileName, journalPath);
 
-        // 1. Normalise fileName — append .md if missing
-        var resolvedFileName = fileName.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)
-            ? fileName
-            : $"{fileName}{FileConstants.MarkdownExtension}";
+        // Run all guard checks (same as ValidatePreconditions) before any writes.
+        var (resolvedFileName, absoluteEntryPath) = ResolveAndValidate(journalPath, fileName);
 
-        // 2. Validate .journalrc exists
-        var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
-        if (!_fileSystem.FileExists(journalrcPath))
-        {
-            _logger.LogWarning("Journal config not found at '{JournalPath}'", journalPath);
-            throw new JournalrcNotFoundException(journalPath);
-        }
-
-        // 3. Validate tracking index exists
         var trackingFileName = $".{_journalSettings.AppName}";
-        var trackingFilePath = _fileSystem.CombinePaths(journalPath, trackingFileName);
-        if (!_fileSystem.FileExists(trackingFilePath))
-        {
-            _logger.LogWarning("Tracking index '{TrackingFileName}' not found at '{JournalPath}'", trackingFileName, journalPath);
-            throw new TrackingIndexNotFoundException(journalPath, trackingFileName);
-        }
-
-        // 4. Guard against protected files — read live TOC filename from config
-        _logger.LogDebug("Checking if '{FileName}' is a protected journal file", resolvedFileName);
+        var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
         var config = _journalConfiguration.Read(journalPath);
         var tocFile = config?.TableOfContents.File
             ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
-
-        var protectedFiles = new[] { _journalSettings.JournalConfigFileName, trackingFileName, tocFile };
-
-        // Check both the raw input and the normalised name: non-.md infrastructure files
-        // (e.g. .journalrc) would otherwise be missed once .md is appended.
-        var targetedProtectedFile = protectedFiles.FirstOrDefault(f =>
-            string.Equals(f, resolvedFileName, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)
-        );
-        if (targetedProtectedFile is not null)
-        {
-            throw new ProtectedJournalFileException(fileName);
-        }
-
-        // 5. Resolve absolute entry path; validate file exists
-        var absoluteEntryPath = _fileSystem.CombinePaths(journalPath, resolvedFileName);
-        _logger.LogDebug("Resolved entry path: '{AbsoluteEntryPath}'", absoluteEntryPath);
-        if (!_fileSystem.FileExists(absoluteEntryPath))
-        {
-            throw new FileNotFoundException(
-                $"Entry file '{resolvedFileName}' not found at '{journalPath}'.",
-                absoluteEntryPath
-            );
-        }
 
         using var tx = _txCoordinator.Begin();
         try
@@ -161,5 +121,66 @@ public sealed class RemoveEntryService(
         {
             throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "remove entry", journalPath, ex);
         }
+    }
+
+    /// <summary>
+    /// Validates all guard preconditions for a remove operation and returns the normalised
+    /// file name and its absolute path. Throws on the first violated condition.
+    /// </summary>
+    private (string resolvedFileName, string absoluteEntryPath) ResolveAndValidate(
+        string journalPath,
+        string fileName)
+    {
+        // 1. Normalise fileName — append .md if missing
+        var resolvedFileName = fileName.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)
+            ? fileName
+            : $"{fileName}{FileConstants.MarkdownExtension}";
+
+        // 2. Validate .journalrc exists
+        var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
+        if (!_fileSystem.FileExists(journalrcPath))
+        {
+            _logger.LogWarning("Journal config not found at '{JournalPath}'", journalPath);
+            throw new JournalrcNotFoundException(journalPath);
+        }
+
+        // 3. Validate tracking index exists
+        var trackingFileName = $".{_journalSettings.AppName}";
+        var trackingFilePath = _fileSystem.CombinePaths(journalPath, trackingFileName);
+        if (!_fileSystem.FileExists(trackingFilePath))
+        {
+            _logger.LogWarning("Tracking index '{TrackingFileName}' not found at '{JournalPath}'", trackingFileName, journalPath);
+            throw new TrackingIndexNotFoundException(journalPath, trackingFileName);
+        }
+
+        // 4. Guard against protected files — read live TOC filename from config
+        _logger.LogDebug("Checking if '{FileName}' is a protected journal file", resolvedFileName);
+        var config = _journalConfiguration.Read(journalPath);
+        var tocFile = config?.TableOfContents.File
+            ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+
+        var protectedFiles = new[] { _journalSettings.JournalConfigFileName, trackingFileName, tocFile };
+
+        // Check both the raw input and the normalised name: non-.md infrastructure files
+        // (e.g. .journalrc) would otherwise be missed once .md is appended.
+        var targetedProtectedFile = protectedFiles.FirstOrDefault(f =>
+            string.Equals(f, resolvedFileName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)
+        );
+        if (targetedProtectedFile is not null)
+            throw new ProtectedJournalFileException(fileName);
+
+        // 5. Resolve absolute entry path; validate file exists
+        var absoluteEntryPath = _fileSystem.CombinePaths(journalPath, resolvedFileName);
+        _logger.LogDebug("Resolved entry path: '{AbsoluteEntryPath}'", absoluteEntryPath);
+        if (!_fileSystem.FileExists(absoluteEntryPath))
+        {
+            throw new FileNotFoundException(
+                $"Entry file '{resolvedFileName}' not found at '{journalPath}'.",
+                absoluteEntryPath
+            );
+        }
+
+        return (resolvedFileName, absoluteEntryPath);
     }
 }

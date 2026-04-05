@@ -287,7 +287,7 @@ public sealed class JournalUpdateService(
             foreach (var relativePath in syncResult.FilesToAdd)
             {
                 _journalConfiguration.AddEntry(journalPath, string.Empty, relativePath);
-                _console.MarkupLine($"[dim]  + {relativePath}[/]");
+                _console.MarkupLine($"[dim]  + {relativePath.EscapeMarkup()}[/]");
                 _logger.LogDebug("Config entry added: {RelativePath}", relativePath);
             }
 
@@ -296,12 +296,12 @@ public sealed class JournalUpdateService(
                 var removed = _journalConfiguration.RemoveEntry(journalPath, relativePath);
                 if (removed)
                 {
-                    _console.MarkupLine($"[dim]  - {relativePath}[/]");
+                    _console.MarkupLine($"[dim]  - {relativePath.EscapeMarkup()}[/]");
                     _logger.LogDebug("Config entry removed: {RelativePath}", relativePath);
                 }
                 else
                 {
-                    _console.MarkupLine($"[yellow]Warning:[/] config entry not found for deleted file: {relativePath}");
+                    _console.MarkupLine($"[yellow]Warning:[/] config entry not found for deleted file: {relativePath.EscapeMarkup()}");
                 }
             }
 
@@ -387,21 +387,21 @@ public sealed class JournalUpdateService(
                     }
                 }
                 _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-                _console.MarkupLine($"[dim]  Updated: {relativePath}[/]");
+                _console.MarkupLine($"[dim]  Updated: {relativePath.EscapeMarkup()}[/]");
                 _logger.LogDebug("Updated Last Edited date: {RelativePath}", relativePath);
             }
 
             foreach (var relativePath in fileResults.AddedFiles)
             {
                 _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-                _console.MarkupLine($"[dim]  Tracked: {relativePath}[/]");
+                _console.MarkupLine($"[dim]  Tracked: {relativePath.EscapeMarkup()}[/]");
                 _logger.LogDebug("Tracked new file: {RelativePath}", relativePath);
             }
 
             foreach (var relativePath in fileResults.DeletedFiles)
             {
                 _fileTracking.RemoveFileFromIndex(journalPath, relativePath);
-                _console.MarkupLine($"[dim]  Removed: {relativePath}[/]");
+                _console.MarkupLine($"[dim]  Removed: {relativePath.EscapeMarkup()}[/]");
                 _logger.LogDebug("Removed from tracking: {RelativePath}", relativePath);
             }
 
@@ -426,20 +426,26 @@ public sealed class JournalUpdateService(
 
     public void RenameToc(string journalPath, string newTocName)
     {
+        // Pre-flight guard: resolve current TOC name and check for a rename conflict before
+        // touching any files. This ensures a conflicting target returns exit 1 (guard) rather
+        // than triggering a full transaction rollback (exit 2).
+        var preflightConfig = _journalConfiguration.Read(journalPath)
+            ?? throw new JournalrcNotFoundException(journalPath);
+
+        var currentTocFile = preflightConfig.TableOfContents.File;
+        var newTocFile = newTocName + FileConstants.MarkdownExtension;
+        var newTocAbsPath = _fileSystem.CombinePaths(journalPath, newTocFile);
+
+        var isAlreadyNamed = string.Equals(currentTocFile, newTocFile, StringComparison.OrdinalIgnoreCase);
+
+        // Guard: only check for a name conflict when an actual rename is needed.
+        // If the TOC is already named correctly, there is nothing to do — skip the guard.
+        if (!isAlreadyNamed && _fileSystem.FileExists(newTocAbsPath))
+            throw new TocRenameConflictException(journalPath, newTocFile);
+
         using var tx = _txCoordinator.BeginOrJoin();
         try
         {
-            var config = _journalConfiguration.Read(journalPath)
-                ?? throw new JournalrcNotFoundException(journalPath);
-
-            var currentTocFile = config.TableOfContents.File;
-            var newTocFile = newTocName + FileConstants.MarkdownExtension;
-            var isAlreadyNamed = string.Equals(
-                currentTocFile,
-                newTocFile,
-                StringComparison.OrdinalIgnoreCase
-            );
-
             var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
             var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
             if (_fileSystem.FileExists(journalrcPath))
@@ -452,21 +458,17 @@ public sealed class JournalUpdateService(
                 foreach (var relative in _markdownLinkRewriter.FindFilesWithLinkTo(journalPath, currentTocFile))
                     tx.Track(_fileSystem.CombinePaths(journalPath, relative));
 
-                var newTocAbsPath = _fileSystem.CombinePaths(journalPath, newTocFile);
-                if (_fileSystem.FileExists(newTocAbsPath))
-                    throw new TocRenameConflictException(journalPath, newTocFile);
-
                 var currentTocAbsPath = _fileSystem.CombinePaths(journalPath, currentTocFile);
                 tx.TrackRename(currentTocAbsPath, newTocAbsPath);
 
                 _fileSystem.RenameFile(currentTocAbsPath, newTocAbsPath);
-                _console.MarkupLine($"Renamed TOC: {currentTocFile} → {newTocFile}");
+                _console.MarkupLine($"Renamed TOC: {currentTocFile.EscapeMarkup()} → {newTocFile.EscapeMarkup()}");
 
                 _journalConfiguration.Update(
                     journalPath,
                     cfg => cfg.TableOfContents.File = newTocFile
                 );
-                _console.MarkupLine($"[green]Updated .journalrc table-of-contents filename to '{newTocFile}'.[/]");
+                _console.MarkupLine($"[green]Updated .journalrc table-of-contents filename to '{newTocFile.EscapeMarkup()}'.[/]");
                 _fileTracking.RenameFileInIndex(journalPath, currentTocFile, newTocFile);
 
                 var modifiedFiles = _markdownLinkRewriter.ReplaceLinksInDirectory(
@@ -500,7 +502,7 @@ public sealed class JournalUpdateService(
                         _fileSystem.UpdateFile(directory, fileName, stamped);
 
                     _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-                    _console.MarkupLine($"[dim]  Rewrote links: {relativePath}[/]");
+                    _console.MarkupLine($"[dim]  Rewrote links: {relativePath.EscapeMarkup()}[/]");
                     _logger.LogDebug("Rewrote TOC links in: {RelativePath}", relativePath);
                 }
 

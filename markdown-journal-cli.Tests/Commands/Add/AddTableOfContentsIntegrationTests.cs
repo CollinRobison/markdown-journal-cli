@@ -151,7 +151,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         var result = _command.Execute(null!, settings);
 
         // Assert
-        result.ShouldBe(0);
+        result.ShouldBe(1);
         _console.Output.ShouldContain("Warning");
         _console.Output.ShouldContain("already exists");
 

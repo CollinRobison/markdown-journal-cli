@@ -147,11 +147,9 @@ public class JournalConfigGenerator(
 
         var index = _fileTracking.LoadIndex(directory);
 
-        if (index.Files.Count == 0)
-        {
-            return null;
-        }
-
+        // A tracking file that contains zero entries is a valid empty-journal state (e.g. a
+        // brand-new directory with no .md files yet). We still create the config so that
+        // downstream steps (TOC generation, etc.) have a well-formed .journalrc to work with.
         // Get all markdown files from tracking index
         var markdownFiles = index
             .Files.Keys.Where(f =>

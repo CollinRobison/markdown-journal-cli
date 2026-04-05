@@ -127,7 +127,7 @@ public class AddTableOfContentsRollbackTests : IDisposable
         var command = CreateCommand();
         var result = command.Execute(null!, new AddTableOfContentsSettings { FilePath = JournalPath });
 
-        result.ShouldBe(0);
+        result.ShouldBe(1);
         _coordinator.Current.ShouldBeNull();
     }
 

@@ -35,6 +35,10 @@ public sealed class RemoveEntryCommand(
         {
             if (!settings.Force)
             {
+                // Validate all preconditions before prompting; surfaces errors without
+                // asking the user to confirm an action that was never possible.
+                _removeEntryService.ValidatePreconditions(settings.FilePath, settings.FileName);
+
                 var confirmed = _console.Confirm(
                     $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone.",
                     defaultValue: false

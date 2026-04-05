@@ -232,6 +232,34 @@ public class InitCommandTests
         result.Output.ShouldContain("unexpected");
     }
 
+    [Fact]
+    public void Execute_PathContainingBrackets_DoesNotThrowMarkupException_WhenDirMissing()
+    {
+        // Paths like "/repos/my[project]/journal" would cause Spectre MarkupException before fix.
+        // The command should emit a plain error message, not crash.
+        var result = _app.Run(["init", "--path", "/nonexistent/my[project]/journal"]);
+
+        result.ExitCode.ShouldBe(1);
+        result.Output.ShouldContain("Error");
+        result.Output.ShouldNotContain("MarkupException");
+        result.Output.ShouldContain("does not exist");
+    }
+
+    [Fact]
+    public void Execute_PathContainingBrackets_DoesNotThrowMarkupException_WhenAlreadyManaged()
+    {
+        // Init on an already-managed journal should display the path safely.
+        var dir = "/test/my[journal]";
+        _fileSystem.CreateDirectory(dir);
+        _fileSystem.CreateFile(dir, ".journalrc", "{}");
+
+        var result = _app.Run(["init", "--path", dir]);
+
+        result.ExitCode.ShouldBe(1);
+        result.Output.ShouldContain("Error");
+        result.Output.ShouldNotContain("MarkupException");
+    }
+
     /// <summary>
     /// Test double for <see cref="IInitJournalService"/> that records calls and supports
     /// configurable exception injection.

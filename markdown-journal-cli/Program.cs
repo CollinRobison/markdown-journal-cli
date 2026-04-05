@@ -171,6 +171,9 @@ public static class Program
             ).WithAlias("rm");
         });
 
-        return app.Run(args);
+        // Spectre.Console returns -1 for validation failures; normalise to 1 so callers
+        // get the documented "pre-write guard failed" exit code instead of bash's 255.
+        var exitCode = app.Run(args);
+        return exitCode == -1 ? 1 : exitCode;
     }
 }

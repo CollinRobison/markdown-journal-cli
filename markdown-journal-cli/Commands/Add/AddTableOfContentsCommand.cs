@@ -67,9 +67,9 @@ public sealed class AddTableOfContents(
             if (_fileSystem.FileExists(tocPath))
             {
                 _console.MarkupLine(
-                    $"[yellow]Warning:[/] Table of Contents file '{tocFile}' already exists at '{settings.FilePath}'"
+                    $"[yellow]Warning:[/] Table of Contents file '{tocFile.EscapeMarkup()}' already exists at '{settings.FilePath.EscapeMarkup()}'"
                 );
-                return 0;
+                return 1;
             }
 
             using var tx = _txCoordinator.Begin();
@@ -100,7 +100,7 @@ public sealed class AddTableOfContents(
                 tx.Commit();
 
                 _console.MarkupLine(
-                    $"[green]Success:[/] Created Table of Contents file '{tocFile}' at '{settings.FilePath}'"
+                    $"[green]Success:[/] Created Table of Contents file '{tocFile.EscapeMarkup()}' at '{settings.FilePath.EscapeMarkup()}'"
                 );
                 return 0;
             }
@@ -111,13 +111,13 @@ public sealed class AddTableOfContents(
         }
         catch (JournalrcNotFoundException ex)
         {
-            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
         }
         catch (RollbackCompletedException) { throw; }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");
+            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
             return 1;
         }
     }

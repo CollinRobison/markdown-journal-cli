@@ -40,7 +40,7 @@ public sealed class InitCommand(
         if (!_fileSystem.DirectoryExists(filePath))
         {
             _console.MarkupLine(
-                $"[red]Error:[/] Directory '[blue]{filePath}[/]' does not exist."
+                $"[red]Error:[/] Directory '[blue]{filePath.EscapeMarkup()}[/]' does not exist."
             );
             return 1;
         }
@@ -52,7 +52,7 @@ public sealed class InitCommand(
         if (_fileSystem.FileExists(journalrcPath))
         {
             _console.MarkupLine(
-                $"[red]Error:[/] '[blue]{filePath}[/]' is already a managed journal."
+                $"[red]Error:[/] '[blue]{filePath.EscapeMarkup()}[/]' is already a managed journal."
             );
             return 1;
         }
@@ -61,19 +61,19 @@ public sealed class InitCommand(
         {
             _initJournalService.Initialize(filePath, journalName, settings.TableOfContentsName);
             _console.MarkupLine(
-                $"[green]Success:[/] Journal [yellow]{journalName}[/] initialised at [blue]{filePath}[/]"
+                $"[green]Success:[/] Journal [yellow]{journalName.EscapeMarkup()}[/] initialised at [blue]{filePath.EscapeMarkup()}[/]"
             );
             return 0;
         }
         catch (TocFileAlreadyExistsException ex)
         {
-            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
         }
         catch (RollbackCompletedException) { throw; }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");
+            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
             return 1;
         }
     }
