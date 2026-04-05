@@ -8,6 +8,19 @@ namespace markdown_journal_cli.Services.RemoveEntry;
 public interface IRemoveEntryService
 {
     /// <summary>
+    /// Validates all preconditions for removing an entry without performing any writes.
+    /// Throws the same guard exceptions that <see cref="RemoveEntry"/> throws so callers
+    /// can surface errors before showing a confirmation prompt.
+    /// </summary>
+    /// <param name="journalPath">The journal directory.</param>
+    /// <param name="fileName">The entry filename (with or without .md extension).</param>
+    /// <exception cref="Exceptions.JournalrcNotFoundException">The .journalrc file is missing.</exception>
+    /// <exception cref="Exceptions.TrackingIndexNotFoundException">The .mdjournal tracking index is missing.</exception>
+    /// <exception cref="Exceptions.ProtectedJournalFileException">The target file is a protected journal file.</exception>
+    /// <exception cref="System.IO.FileNotFoundException">The entry file does not exist.</exception>
+    void ValidatePreconditions(string journalPath, string fileName);
+
+    /// <summary>
     /// Removes a journal entry and returns the relative paths of any files whose dead links
     /// were stripped (populated only when <paramref name="cleanRefs"/> is <c>true</c>).
     /// </summary>

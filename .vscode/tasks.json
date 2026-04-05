@@ -12,6 +12,83 @@
         "/consoleloggerparameters:NoSummary"
       ],
       "problemMatcher": "$msCompile"
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rollback Manual Test Tasks
+    // Test journal lives at /tmp/rollback-test/RollbackTest
+    // Files: Alpha.md, Beta.md, .journalrc, .mdjournal, 1a-TableOfContents.md
+    //
+    // Workflow:
+    //   1. Run a [Rollback] launch config — it auto-runs the matching "ready-*" task first:
+    //        build → teardown → create-journal → (optionally lock a file)
+    //   2. The CLI runs and hits a permission error mid-write
+    //   3. Observe the Rollback Summary table + exit code in the terminal
+    //   4. Run "[Rollback] ✓ Retry after unlock" to confirm the journal is intact
+    //
+    // To manually inspect state mid-test: open /tmp/rollback-test/RollbackTest in Finder
+    // ─────────────────────────────────────────────────────────────────────────
+
+    {
+      "label": "rollback-test: teardown",
+      "type": "shell",
+      "command": "chmod -R 755 /tmp/rollback-test 2>/dev/null; rm -rf /tmp/rollback-test && echo '✓ Teardown complete'",
+      "presentation": { "reveal": "silent", "close": true }
+    },
+    {
+      "label": "rollback-test: create-journal",
+      "type": "shell",
+      "command": "dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll' new RollbackTest --path /tmp/rollback-test && dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll' add --path /tmp/rollback-test/RollbackTest entry Alpha && dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll' add --path /tmp/rollback-test/RollbackTest entry Beta && echo '✓ Journal ready  →  Alpha.md  Beta.md  .journalrc  .mdjournal  1a-TableOfContents.md'",
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "rollback-setup" }
+    },
+
+    // --- lock tasks (run standalone or chained via "ready-*" compound task) ---
+    {
+      "label": "rollback-test: lock-toc",
+      "type": "shell",
+      "command": "chmod 444 /tmp/rollback-test/RollbackTest/1a-TableOfContents.md && echo '🔒 Locked: 1a-TableOfContents.md  (TOC writes will fail → triggers rollback)'",
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "rollback-setup" }
+    },
+    {
+      "label": "rollback-test: lock-journalrc",
+      "type": "shell",
+      "command": "chmod 444 /tmp/rollback-test/RollbackTest/.journalrc && echo '🔒 Locked: .journalrc  (config writes will fail → triggers rollback)'",
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "rollback-setup" }
+    },
+    {
+      "label": "rollback-test: lock-dir",
+      "type": "shell",
+      "command": "chmod 555 /tmp/rollback-test/RollbackTest && echo '🔒 Locked dir: new-file creation blocked, existing-file writes still work'",
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "rollback-setup" }
+    },
+    {
+      "label": "rollback-test: unlock",
+      "type": "shell",
+      "command": "chmod 755 /tmp/rollback-test/RollbackTest 2>/dev/null; chmod 644 /tmp/rollback-test/RollbackTest/.journalrc /tmp/rollback-test/RollbackTest/1a-TableOfContents.md /tmp/rollback-test/RollbackTest/.mdjournal 2>/dev/null && echo '🔓 All permissions restored — safe to retry'",
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "rollback-setup" }
+    },
+
+    // --- compound "ready-*" tasks: used as preLaunchTask in launch.json ---
+    // Each one does a clean build + teardown + journal creation, then optionally locks a file.
+    {
+      "label": "rollback-test: ready",
+      "dependsOn": ["build", "rollback-test: teardown", "rollback-test: create-journal"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "rollback-test: ready-toc-locked",
+      "dependsOn": ["build", "rollback-test: teardown", "rollback-test: create-journal", "rollback-test: lock-toc"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "rollback-test: ready-journalrc-locked",
+      "dependsOn": ["build", "rollback-test: teardown", "rollback-test: create-journal", "rollback-test: lock-journalrc"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "rollback-test: ready-dir-locked",
+      "dependsOn": ["build", "rollback-test: teardown", "rollback-test: create-journal", "rollback-test: lock-dir"],
+      "dependsOrder": "sequence"
     }
   ]
 }

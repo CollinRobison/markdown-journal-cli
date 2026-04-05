@@ -14,7 +14,7 @@ public class RemoveSettings : CommandSettings
     public string FilePath { get; set; } = ".";
 }
 
-public class RemoveEntrySettings : RemoveSettings
+public sealed class RemoveEntrySettings : RemoveSettings
 {
     [CommandArgument(0, "<fileName>")]
     [Description("The name of the file to remove (with or without .md extension).")]

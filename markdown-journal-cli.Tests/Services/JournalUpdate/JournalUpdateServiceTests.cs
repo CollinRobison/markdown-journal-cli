@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Exceptions;
@@ -74,6 +75,8 @@ public class JournalUpdateServiceTests
             _tableOfContentsService,
             _journalSettings,
             new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalUpdateService>.Instance
         );
 
@@ -111,6 +114,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -128,6 +133,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -145,6 +152,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -162,6 +171,8 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -179,6 +190,46 @@ public class JournalUpdateServiceTests
                 null!,
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
+                NullLogger<JournalUpdateService>.Instance
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_ThrowsArgumentNullException_WhenTxCoordinatorIsNull()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new JournalUpdateService(
+                _console,
+                Mock.Of<IFileSystem>(),
+                Mock.Of<IJournalConfiguration>(),
+                Mock.Of<IFileTracking>(),
+                Mock.Of<ITableOfContentsService>(),
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>(),
+                null!,
+                NoOpRollbackReporter.Instance,
+                NullLogger<JournalUpdateService>.Instance
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_ThrowsArgumentNullException_WhenRollbackReporterIsNull()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new JournalUpdateService(
+                _console,
+                Mock.Of<IFileSystem>(),
+                Mock.Of<IJournalConfiguration>(),
+                Mock.Of<IFileTracking>(),
+                Mock.Of<ITableOfContentsService>(),
+                _journalSettings,
+                Mock.Of<IMarkdownLinkRewriter>(),
+                NoOpFileTransactionCoordinator.Instance,
+                null!,
                 NullLogger<JournalUpdateService>.Instance
             )
         );
@@ -652,6 +703,8 @@ public class JournalUpdateServiceTests
             mockTocService.Object,
             _journalSettings,
             new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalUpdateService>.Instance
         );
 
@@ -820,6 +873,53 @@ public class JournalUpdateServiceTests
 
         // Console output mentions the count of updated files
         _console.Output.ShouldContain("Last Edited updated for 2 file(s).");
+    }
+
+    [Fact]
+    public void RenameToc_ConflictIsPreflightGuard_NoFilesModified()
+    {
+        // When the rename target already exists, the conflict must be detected
+        // BEFORE any file writes so the journal is left completely untouched (exit 1 / guard).
+        // Before this fix, a full rollback (exit 2) was triggered after rewriting backlinks.
+        const string oldTocFile = "1a-TableOfContents.md";
+        const string conflictingFile = "NewName.md";
+        const string entryWithLink = "entry.md";
+
+        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
+        _fileSystem.CreateFile(_testPath, conflictingFile, "# Conflict");
+        _fileSystem.CreateFile(_testPath, entryWithLink, $"[TOC]({oldTocFile})");
+        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+        _fileTracking.UpdateFileInIndex(_testPath, conflictingFile);
+        _fileTracking.UpdateFileInIndex(_testPath, entryWithLink);
+
+        var entryContentBefore = _fileSystem.GetFileContent(Path.Combine(_testPath, entryWithLink));
+
+        // Act & Assert — throws TocRenameConflictException (not a rollback exception)
+        Should.Throw<TocRenameConflictException>(
+            () => _service.RenameToc(_testPath, "NewName")
+        );
+
+        // Verify: the entry was NOT modified — no link rewrites occurred
+        var entryContentAfter = _fileSystem.GetFileContent(Path.Combine(_testPath, entryWithLink));
+        entryContentAfter.ShouldBe(entryContentBefore);
+    }
+
+    [Fact]
+    public void RenameToc_ConflictException_IsNotWrappedInRollbackCompletedException()
+    {
+        // TocRenameConflictException must propagate as-is (not wrapped in
+        // RollbackCompletedException) so UpdateCommand can catch it and return exit 1.
+        const string oldTocFile = "1a-TableOfContents.md";
+        const string conflictingFile = "AnotherFile.md";
+
+        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
+        _fileSystem.CreateFile(_testPath, conflictingFile, "# Other");
+        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+
+        var exception = Should.Throw<TocRenameConflictException>(
+            () => _service.RenameToc(_testPath, "AnotherFile")
+        );
+        exception.ShouldNotBeNull();
     }
 
     #endregion

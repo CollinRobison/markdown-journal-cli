@@ -2,6 +2,8 @@
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -14,7 +16,7 @@ public sealed class NewCommand(
     IFileSystem fileSystem,
     INewJournalService journalInitializer,
     IOptions<JournalSettings> journalSettings
-) : Command<NewCommand.Settings>
+) : JournalCommand<NewCommand.Settings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -61,12 +63,19 @@ public sealed class NewCommand(
             {
                 return ValidationResult.Error("Journal name cannot contain spaces");
             }
+            // Reject characters that are valid on the filesystem but break markdown link syntax
+            // or are interpreted as shell globs (e.g. my[journal] expands in bash).
+            if (!string.IsNullOrWhiteSpace(JournalName)
+                && JournalName.IndexOfAny(['[', ']', '(', ')']) >= 0)
+            {
+                return ValidationResult.Error("Journal name cannot contain markdown link characters: [ ] ( )");
+            }
 
             return ValidationResult.Success();
         }
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int ExecuteCore(CommandContext context, Settings settings)
     {
         var journalName = settings.JournalName ?? _journalSettings.DefaultJournalName;
         try
@@ -84,19 +93,20 @@ public sealed class NewCommand(
             _journalInitializer.Initialize(journalDirectory, journalName);
 
             _console.MarkupLine(
-                $"[green]Success:[/] Journal [yellow]{journalName}[/] created at [blue]{journalDirectory}[/]"
+                $"[green]Success:[/] Journal [yellow]{journalName.EscapeMarkup()}[/] created at [blue]{journalDirectory.EscapeMarkup()}[/]"
             );
 
             return 0;
         }
         catch (JournalAlreadyExistsException ex)
         {
-            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
         }
+        catch (RollbackCompletedException) { throw; }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");
+            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
             return 1;
         }
     }

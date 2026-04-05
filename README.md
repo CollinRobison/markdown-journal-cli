@@ -412,6 +412,19 @@ mdjournal update entry draft_thoughts --ignore
 mdjournal update entry draft_thoughts --unignore
 ```
 
+## Exit Codes
+
+All `mdjournal` commands follow a consistent exit-code contract:
+
+| Code | Meaning |
+|---|---|
+| `0` | Command succeeded |
+| `1` | Command failed — pre-flight check or unexpected error; no writes started |
+| `2` | Command failed mid-write; **all writes fully rolled back** — safe to retry |
+| `3` | Command failed mid-write; **rollback had errors** — manual inspection recommended |
+
+> **Note:** `--dry-run` always exits with code `0` — it never writes files.
+
 ## Contributing
 
 Interested in contributing? Check out the **[Development Guide](docs/DEVELOPMENT.md)** for:
@@ -434,7 +447,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ **`remove entry` command** — delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead inline links (`--clean-refs`); `rm` alias supported
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **882 passing unit tests** covering core functionality
+- ✅ **1045 passing unit tests** covering core functionality
 - ✅ **`--dry-run` / `--check` flag** on `update journal` — previews all changes (tracking, config, TOC, rename-toc) without any writes, with Spectre.Console color-coded tables
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
@@ -447,6 +460,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **Ignore files functionality** to exclude entries from TOC
 - ✅ Entry formatting with customizable separators
 - ✅ Nested topic hierarchy support
+- ✅ **Rollback system** — all write commands are wrapped in a file transaction; if any step fails mid-operation, all changes are automatically reversed and exit code `2` (fully rolled back) or `3` (partial rollback) is returned
 
 **Planned Features:**
 - ⏳ look through and clean up all tests **(finish before moving on)**
@@ -454,11 +468,11 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ Global tool installation **(finish before moving on)**
 - ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
 - ⏳ make the repo collaborator ready and make public with correct license. **(finish before moving on)**
-- ⏳  LOOK INTO SETTING UP A ROLLBACK SYSTEM FOR WHEN A COMMAND FAILS. FOR EXAMPLE HOLDING EACH FILE TYPE IN MEMORY AND IF FILE CREATIONS DROPS THEN REVERT BACK. **(finish before moving on)**
 - ⏳ clean up docs (finish before moving on)**
 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
+- ⏳ update the `delete entry` command when using the `--clean-refs` flag, after a file has already been deleted, to allow it to still clean up the references to that file link in other files.
 
 **Known Limitations:**
 - Global tool installation not yet configured

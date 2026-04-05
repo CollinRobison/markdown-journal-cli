@@ -3,6 +3,7 @@ using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
@@ -65,6 +66,8 @@ public class AddEntryCommandTests
             _mockTemplateManager.Object,
             _mockFileTracking.Object,
             _mockTocGenerator.Object,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalEntryService>.Instance
         );
 
@@ -209,6 +212,10 @@ body goes here.
                 It.IsAny<DateTime?>()
             )
         );
+
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(It.IsAny<string[]>()))
+            .Returns((string[] paths) => Path.Combine(paths));
     }
 
     #region Positive Cases

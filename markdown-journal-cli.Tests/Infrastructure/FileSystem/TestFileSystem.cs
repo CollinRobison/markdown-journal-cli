@@ -20,19 +20,21 @@ public class TestFileSystem : IFileSystem
     /// </summary>
     public readonly Dictionary<string, string> _files = new();
 
+    public List<string> DeletedDirectories { get; } = new();
+
     /// <summary>
     /// Determines whether the specified directory exists in the in-memory file system.
     /// </summary>
     /// <param name="path">The directory path to check.</param>
     /// <returns><c>true</c> if the directory exists; otherwise, <c>false</c>.</returns>
-    public bool DirectoryExists(string path) => _directories.ContainsKey(path);
+    public virtual bool DirectoryExists(string path) => _directories.ContainsKey(path);
 
     /// <summary>
     /// Creates a directory entry in the in-memory file system.
     /// If the directory already exists in the in-memory store, this method does nothing.
     /// </summary>
     /// <param name="path">The directory path to create.</param>
-    public void CreateDirectory(string path)
+    public virtual void CreateDirectory(string path)
     {
         if (!_directories.ContainsKey(path))
         {
@@ -64,7 +66,7 @@ public class TestFileSystem : IFileSystem
     /// <param name="path">The directory path where the markdown file will be created.</param>
     /// <param name="fileName">The file name excluding extension (for example, <c>note</c> not <c>note.md</c>).</param>
     /// <param name="body">The markdown content to write into the file.</param>
-    public void CreateMarkdownFile(string path, string fileName, string body)
+    public virtual void CreateMarkdownFile(string path, string fileName, string body)
     {
         if (!_directories.ContainsKey(path))
         {
@@ -90,7 +92,7 @@ public class TestFileSystem : IFileSystem
     /// </summary>
     /// <param name="filePath">The full path to the file.</param>
     /// <returns>True if the file exists, false otherwise.</returns>
-    public bool FileExists(string filePath)
+    public virtual bool FileExists(string filePath)
     {
         return _files.ContainsKey(filePath);
     }
@@ -113,7 +115,7 @@ public class TestFileSystem : IFileSystem
         return _directories.Keys;
     }
 
-    public void CreateFile(string path, string fileName, string body)
+    public virtual void CreateFile(string path, string fileName, string body)
     {
         if (!_directories.ContainsKey(path))
         {
@@ -124,18 +126,24 @@ public class TestFileSystem : IFileSystem
         _files[filePath] = body;
     }
 
-    public void UpdateFile(string path, string fileName, string body)
+    public virtual void UpdateFile(string path, string fileName, string body)
     {
         var filePath = Path.Combine(path, fileName);
         _files[filePath] = body;
     }
 
-    public void DeleteFile(string filePath)
+    public virtual void DeleteFile(string filePath)
     {
         _files.Remove(filePath);
     }
 
-    public void RenameFile(string oldPath, string newPath)
+    public virtual void DeleteDirectory(string path)
+    {
+        DeletedDirectories.Add(path);
+        _directories.Remove(path);
+    }
+
+    public virtual void RenameFile(string oldPath, string newPath)
     {
         if (!_files.ContainsKey(oldPath))
             throw new FileNotFoundException($"File not found: {oldPath}");
@@ -160,7 +168,7 @@ public class TestFileSystem : IFileSystem
 
     public string GetFullPath(string path) => Path.GetFullPath(path);
 
-    public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+    public virtual string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
     {
         var pattern = searchPattern.Replace("*", "").Replace("?", "");
 
@@ -193,7 +201,7 @@ public class TestFileSystem : IFileSystem
         return files;
     }
 
-    public IReadOnlyList<string> GetMarkdownFiles(string directory)
+    public virtual IReadOnlyList<string> GetMarkdownFiles(string directory)
     {
         var normalizedDirectory = directory.TrimEnd(
             Path.DirectorySeparatorChar,

@@ -3,6 +3,7 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Services;
@@ -71,6 +72,8 @@ public class UpdateCommandTests
             _tableOfContentsGenerator,
             _journalSettings,
             new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalUpdateService>.Instance
         );
 
@@ -93,7 +96,8 @@ public class UpdateCommandTests
             _journalSettings,
             _journalConfiguration,
             NullLogger<UpdateCommand>.Instance,
-            renderer
+            renderer,
+            NoOpFileTransactionCoordinator.Instance
         );
     }
 
@@ -654,6 +658,8 @@ public class UpdateCommandTests
             customTocGen,
             customSettings,
             new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<JournalUpdateService>.Instance
         );
         var command = new UpdateCommand(
@@ -664,7 +670,8 @@ public class UpdateCommandTests
             customSettings,
             customConfig,
             NullLogger<UpdateCommand>.Instance,
-            new DryRunRenderer(_console, customConfig, customSettings)
+            new DryRunRenderer(_console, customConfig, customSettings),
+            NoOpFileTransactionCoordinator.Instance
         );
         var settings = new UpdateJournalSettings { FilePath = _testPath };
 
@@ -1875,7 +1882,8 @@ public class UpdateCommandTests
         var command = new UpdateCommand(
             _console, _fileSystem, mockService.Object, _fileTracking,
             _journalSettings, _journalConfiguration, NullLogger<UpdateCommand>.Instance,
-            new DryRunRenderer(_console, _journalConfiguration, _journalSettings)
+            new DryRunRenderer(_console, _journalConfiguration, _journalSettings),
+            NoOpFileTransactionCoordinator.Instance
         );
 
         command.Execute(

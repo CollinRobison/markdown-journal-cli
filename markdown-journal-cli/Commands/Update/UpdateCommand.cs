@@ -6,6 +6,8 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,8 +27,9 @@ public sealed class UpdateCommand(
     IOptions<JournalSettings> journalSettings,
     IJournalConfiguration journalConfiguration,
     ILogger<UpdateCommand> logger,
-    IDryRunRenderer dryRunRenderer
-) : Command<UpdateJournalSettings>
+    IDryRunRenderer dryRunRenderer,
+    IFileTransactionCoordinator txCoordinator
+) : JournalCommand<UpdateJournalSettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -43,8 +46,10 @@ public sealed class UpdateCommand(
     private readonly IDryRunRenderer _dryRunRenderer =
         dryRunRenderer ?? throw new ArgumentNullException(nameof(dryRunRenderer));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
 
-    public override int Execute(CommandContext context, UpdateJournalSettings settings)
+    protected override int ExecuteCore(CommandContext context, UpdateJournalSettings settings)
     {
         try
         {
@@ -74,6 +79,8 @@ public sealed class UpdateCommand(
             if (settings.DryRun)
                 return ExecuteDryRun(settings, all);
 
+            using var outerTx = _txCoordinator.Begin();
+
             // --rename-toc is not a change-detection operation — handle it first and independently
             if (settings.RenameToc is not null)
                 _journalUpdateService.RenameToc(settings.FilePath, settings.RenameToc);
@@ -94,6 +101,7 @@ public sealed class UpdateCommand(
                 {
                     if (settings.RenameToc is null)
                         _console.MarkupLine("[green]Everything is up to date.[/]");
+                    outerTx.Commit();
                     return 0;
                 }
 
@@ -117,6 +125,7 @@ public sealed class UpdateCommand(
                     _journalUpdateService.UpdateTableOfContents(settings.FilePath);
             }
 
+            outerTx.Commit();
             return 0;
         }
         catch (TocRenameConflictException ex)
@@ -133,6 +142,10 @@ public sealed class UpdateCommand(
         {
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
+        }
+        catch (RollbackCompletedException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

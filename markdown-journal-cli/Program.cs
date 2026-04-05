@@ -8,6 +8,7 @@ using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Services.RemoveEntry;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +60,11 @@ public static class Program
         host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
         host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();
         host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();
+
+        // Rollback infrastructure
+        host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackStrategy>();
+        host.Services.AddSingleton<IFileTransactionCoordinator, FileTransactionCoordinator>();
+        host.Services.AddSingleton<IRollbackReporter, RollbackReporter>();
 
         // Register commands
         host.Services.AddSingleton<NewCommand>();
@@ -165,6 +171,9 @@ public static class Program
             ).WithAlias("rm");
         });
 
-        return app.Run(args);
+        // Spectre.Console returns -1 for validation failures; normalise to 1 so callers
+        // get the documented "pre-write guard failed" exit code instead of bash's 255.
+        var exitCode = app.Run(args);
+        return exitCode == -1 ? 1 : exitCode;
     }
 }

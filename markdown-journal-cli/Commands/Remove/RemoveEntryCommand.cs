@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Services.RemoveEntry;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -12,7 +14,7 @@ public sealed class RemoveEntryCommand(
     IAnsiConsole console,
     IRemoveEntryService removeEntryService,
     ILogger<RemoveEntryCommand> logger
-) : Command<RemoveEntrySettings>
+) : JournalCommand<RemoveEntrySettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -21,7 +23,7 @@ public sealed class RemoveEntryCommand(
     private readonly ILogger<RemoveEntryCommand> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
 
-    public override int Execute(CommandContext context, RemoveEntrySettings settings)
+    protected override int ExecuteCore(CommandContext context, RemoveEntrySettings settings)
     {
         _logger.LogDebug(
             "RemoveEntryCommand executing for '{FileName}' in '{FilePath}'",
@@ -33,6 +35,10 @@ public sealed class RemoveEntryCommand(
         {
             if (!settings.Force)
             {
+                // Validate all preconditions before prompting; surfaces errors without
+                // asking the user to confirm an action that was never possible.
+                _removeEntryService.ValidatePreconditions(settings.FilePath, settings.FileName);
+
                 var confirmed = _console.Confirm(
                     $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone.",
                     defaultValue: false
@@ -89,6 +95,10 @@ public sealed class RemoveEntryCommand(
         {
             _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
+        }
+        catch (RollbackCompletedException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

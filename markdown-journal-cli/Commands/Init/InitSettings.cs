@@ -39,6 +39,12 @@ public sealed class InitSettings : CommandSettings
         if (!string.IsNullOrWhiteSpace(JournalName) && JournalName.Contains(' '))
             return ValidationResult.Error("Journal name cannot contain spaces");
 
+        // Reject characters that are valid on the filesystem but break markdown link syntax
+        // or are interpreted as shell globs (e.g. my[journal] expands in bash).
+        if (!string.IsNullOrWhiteSpace(JournalName)
+            && JournalName.IndexOfAny(['[', ']', '(', ')']) >= 0)
+            return ValidationResult.Error("Journal name cannot contain markdown link characters: [ ] ( )");
+
         return ValidationResult.Success();
     }
 }

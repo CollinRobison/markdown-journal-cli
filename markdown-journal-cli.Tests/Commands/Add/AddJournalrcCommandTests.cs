@@ -2,6 +2,7 @@ using markdown_journal_cli;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
@@ -58,7 +59,9 @@ public class AddJournalrcCommandTests
             _console,
             _fileSystem,
             _configGenerator,
-            Options.Create(_journalSettings)
+            Options.Create(_journalSettings),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance
         );
     }
 

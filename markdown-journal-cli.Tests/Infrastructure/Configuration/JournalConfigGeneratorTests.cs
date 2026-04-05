@@ -450,6 +450,28 @@ public class JournalConfigGeneratorTests
     }
 
     [Fact]
+    public void GenerateFromTrackingIndex_EmptyTrackingIndex_ReturnsEmptyConfigNotNull()
+    {
+        // Arrange — tracking file exists but contains zero .md entries (brand-new journal)
+        var directory = "/test/journal";
+        _fileSystem.CreateDirectory(directory);
+
+        var emptyIndexJson = @"{""Files"": {}}";
+        _fileSystem.CreateFile(directory, $".{_journalSettings.AppName}", emptyIndexJson);
+
+        // Act
+        var result = _generator.GenerateFromTrackingIndex(directory, "1a-TableOfContents", "EmptyJournal");
+
+        // Assert — must return a valid (empty) config, not null
+        Assert.NotNull(result);
+        Assert.Equal("tracking", result.Source);
+        Assert.Equal(0, result.FileCount);
+        Assert.Equal("EmptyJournal", result.Config.JournalName);
+        Assert.Empty(result.Config.TableOfContents.RootEntries);
+        Assert.Empty(result.Config.TableOfContents.Structure.Topics);
+    }
+
+    [Fact]
     public void GenerateFromTrackingIndex_NullTocFileName_ThrowsArgumentException()
     {
         // Act & Assert

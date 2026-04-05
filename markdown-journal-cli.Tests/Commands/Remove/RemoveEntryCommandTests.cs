@@ -296,4 +296,72 @@ public class RemoveEntryCommandTests
         result.ShouldBe(0);
         _console.Output.ShouldContain("Success:");
     }
+
+    [Fact]
+    public void Execute_WithoutForce_FileNotFound_ReturnsError_BeforeShowingPrompt()
+    {
+        // The guard checks must be evaluated before the confirmation prompt so
+        // the user is never asked to confirm an action that was never possible.
+        _mockRemoveEntryService
+            .Setup(s => s.ValidatePreconditions(TestPath, TestFileName))
+            .Throws(new FileNotFoundException($"Entry file '{TestFileName}.md' not found at '{TestPath}'."));
+
+        var settings = new RemoveEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            Force = false,
+        };
+
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+        // Confirm the prompt was NEVER shown — the error surfaced before it
+        _console.Output.ShouldNotContain("Are you sure");
+        _mockRemoveEntryService.Verify(
+            s => s.RemoveEntry(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void Execute_WithoutForce_JournalrcMissing_ReturnsError_BeforeShowingPrompt()
+    {
+        _mockRemoveEntryService
+            .Setup(s => s.ValidatePreconditions(TestPath, TestFileName))
+            .Throws(new JournalrcNotFoundException(TestPath));
+
+        var settings = new RemoveEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            Force = false,
+        };
+
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+        _console.Output.ShouldNotContain("Are you sure");
+    }
+
+    [Fact]
+    public void Execute_WithForce_DoesNotCallValidatePreconditions()
+    {
+        // With --force, the confirmation path (and its preflight validation) is skipped entirely.
+        var settings = new RemoveEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            Force = true,
+        };
+
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        _mockRemoveEntryService.Verify(
+            s => s.ValidatePreconditions(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
 }

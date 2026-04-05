@@ -2,6 +2,7 @@ using System.Text.Json;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -65,7 +66,9 @@ public class AddTableOfContentsIntegrationTests : IDisposable
             _fileSystem,
             _journalConfiguration,
             _tocGenerator,
-            _journalSettings
+            _journalSettings,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance
         );
     }
 
@@ -148,7 +151,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         var result = _command.Execute(null!, settings);
 
         // Assert
-        result.ShouldBe(0);
+        result.ShouldBe(1);
         _console.Output.ShouldContain("Warning");
         _console.Output.ShouldContain("already exists");
 

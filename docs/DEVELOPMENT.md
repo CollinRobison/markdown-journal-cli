@@ -69,11 +69,25 @@ markdown-journal-cli/
 │   │   ├── FileSystem/           # File system abstraction
 │   │   │   ├── IFileSystem.cs
 │   │   │   ├── FileSystem.cs
-│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview + future rollback)
+│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview)
 │   │   │   ├── InMemoryFileBuffer.cs   # Snapshot/Stage/Commit/Restore implementation
 │   │   │   ├── IMarkdownLinkRewriter.cs   # Inline link rewriting interface
 │   │   │   ├── MarkdownLinkRewriter.cs    # Compiled-regex link rewriter implementation
 │   │   │   └── MarkdownMetadataParser.cs
+│   │   ├── Transactions/         # File transaction and rollback infrastructure
+│   │   │   ├── IFileTransactionCoordinator.cs   # Ambient scope factory
+│   │   │   ├── FileTransactionCoordinator.cs    # Thread-local ambient scope implementation
+│   │   │   ├── IFileTransactionScope.cs         # Track/Commit/Rollback contract
+│   │   │   ├── FileTransactionScope.cs          # Execute-then-compensate implementation
+│   │   │   ├── JoinedTransactionScope.cs        # Inner scope that delegates to root
+│   │   │   ├── IDeletionRollbackStrategy.cs     # Snapshot/restore for deleted files
+│   │   │   ├── InMemoryDeletionRollbackStrategy.cs
+│   │   │   ├── IRollbackReporter.cs             # Console output for rollback events
+│   │   │   ├── RollbackReporter.cs              # Spectre.Console rollback summary
+│   │   │   ├── RollbackReporterExtensions.cs    # Extension helpers
+│   │   │   ├── NoOpTransactionInfrastructure.cs # No-op impls for tests/dry-run
+│   │   │   ├── RollbackCompletedException.cs    # Thrown after rollback; carries RollbackResult
+│   │   │   └── Models/                          # RollbackEntry, RollbackEntryKind, RollbackResult, RollbackFailure
 │   │   └── Tracking/             # File change detection
 │   │       ├── IFileTracking.cs
 │   │       ├── FileTracking.cs
@@ -117,7 +131,7 @@ markdown-journal-cli/
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests (941 tests)
+├── markdown-journal-cli.Tests/    # Unit tests
 │   ├── Commands/                 # Command tests
 │   │   ├── NewCommandTests.cs
 │   │   ├── Init/
@@ -127,7 +141,10 @@ markdown-journal-cli/
 │   │   │   ├── AddFileTrackingCommandTests.cs
 │   │   │   ├── AddJournalrcCommandTests.cs
 │   │   │   ├── AddTableOfContentsCommandTests.cs
-│   │   │   └── AddTableOfContentsIntegrationTests.cs
+│   │   │   ├── AddTableOfContentsIntegrationTests.cs
+│   │   │   ├── AddFileTrackingRollbackTests.cs    # rollback: fault-inject each write step
+│   │   │   ├── AddJournalrcRollbackTests.cs
+│   │   │   └── AddTableOfContentsRollbackTests.cs
 │   │   ├── Remove/
 │   │   │   └── RemoveEntryCommandTests.cs     # remove entry command tests
 │   │   └── Update/
@@ -136,10 +153,17 @@ markdown-journal-cli/
 │   ├── Infrastructure/           # Infrastructure service tests
 │   │   ├── FileSystem/
 │   │   │   ├── FileSystemTests.cs
+│   │   │   ├── FaultInjectingFileSystem.cs    # test helper: fault injection for IFileSystem
 │   │   │   ├── InMemoryFileBufferTests.cs     # new: Snapshot/Stage/Commit/Restore tests
 │   │   │   ├── MarkdownLinkRewriterTests.cs   # extended: StripLinksInDirectory tests added
 │   │   │   ├── MarkdownMetadataParserTests.cs
 │   │   │   └── TestFileSystem.cs
+│   │   ├── Transactions/
+│   │   │   ├── FileTransactionScopeTests.cs       # Track*/Commit/Rollback + reverse-order tests
+│   │   │   ├── FileTransactionCoordinatorTests.cs  # Begin/BeginOrJoin ambient scope tests
+│   │   │   ├── JoinedTransactionScopeTests.cs      # joined scope delegation tests
+│   │   │   ├── RollbackReporterTests.cs            # console output tests
+│   │   │   └── TransactionEdgeCaseTests.cs         # idempotency, disposed scope, etc.
 │   │   ├── FileTrackingTests.cs
 │   │   ├── HashServiceTests.cs
 │   │   ├── JournalConfigurationTests.cs
@@ -165,6 +189,14 @@ markdown-journal-cli/
 │       │   └── NewJournalServiceTests.cs
 │       ├── RemoveEntry/
 │       │   └── RemoveEntryServiceTests.cs     # remove entry service tests
+│       ├── Rollback/
+│       │   ├── ServiceRollbackTestBase.cs               # shared helpers for rollback tests
+│       │   ├── InitJournalServiceRollbackTests.cs
+│       │   ├── JournalEntryServiceRollbackTests.cs
+│       │   ├── JournalFileUpdateServiceRollbackTests.cs
+│       │   ├── JournalUpdateServiceRollbackTests.cs
+│       │   ├── NewJournalServiceRollbackTests.cs
+│       │   └── RemoveEntryServiceRollbackTests.cs
 │       └── TableOfContents/
 │           └── TableOfContentsServiceTests.cs  # extended: PreviewTableOfContents tests added
 ├── docs/                         # Documentation
@@ -186,7 +218,7 @@ using markdown_journal_cli.Infrastructure.Configuration;
 namespace markdown_journal_cli.Commands.YourCommand;
 
 [Description("TODO: Add your command description")]
-public sealed class YourCommand : Command<YourCommand.Settings>
+public sealed class YourCommand : JournalCommand<YourCommand.Settings>
 {
     private readonly IAnsiConsole _console;
     private readonly IFileSystem _fileSystem;
@@ -216,7 +248,7 @@ public sealed class YourCommand : Command<YourCommand.Settings>
         }
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int ExecuteCore(CommandContext context, Settings settings)
     {
         try
         {
@@ -593,7 +625,13 @@ The following areas need detailed documentation (you should write these based on
 ```csharp
 // Core services
 host.Services.AddSingleton<IFileSystem, FileSystem>();
-host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging + future rollback
+host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging
+
+// Rollback infrastructure
+host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackStrategy>();
+host.Services.AddSingleton<IFileTransactionCoordinator, FileTransactionCoordinator>();
+host.Services.AddSingleton<IRollbackReporter, RollbackReporter>();
+
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -768,5 +806,48 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ File change detection with SHA256 hashing
 - ✅ Automatic metadata date updates
 - ✅ Multi-layer TOC self-reference prevention
+- ✅ **Rollback system** — `IFileTransactionScope` / `IFileTransactionCoordinator` provide ambient execute-then-compensate transactions for all write commands; `IRollbackReporter` renders rollback summaries; `JournalCommand<TSettings>` maps `RollbackCompletedException` to exit codes 2/3
 - ⏳ Additional commands (list, open, search, rename)
 - ⏳ Documentation completion
+
+
+### Rollback Infrastructure (`Infrastructure/Transactions/`)
+
+All write commands participate in a file transaction that can be rolled back if any step fails mid-operation.
+
+**Usage pattern in services:**
+```csharp
+using var tx = _coordinator.BeginOrJoin();
+try
+{
+    tx.Track(fileA);          // snapshot before write
+    WriteFileA(...);
+
+    tx.TrackNew(fileB);       // record new file before create
+    CreateFileB(...);
+
+    tx.TrackDelete(fileC);    // snapshot before delete
+    DeleteFileC(...);
+
+    tx.Commit();
+}
+catch (Exception ex)
+{
+    _reporter.ReportRollbackStarting("update journal", ex);
+    var result = tx.Rollback();
+    _reporter.ReportRollbackComplete(result, journalPath);
+    throw new RollbackCompletedException(result, ex);
+}
+```
+
+**Key types:**
+- `IFileTransactionCoordinator` — singleton factory; `Begin()` creates a root scope; `BeginOrJoin()` joins an existing ambient scope or creates a new one; thread-local ambient scope
+- `IFileTransactionScope` — tracks write operations (`Track`, `TrackNew`, `TrackRename`, `TrackDelete`, `TrackNewDirectory`); `Commit()` finalizes; `Rollback()` reverses in reverse-registration order; auto-rolls back on `Dispose()` if not committed
+- `JoinedTransactionScope` — returned by `BeginOrJoin()` when a scope already exists; delegates to the root; `Commit()` is a local no-op (only root commit finalizes)
+- `IDeletionRollbackStrategy` / `InMemoryDeletionRollbackStrategy` — captures file content before `TrackDelete`; restores on rollback
+- `IRollbackReporter` / `RollbackReporter` — prints Spectre.Console rollback summary table to the terminal
+- `RollbackCompletedException` — thrown after rollback; carries `RollbackResult` (restored + failed entries); caught by `JournalCommand<TSettings>` and mapped to exit codes 2/3
+- `NoOpFileTransactionCoordinator`, `NoOpFileTransactionScope`, `NoOpRollbackReporter` — no-op implementations (static `Instance` singleton) for tests and dry-run contexts
+
+**Testing:**
+Inject `FaultInjectingFileSystem` (in `markdown-journal-cli.Tests/Infrastructure/FileSystem/`) to trigger failures at specific write steps and assert all prior writes were reversed. Use `ServiceRollbackTestBase` for shared setup across service rollback tests.

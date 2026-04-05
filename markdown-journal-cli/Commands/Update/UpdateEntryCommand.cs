@@ -2,6 +2,8 @@ using System;
 using System.ComponentModel;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -14,14 +16,14 @@ namespace markdown_journal_cli.Commands.Update;
 public sealed class UpdateEntryCommand(
     IAnsiConsole console,
     IJournalFileUpdateService fileUpdateService
-) : Command<UpdateEntrySettings>
+) : JournalCommand<UpdateEntrySettings>
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
     private readonly IJournalFileUpdateService _fileUpdateService =
         fileUpdateService ?? throw new ArgumentNullException(nameof(fileUpdateService));
 
-    public override int Execute(CommandContext context, UpdateEntrySettings settings)
+    protected override int ExecuteCore(CommandContext context, UpdateEntrySettings settings)
     {
         try
         {
@@ -50,6 +52,10 @@ public sealed class UpdateEntryCommand(
         {
             _console.MarkupLine($"[red]Error:[/] {ex.Message}");
             return 1;
+        }
+        catch (RollbackCompletedException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

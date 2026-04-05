@@ -4,6 +4,7 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,7 +45,9 @@ public class AddTableOfContentsCommandTests
             _fileSystem,
             _mockJournalConfiguration.Object,
             _mockTocGenerator.Object,
-            Options.Create(_journalSettings)
+            Options.Create(_journalSettings),
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance
         );
     }
 
@@ -250,7 +253,7 @@ public class AddTableOfContentsCommandTests
         var result = _command.Execute(null!, settings);
 
         // Assert
-        result.ShouldBe(0);
+        result.ShouldBe(1);
         _console.Output.ShouldContain("Warning");
         _console.Output.ShouldContain("already exists");
 
@@ -437,7 +440,7 @@ public class AddTableOfContentsCommandTests
         var result = _command.Execute(null!, settings);
 
         // Assert
-        result.ShouldBe(0);
+        result.ShouldBe(1);
         _console.Output.ShouldContain("Warning");
         _console.Output.ShouldContain("already exists");
         _console.Output.ShouldContain(customTocFile);
@@ -451,6 +454,76 @@ public class AddTableOfContentsCommandTests
                 ),
             Times.Never
         );
+    }
+
+    [Fact]
+    public void Execute_TocAlreadyExists_ReturnsOne_NotZero()
+    {
+        // "add toc" must return a non-zero exit code when the TOC already exists
+        // so scripts can detect the "nothing done" case.
+        var directory = "/test/journal";
+        var tocFile = $"{_journalSettings.TableOfContentsFileName}.md";
+
+        _fileSystem.CreateDirectory(directory);
+        _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
+        _fileSystem.CreateFile(directory, tocFile, "# Existing TOC");
+
+        var config = new JournalConfig
+        {
+            TableOfContents = new TableOfContents
+            {
+                File = tocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
+        };
+        _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
+
+        var settings = new AddTableOfContentsSettings { FilePath = directory };
+
+        var result = _command.Execute(null!, settings);
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Warning");
+        _console.Output.ShouldContain("already exists");
+    }
+
+    [Fact]
+    public void Execute_TocNameContainingBrackets_DoesNotThrowMarkupException_WhenAlreadyExists()
+    {
+        // TOC filenames containing bracket characters (e.g. "toc[2026]") must be
+        // escaped before being passed to Spectre.Console markup rendering.
+        var directory = "/test/journal";
+        var bracketTocName = "toc[2026]";
+        var bracketTocFile = $"{bracketTocName}.md";
+
+        _fileSystem.CreateDirectory(directory);
+        _fileSystem.CreateFile(directory, _journalSettings.JournalConfigFileName, "{}");
+        _fileSystem.CreateFile(directory, bracketTocFile, "# TOC");
+
+        var config = new JournalConfig
+        {
+            TableOfContents = new TableOfContents
+            {
+                File = bracketTocFile,
+                Structure = new Structure { Topics = [] },
+                RootEntries = [],
+            },
+        };
+        _mockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
+
+        var settings = new AddTableOfContentsSettings
+        {
+            FilePath = directory,
+            TableOfContentsName = bracketTocName,
+        };
+
+        // Should warn and return 1 — must NOT throw MarkupException
+        var result = _command.Execute(null!, settings);
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Warning");
+        _console.Output.ShouldContain("already exists");
     }
 
     #endregion

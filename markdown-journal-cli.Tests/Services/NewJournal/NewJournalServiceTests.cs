@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
@@ -58,6 +59,8 @@ public class NewJournalServiceTests
             _mockJournalConfiguration.Object,
             _mockFileTracking.Object,
             _journalSettings,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance,
             NullLogger<NewJournalService>.Instance
         );
     }
@@ -74,6 +77,8 @@ public class NewJournalServiceTests
                 _mockJournalConfiguration.Object,
                 _mockFileTracking.Object,
                 _journalSettings,
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<NewJournalService>.Instance
             )
         );
@@ -89,6 +94,8 @@ public class NewJournalServiceTests
                 _mockJournalConfiguration.Object,
                 _mockFileTracking.Object,
                 _journalSettings,
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<NewJournalService>.Instance
             )
         );
@@ -104,6 +111,8 @@ public class NewJournalServiceTests
                 null!,
                 _mockFileTracking.Object,
                 _journalSettings,
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<NewJournalService>.Instance
             )
         );
@@ -119,6 +128,8 @@ public class NewJournalServiceTests
                 _mockJournalConfiguration.Object,
                 null!,
                 _journalSettings,
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 NullLogger<NewJournalService>.Instance
             )
         );
@@ -134,7 +145,43 @@ public class NewJournalServiceTests
                 _mockJournalConfiguration.Object,
                 _mockFileTracking.Object,
                 _journalSettings,
+                NoOpFileTransactionCoordinator.Instance,
+                NoOpRollbackReporter.Instance,
                 null!
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_NullTxCoordinator_ThrowsArgumentNullException()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                _mockFileSystem.Object,
+                _mockTemplateManager.Object,
+                _mockJournalConfiguration.Object,
+                _mockFileTracking.Object,
+                _journalSettings,
+                null!,
+                NoOpRollbackReporter.Instance,
+                NullLogger<NewJournalService>.Instance
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_NullRollbackReporter_ThrowsArgumentNullException()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new NewJournalService(
+                _mockFileSystem.Object,
+                _mockTemplateManager.Object,
+                _mockJournalConfiguration.Object,
+                _mockFileTracking.Object,
+                _journalSettings,
+                NoOpFileTransactionCoordinator.Instance,
+                null!,
+                NullLogger<NewJournalService>.Instance
             )
         );
     }

@@ -2,6 +2,7 @@ using markdown_journal_cli;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -58,7 +59,9 @@ public class JournalFileUpdateServiceTests
             journalSettings,
             NullLogger<JournalFileUpdateService>.Instance,
             _mockFileTracking.Object,
-            _mockMarkdownLinkRewriter.Object
+            _mockMarkdownLinkRewriter.Object,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance
         );
     }
 

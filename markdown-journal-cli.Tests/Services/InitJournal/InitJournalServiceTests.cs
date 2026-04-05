@@ -1,6 +1,7 @@
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
@@ -48,11 +49,12 @@ public class InitJournalServiceTests
 
         _service = new InitJournalService(
             _mockFileSystem.Object,
-            _mockJournalConfiguration.Object,
             _mockJournalConfigGenerator.Object,
             _mockFileTracking.Object,
             _mockTableOfContentsService.Object,
-            _journalSettings
+            _journalSettings,
+            NoOpFileTransactionCoordinator.Instance,
+            NoOpRollbackReporter.Instance
         );
     }
 

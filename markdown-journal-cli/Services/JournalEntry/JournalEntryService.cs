@@ -4,12 +4,13 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services;
 
-public class JournalEntryService(
+public sealed class JournalEntryService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
     IOptions<JournalSettings> journalSettings,
@@ -17,6 +18,8 @@ public class JournalEntryService(
     ITemplateManager templateManager,
     IFileTracking fileTracking,
     ITableOfContentsService tableOfContentsService,
+    IFileTransactionCoordinator txCoordinator,
+    IRollbackReporter rollbackReporter,
     ILogger<JournalEntryService> logger
 ) : IJournalEntryService
 {
@@ -32,6 +35,10 @@ public class JournalEntryService(
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly ITableOfContentsService _tableOfContentsService =
         tableOfContentsService ?? throw new ArgumentNullException(nameof(tableOfContentsService));
+    private readonly IFileTransactionCoordinator _txCoordinator =
+        txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+    private readonly IRollbackReporter _rollbackReporter =
+        rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
     private readonly ILogger<JournalEntryService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
@@ -51,9 +58,9 @@ public class JournalEntryService(
             filePath
         );
 
-        var journalrc = $"{filePath}/{_journalSettings.JournalConfigFileName}";
+        var journalrc = _fileSystem.CombinePaths(filePath, _journalSettings.JournalConfigFileName);
         var trackingFileName = $".{_journalSettings.AppName}";
-        var trackingFilePath = $"{filePath}/{trackingFileName}";
+        var trackingFilePath = _fileSystem.CombinePaths(filePath, trackingFileName);
 
         if (!_fileSystem.FileExists(journalrc))
         {
@@ -75,7 +82,7 @@ public class JournalEntryService(
 
         var fileNameFormatted = FileNameFormatted(entryName, heading, subheading);
 
-        var entryFilePath = $"{filePath}/{fileNameFormatted}";
+        var entryFilePath = _fileSystem.CombinePaths(filePath, fileNameFormatted);
         if (_fileSystem.FileExists(entryFilePath))
         {
             _logger.LogWarning(
@@ -86,48 +93,73 @@ public class JournalEntryService(
             throw new JournalEntryAlreadyExistsException(fileNameFormatted, entryFilePath);
         }
 
-        var entryParams = new Dictionary<string, object>
+        using var tx = _txCoordinator.Begin();
+        try
         {
-            ["title"] = entryTitle,
-            ["addSourceBlock"] = true,
-        };
+            var entryParams = new Dictionary<string, object>
+            {
+                ["title"] = entryTitle,
+                ["addSourceBlock"] = true,
+            };
 
-        _logger.LogDebug(
-            "Creating markdown file '{FileName}' in '{FilePath}'",
-            fileNameFormatted,
-            filePath
-        );
-        _fileSystem.CreateMarkdownFile(
-            filePath,
-            fileNameFormatted,
-            _templateManager.GenerateFromTemplate("journal-entry", entryParams)
-        );
+            tx.TrackNew(entryFilePath);
+            if (_fileSystem.FileExists(journalrc))
+                tx.Track(journalrc);
+            if (_fileSystem.FileExists(trackingFilePath))
+                tx.Track(trackingFilePath);
 
-        var headings = _entryFormatter.BuildHeadingArray(heading, subheading);
+            if (!ignoreFile)
+            {
+                var tocPath = _fileSystem.CombinePaths(filePath, $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}");
+                if (_fileSystem.FileExists(tocPath))
+                    tx.Track(tocPath);
+                else
+                    tx.TrackNew(tocPath);
+            }
 
-        _logger.LogDebug("Updating journal config with entry '{EntryTitle}'", entryTitle);
-        _journalConfiguration.AddEntry(
-            filePath,
-            entryTitle,
-            fileNameFormatted,
-            headings.Length > 0 ? headings : null,
-            ignoreFile: ignoreFile
-        );
+            _logger.LogDebug(
+                "Creating markdown file '{FileName}' in '{FilePath}'",
+                fileNameFormatted,
+                filePath
+            );
+            _fileSystem.CreateMarkdownFile(
+                filePath,
+                fileNameFormatted,
+                _templateManager.GenerateFromTemplate("journal-entry", entryParams)
+            );
 
-        _logger.LogDebug("Updating file tracking index with '{FileName}'", fileNameFormatted);
-        _fileTracking.UpdateFileInIndex(filePath, fileNameFormatted);
+            var headings = _entryFormatter.BuildHeadingArray(heading, subheading);
 
-        if (!ignoreFile)
-        {
-            _logger.LogDebug("Updating table of contents for journal at '{FilePath}'", filePath);
-            _tableOfContentsService.UpdateTableOfContents(filePath, lastEditedDate: DateTime.Now);
+            _logger.LogDebug("Updating journal config with entry '{EntryTitle}'", entryTitle);
+            _journalConfiguration.AddEntry(
+                filePath,
+                entryTitle,
+                fileNameFormatted,
+                headings.Length > 0 ? headings : null,
+                ignoreFile: ignoreFile
+            );
+
+            _logger.LogDebug("Updating file tracking index with '{FileName}'", fileNameFormatted);
+            _fileTracking.UpdateFileInIndex(filePath, fileNameFormatted);
+
+            if (!ignoreFile)
+            {
+                _logger.LogDebug("Updating table of contents for journal at '{FilePath}'", filePath);
+                _tableOfContentsService.UpdateTableOfContents(filePath, lastEditedDate: DateTime.Now);
+            }
+
+            tx.Commit();
+
+            _logger.LogDebug(
+                "Successfully added entry '{EntryName}' to journal at '{FilePath}'",
+                entryName,
+                filePath
+            );
         }
-
-        _logger.LogDebug(
-            "Successfully added entry '{EntryName}' to journal at '{FilePath}'",
-            entryName,
-            filePath
-        );
+        catch (Exception ex)
+        {
+            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "add journal entry", filePath, ex);
+        }
     }
 
     private string FileNameFormatted(string entryName, string? heading, string? subheading)

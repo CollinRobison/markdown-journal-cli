@@ -27,6 +27,10 @@ This document provides detailed technical information about the Markdown Journal
                     │  • IMarkdownLinkRewriter              │
                     │  • ITemplateManager                   │
                     │  • IDryRunRenderer                    │
+                    │  • IFileTransactionCoordinator        │
+                    │  • IFileTransactionScope              │
+                    │  • IRollbackReporter                  │
+                    │  • IDeletionRollbackStrategy          │
                     └─────────────────────────────────────────┘
 ```
 
@@ -113,7 +117,10 @@ public sealed class TypeRegistrar : ITypeRegistrar
 1. **Startup** - `Program.cs` creates `TypeRegistrar`
 2. **Registration** - Core services registered:
    - `IFileSystem` → `FileSystem` (File operations)
-   - `IInMemoryFileBuffer` → `InMemoryFileBuffer` (Dry-run staging + future rollback)
+   - `IInMemoryFileBuffer` → `InMemoryFileBuffer` (Dry-run staging)
+   - `IDeletionRollbackStrategy` → `InMemoryDeletionRollbackStrategy` (delete restoration snapshots)
+   - `IFileTransactionCoordinator` → `FileTransactionCoordinator` (ambient rollback transactions)
+   - `IRollbackReporter` → `RollbackReporter` (rollback UX reporting)
    - `ITemplateManager` → `TemplateManager` (Template processing)
    - `IJournalConfiguration` → `JournalConfiguration` (Config management)
    - `ITableOfContentsService` → `TableOfContentsService` (TOC generation + preview)
@@ -132,7 +139,13 @@ public sealed class TypeRegistrar : ITypeRegistrar
 ```csharp
 // Core services
 host.Services.AddSingleton<IFileSystem, FileSystem>();
-host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging + future rollback
+host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging
+
+// Rollback infrastructure
+host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackStrategy>();
+host.Services.AddSingleton<IFileTransactionCoordinator, FileTransactionCoordinator>();
+host.Services.AddSingleton<IRollbackReporter, RollbackReporter>();
+
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -181,6 +194,30 @@ System.Exception
             ├── ProtectedJournalFileException      ← thrown when remove entry targets .journalrc, tracking index, or TOC
             └── [other domain-specific exceptions]
 ```
+
+### `JournalCommand<TSettings>` Base Class
+
+All commands extend `JournalCommand<TSettings>` instead of `Command<TSettings>` directly. This base class seals the Spectre.Console `Execute()` entrypoint and maps `RollbackCompletedException` to the standard exit codes:
+
+```csharp
+public abstract class JournalCommand<TSettings> : Command<TSettings>
+    where TSettings : CommandSettings
+{
+    public sealed override int Execute(CommandContext context, TSettings settings)
+    {
+        try { return ExecuteCore(context, settings); }
+        catch (RollbackCompletedException ex)
+        {
+            return ex.Result.IsFullyRestored ? 2 : 3;
+        }
+    }
+
+    protected abstract int ExecuteCore(CommandContext context, TSettings settings);
+}
+```
+
+- Exit code `2` — operation failed mid-write, all changes fully rolled back (safe to retry)
+- Exit code `3` — operation failed mid-write, rollback had errors (manual inspection recommended)
 
 ## 📁 File System Abstraction
 
@@ -390,6 +427,30 @@ public interface IInMemoryFileBuffer
 - Registered as singleton in DI; case-insensitive path keys
 - Used by the dry-run path to stage and read generated TOC content without touching disk
 - Designed to be wired into `JournalUpdateService` write operations in the future for transactional rollback on partial failure (infrastructure is in place; write-path integration is future work)
+
+**`IFileTransactionCoordinator`** — Singleton factory for per-operation file transaction scopes.
+- `Begin()` creates a new root `IFileTransactionScope` and sets it as the thread-local ambient scope. Throws if a scope is already active.
+- `BeginOrJoin()` returns a `JoinedTransactionScope` wrapping the current ambient scope if one exists, or calls `Begin()` if not. Use in services that may be called from within an outer command-level transaction.
+- `Current` — the currently active ambient scope, or `null` if none.
+
+**`IFileTransactionScope`** — Represents an active file transaction. Tracks write operations so they can be reversed on failure. Auto-rolls back on `Dispose()` if `Commit()` was not called.
+- `Track(path)` — snapshot an existing file *before* modifying it (first-write-wins; subsequent calls for the same path are no-ops)
+- `TrackNew(path)` — record a file that will be created; rollback deletes it
+- `TrackRename(oldPath, newPath)` — record a rename; rollback renames back
+- `TrackDelete(path)` — snapshot file content *before* deletion; rollback re-creates it
+- `TrackNewDirectory(path)` — record a directory that will be created; rollback deletes it
+- `Commit()` — clears all tracked entries and marks the transaction complete; `Dispose()` is a no-op afterwards
+- `Rollback()` → `RollbackResult` — reverses all tracked changes in reverse registration order; idempotent
+
+**`JoinedTransactionScope`** — Returned by `BeginOrJoin()` when a root scope is already active. Delegates all `Track*` and `Rollback()` calls to the root. `Commit()` on a joined scope is a local no-op — only `Commit()` on the root scope finalizes the transaction. Useful for services that want to participate in a caller-initiated transaction without owning its lifetime.
+
+**`IDeletionRollbackStrategy`** — Captures and restores file content for `TrackDelete` entries. `InMemoryDeletionRollbackStrategy` stores content in a dictionary keyed by absolute path.
+
+**`IRollbackReporter`** — Writes rollback progress and results to the terminal.
+- `ReportRollbackStarting(description, cause)` — red error line + yellow "Rolling back changes..." notice
+- `ReportRollbackComplete(result, journalRoot)` — Spectre.Console rounded table listing each restored/failed file; green "fully rolled back" or red partial-rollback warning
+
+**`NoOpFileTransactionCoordinator` / `NoOpFileTransactionScope` / `NoOpRollbackReporter`** — Silent no-op implementations in `NoOpTransactionInfrastructure.cs`. Use the static `Instance` singleton in tests and dry-run contexts.
 
 **`IDryRunRenderer`** - Renders an `UpdateDryRunReport` to the terminal
 ```csharp
@@ -751,7 +812,7 @@ public string GenerateTableOfContents(JournalConfig config)
 
 ### Test Structure
 ```
-markdown-journal-cli.Tests/ (941 tests)
+markdown-journal-cli.Tests/
 ├── Commands/
 │   ├── NewCommandTests.cs
 │   ├── Init/
@@ -760,7 +821,10 @@ markdown-journal-cli.Tests/ (941 tests)
 │   │   ├── AddEntryCommandTests.cs
 │   │   ├── AddJournalrcCommandTests.cs
 │   │   ├── AddTableOfContentsCommandTests.cs
-│   │   └── AddTableOfContentsIntegrationTests.cs
+│   │   ├── AddTableOfContentsIntegrationTests.cs
+│   │   ├── AddFileTrackingRollbackTests.cs   ← rollback: fault-inject each write step
+│   │   ├── AddJournalrcRollbackTests.cs
+│   │   └── AddTableOfContentsRollbackTests.cs
 │   ├── Remove/
 │   │   └── RemoveEntryCommandTests.cs   ← remove entry command tests
 │   └── Update/
@@ -769,10 +833,17 @@ markdown-journal-cli.Tests/ (941 tests)
 ├── Infrastructure/
 │   ├── FileSystem/
 │   │   ├── FileSystemTests.cs
+│   │   ├── FaultInjectingFileSystem.cs       ← test helper: fault injection for IFileSystem
 │   │   ├── InMemoryFileBufferTests.cs    ← new: Snapshot/Stage/Commit/Restore tests
 │   │   ├── MarkdownLinkRewriterTests.cs  ← extended: StripLinksInDirectory tests added
 │   │   ├── MarkdownMetadataParserTests.cs
 │   │   └── TestFileSystem.cs
+│   ├── Transactions/
+│   │   ├── FileTransactionScopeTests.cs       ← Track*/Commit/Rollback + reverse-order tests
+│   │   ├── FileTransactionCoordinatorTests.cs  ← Begin/BeginOrJoin ambient scope tests
+│   │   ├── JoinedTransactionScopeTests.cs      ← joined scope delegation tests
+│   │   ├── RollbackReporterTests.cs            ← console output tests
+│   │   └── TransactionEdgeCaseTests.cs         ← idempotency, disposed scope, etc.
 │   ├── FileTrackingTests.cs
 │   ├── HashServiceTests.cs
 │   ├── JournalConfigurationTests.cs
@@ -798,6 +869,14 @@ markdown-journal-cli.Tests/ (941 tests)
     │   └── NewJournalServiceTests.cs
     ├── RemoveEntry/
     │   └── RemoveEntryServiceTests.cs        ← remove entry service tests
+    ├── Rollback/
+    │   ├── ServiceRollbackTestBase.cs               ← shared helpers for rollback tests
+    │   ├── InitJournalServiceRollbackTests.cs
+    │   ├── JournalEntryServiceRollbackTests.cs
+    │   ├── JournalFileUpdateServiceRollbackTests.cs
+    │   ├── JournalUpdateServiceRollbackTests.cs
+    │   ├── NewJournalServiceRollbackTests.cs
+    │   └── RemoveEntryServiceRollbackTests.cs
     └── TableOfContents/
         └── TableOfContentsServiceTests.cs    ← extended: PreviewTableOfContents tests added
 ```
@@ -835,6 +914,7 @@ public class NewCommandTests
 5. **Edge Case Tests** - Parent-child detection, natural sorting, ignore files
 6. **Change Detection Tests** - File tracking with hash comparison
 7. **Format Tests** - Entry name formatting with various separators
+8. **Rollback Tests** — Fault injection at each write step via `FaultInjectingFileSystem`; asserts all prior writes were reversed and `RollbackCompletedException` was thrown with the expected `RollbackResult`
 
 ## 🔮 Future Architecture Considerations
 
@@ -842,7 +922,7 @@ public class NewCommandTests
 - **Global configuration** - User-level defaults (default editor, date format, etc.)
 - **Plugin/extension points** - Custom template generators and entry processors
 - **~~`--check` flag~~ ✅ Implemented** - Dry-run preview of changes before applying them (shipped as `--dry-run|--check` on `update journal`)
-- **Rollback wiring** - Wire `IInMemoryFileBuffer.Snapshot()` before each write in `JournalUpdateService` for transactional rollback on partial failure. Infrastructure is in place (`IInMemoryFileBuffer`); integration into write path is future work.
+- **~~Rollback wiring~~** ✅ **Implemented** — `IFileTransactionCoordinator` / `IFileTransactionScope` provide ambient execute-then-compensate transactions for all write commands. Services call `Track*` before each write; on failure, `Rollback()` restores all changes in reverse order. `RollbackCompletedException` propagates the `RollbackResult` to `JournalCommand<TSettings>` which maps it to exit codes 2/3.
 
 ## 📋 Design Decisions Log
 
@@ -921,3 +1001,21 @@ public class NewCommandTests
 ### Decision: `PreviewTableOfContents()` on `ITableOfContentsService`
 **Rationale:** The dry-run path needed the TOC generation logic without the `_fileSystem.UpdateFile()` call. Rather than duplicating the generation logic, a new public method extracts the read-and-generate path: it reads existing dates from the current TOC file on disk (to preserve them), calls the private `GenerateTableOfContents()` helper, and returns the string. This keeps generation logic in one place and makes the service testable for both write and preview paths in isolation.  
 **Alternatives:** Make `GenerateTableOfContents()` public — exposes an internal helper that callers would need to manage manually (config reading, date preservation).
+
+### Decision: Execute-Then-Compensate via `IFileTransactionScope`
+**Rationale:** When a multi-step operation (e.g. `update journal` touches `.mdjournal`, `.journalrc`, TOC, and multiple entry files) fails partway through, the journal is left in an inconsistent state. The `IInMemoryFileBuffer` already had a `Snapshot/Restore` stub for this purpose; rather than overloading it, a dedicated `IFileTransactionScope` / `FileTransactionCoordinator` pair was introduced. Services call `Track*` before each write; the scope stores snapshots and reverses them in reverse-registration order on `Rollback()`. A `JoinedTransactionScope` wrapper allows inner services to participate in an outer command-level transaction without owning its lifetime. This maps to the execute-then-compensate Unit of Work pattern used by `TxFileManager` (ChinhDo), without any external dependencies or OS-specific kernel transactions.  
+**Alternatives:** Extend `IInMemoryFileBuffer` directly (Option A) — mixed staging + rollback concerns, no explicit transaction boundary. WAL-style sentinel file (Option D) — would survive process crashes but is significantly more complex and overkill for a single-user CLI.
+
+### Decision: `JournalCommand<TSettings>` Base Class for Exit-Code Mapping
+**Rationale:** All commands need to translate `RollbackCompletedException` into the standard exit codes (2 = fully rolled back, 3 = partial rollback) without duplicating a try/catch in every `Execute()` override. A thin abstract base class seals `Execute()` and delegates to `ExecuteCore()` in each concrete command. This keeps exit-code semantics centralized and ensures future commands get correct rollback exit codes automatically.  
+**Alternatives:** Duplicate the try/catch in every command — error-prone and harder to maintain.
+
+
+## Exit Codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Command succeeded |
+| `1` | Command failed — pre-flight check or unexpected error; no writes started |
+| `2` | Command failed mid-write; all writes fully rolled back (safe to retry) |
+| `3` | Command failed mid-write; rollback had errors (manual inspection required) |

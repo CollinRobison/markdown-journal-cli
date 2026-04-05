@@ -149,6 +149,12 @@ public interface IFileSystem
     string GetFileContent(string filePath);
 
     /// <summary>
+    /// Deletes the specified directory.
+    /// </summary>
+    /// <param name="path">The directory path to delete.</param>
+    void DeleteDirectory(string path);
+
+    /// <summary>
     /// Gets the file name without the extension from the specified path.
     /// </summary>
     /// <param name="path">The file path.</param>
