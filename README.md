@@ -472,6 +472,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
+- ⏳ update the `delete entry` command when using the `--clean-refs` flag, after a file has already been deleted, to allow it to still clean up the references to that file link in other files.
 
 **Known Limitations:**
 - Global tool installation not yet configured
