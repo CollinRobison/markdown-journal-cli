@@ -33,11 +33,19 @@ public class AddJournalrcRollbackTests : IDisposable
         _fileSystem = new FaultInjectingFileSystem();
         var buffer = new InMemoryFileBuffer(_fileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
-        _coordinator = new FileTransactionCoordinator(_fileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance);
+        _coordinator = new FileTransactionCoordinator(
+            _fileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
+        );
 
         _console = new TestConsole();
         var rollbackConsole = new TestConsole();
-        _rollbackReporter = new RollbackReporter(rollbackConsole, NullLogger<RollbackReporter>.Instance);
+        _rollbackReporter = new RollbackReporter(
+            rollbackConsole,
+            NullLogger<RollbackReporter>.Instance
+        );
 
         _journalSettings = new JournalSettings
         {
@@ -61,18 +69,38 @@ public class AddJournalrcRollbackTests : IDisposable
             var mockGenerator = new Mock<IJournalConfigGenerator>();
             // All sources return null so fallback GenerateFromDirectory is used
             mockGenerator
-                .Setup(g => g.GenerateFromTableOfContents(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(g =>
+                    g.GenerateFromTableOfContents(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<string>()
+                    )
+                )
                 .Returns((JournalConfigGenerationResult?)null);
             mockGenerator
-                .Setup(g => g.GenerateFromTrackingIndex(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(g =>
+                    g.GenerateFromTrackingIndex(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<string>()
+                    )
+                )
                 .Returns((JournalConfigGenerationResult?)null);
             mockGenerator
-                .Setup(g => g.GenerateFromDirectory(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                .Callback((string dir, string toc, string name) =>
-                {
-                    // Simulate a partial file write before throwing
-                    _fileSystem.CreateFile(dir, ".journalrc", "{}");
-                })
+                .Setup(g =>
+                    g.GenerateFromDirectory(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<string>()
+                    )
+                )
+                .Callback(
+                    (string dir, string toc, string name) =>
+                    {
+                        // Simulate a partial file write before throwing
+                        _fileSystem.CreateFile(dir, ".journalrc", "{}");
+                    }
+                )
                 .Throws(new IOException("Write failed mid-way"));
             generator = mockGenerator.Object;
         }

@@ -7,7 +7,8 @@ using Microsoft.Extensions.Logging;
 /// Rewrites inline markdown link references by matching the final path segment of the URL.
 /// Only inline links ([text](url)) are handled; reference-style links are out of scope.
 /// </summary>
-public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRewriter> logger) : IMarkdownLinkRewriter
+public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRewriter> logger)
+    : IMarkdownLinkRewriter
 {
     private readonly IFileSystem _fileSystem =
         fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -20,10 +21,11 @@ public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRe
         if (string.IsNullOrEmpty(content))
             return content;
 
-        return BuildLinkPattern(oldFileName).Replace(
-            content,
-            m => $"[{m.Groups["text"].Value}]({m.Groups["prefix"].Value}{newFileName})"
-        );
+        return BuildLinkPattern(oldFileName)
+            .Replace(
+                content,
+                m => $"[{m.Groups["text"].Value}]({m.Groups["prefix"].Value}{newFileName})"
+            );
     }
 
     /// <inheritdoc/>
@@ -68,7 +70,12 @@ public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRe
             if (fileName2 != null)
                 _fileSystem.UpdateFile(fileDir, fileName2, updated);
 
-            _logger.LogDebug("Rewrote links in '{RelativePath}': {OldFileName} → {NewFileName}", relativePath, oldFileName, newFileName);
+            _logger.LogDebug(
+                "Rewrote links in '{RelativePath}': {OldFileName} → {NewFileName}",
+                relativePath,
+                oldFileName,
+                newFileName
+            );
             modified.Add(relativePath);
         }
 
@@ -102,7 +109,11 @@ public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRe
             if (fileNameOnly != null)
                 _fileSystem.UpdateFile(fileDir, fileNameOnly, updated);
 
-            _logger.LogDebug("Stripped links in '{RelativePath}': removed links to {FileName}", relativePath, fileName);
+            _logger.LogDebug(
+                "Stripped links in '{RelativePath}': removed links to {FileName}",
+                relativePath,
+                fileName
+            );
             modified.Add(relativePath);
         }
 
@@ -115,6 +126,8 @@ public class MarkdownLinkRewriter(IFileSystem fileSystem, ILogger<MarkdownLinkRe
     // RegexOptions.Compiled — JIT-compiles the pattern on first use; worthwhile since
     // the same pattern is applied across every .md file in the journal directory.
     private static Regex BuildLinkPattern(string fileName) =>
-        new($@"\[(?<text>[^\]]*)\]\((?<prefix>(?:[^)]*/)?)(?<file>{Regex.Escape(fileName)})\)",
-            RegexOptions.Compiled);
+        new(
+            $@"\[(?<text>[^\]]*)\]\((?<prefix>(?:[^)]*/)?)(?<file>{Regex.Escape(fileName)})\)",
+            RegexOptions.Compiled
+        );
 }

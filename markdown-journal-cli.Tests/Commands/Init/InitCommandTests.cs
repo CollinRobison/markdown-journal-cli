@@ -58,9 +58,11 @@ public class InitCommandTests
         _app.Configure(config =>
         {
             config.SetApplicationName(_journalSettings.Value.AppName);
-            config.AddCommand<InitCommand>("init").WithDescription(
-                "Initialises an existing directory as an mdjournal-managed journal."
-            );
+            config
+                .AddCommand<InitCommand>("init")
+                .WithDescription(
+                    "Initialises an existing directory as an mdjournal-managed journal."
+                );
         });
     }
 

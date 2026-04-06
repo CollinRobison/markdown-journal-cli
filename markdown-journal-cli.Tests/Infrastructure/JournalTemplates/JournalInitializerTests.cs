@@ -1,10 +1,10 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;

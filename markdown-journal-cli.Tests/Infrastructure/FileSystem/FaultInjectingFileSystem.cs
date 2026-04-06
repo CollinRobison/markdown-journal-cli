@@ -21,7 +21,11 @@ public enum FaultInjectPoint
 /// </summary>
 public sealed class FaultInjectingFileSystem : TestFileSystem
 {
-    private readonly record struct FaultSpec(FaultInjectPoint Point, int OnCallNumber, Exception Exception);
+    private readonly record struct FaultSpec(
+        FaultInjectPoint Point,
+        int OnCallNumber,
+        Exception Exception
+    );
 
     private readonly List<FaultSpec> _faults = [];
     private readonly Dictionary<FaultInjectPoint, int> _callCounts = [];

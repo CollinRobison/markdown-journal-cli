@@ -1,12 +1,12 @@
 using System;
 using System.ComponentModel;
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
-using markdown_journal_cli.Commands;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging;
@@ -86,14 +86,21 @@ public sealed class UpdateCommand(
                 _journalUpdateService.RenameToc(settings.FilePath, settings.RenameToc);
 
             // For the remaining update operations we need to detect tracked file changes
-            if (all || settings.DateFlag || settings.Tracking || settings.ConfigFlag || settings.TocFlag)
+            if (
+                all
+                || settings.DateFlag
+                || settings.Tracking
+                || settings.ConfigFlag
+                || settings.TocFlag
+            )
             {
                 var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
 
                 // Pre-detect config drift to include in the early-return check
-                var configDrift = (all || settings.ConfigFlag)
-                    ? _journalConfiguration.DetectConfigChanges(settings.FilePath)
-                    : null;
+                var configDrift =
+                    (all || settings.ConfigFlag)
+                        ? _journalConfiguration.DetectConfigChanges(settings.FilePath)
+                        : null;
 
                 var hasAnythingToDo = fileResults.HasChanges || (configDrift?.HasChanges ?? false);
 
@@ -117,7 +124,9 @@ public sealed class UpdateCommand(
                 if (all || settings.ConfigFlag)
                 {
                     // Re-detect after tracking update so same-run additions/deletions are captured
-                    var configSyncResult = _journalConfiguration.DetectConfigChanges(settings.FilePath);
+                    var configSyncResult = _journalConfiguration.DetectConfigChanges(
+                        settings.FilePath
+                    );
                     _journalUpdateService.UpdateJournalConfig(settings.FilePath, configSyncResult);
                 }
 
@@ -203,9 +212,7 @@ public sealed class UpdateCommand(
 
         _dryRunRenderer.Render(report, settings.FilePath);
 
-        _console.MarkupLine(
-            "[dim]No changes were applied. Re-run without --dry-run to apply.[/]"
-        );
+        _console.MarkupLine("[dim]No changes were applied. Re-run without --dry-run to apply.[/]");
         return 0;
     }
 }

@@ -105,11 +105,15 @@ public sealed class JournalFileUpdateService(
         using var tx = _txCoordinator.Begin();
         try
         {
-            var journalrcPath = _fileSystem.CombinePaths(directory, _journalSettings.JournalConfigFileName);
+            var journalrcPath = _fileSystem.CombinePaths(
+                directory,
+                _journalSettings.JournalConfigFileName
+            );
             if (_fileSystem.FileExists(journalrcPath))
                 tx.Track(journalrcPath);
 
-            var tocFile = $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
+            var tocFile =
+                $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
             var tocAbsPath = _fileSystem.CombinePaths(directory, tocFile);
             if (_fileSystem.FileExists(tocAbsPath))
                 tx.Track(tocAbsPath);
@@ -125,7 +129,8 @@ public sealed class JournalFileUpdateService(
 
             if (isRenaming && updateBacklinks)
             {
-                var backlinks = _markdownLinkRewriter.FindFilesWithLinkTo(directory, currentFile) ?? [];
+                var backlinks =
+                    _markdownLinkRewriter.FindFilesWithLinkTo(directory, currentFile) ?? [];
                 foreach (var relative in backlinks)
                     tx.Track(_fileSystem.CombinePaths(directory, relative));
             }
@@ -135,7 +140,8 @@ public sealed class JournalFileUpdateService(
 
             if (isRenaming && updateBacklinks)
             {
-                var backlinkTocFile = _journalSettings.TableOfContentsFileName + FileConstants.MarkdownExtension;
+                var backlinkTocFile =
+                    _journalSettings.TableOfContentsFileName + FileConstants.MarkdownExtension;
                 _markdownLinkRewriter.ReplaceLinksInDirectory(
                     directory,
                     currentFile,
@@ -172,7 +178,13 @@ public sealed class JournalFileUpdateService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update entry", directory, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "update entry",
+                directory,
+                ex
+            );
         }
     }
 
@@ -191,9 +203,7 @@ public sealed class JournalFileUpdateService(
         // Verify the file exists
         if (!_fileSystem.FileExists(filePath))
         {
-            throw new FileNotFoundException(
-                $"File '{normalizedFile}' not found at '{directory}'."
-            );
+            throw new FileNotFoundException($"File '{normalizedFile}' not found at '{directory}'.");
         }
 
         // Verify .journalrc exists
@@ -209,7 +219,11 @@ public sealed class JournalFileUpdateService(
         return normalizedFile;
     }
 
-    private string DetermineTargetFileName(string? newEntryName, string? newHeadings, string currentFile)
+    private string DetermineTargetFileName(
+        string? newEntryName,
+        string? newHeadings,
+        string currentFile
+    )
     {
         var hasNewName = !string.IsNullOrEmpty(newEntryName);
         var hasNewHeadings = !string.IsNullOrEmpty(newHeadings);
@@ -219,7 +233,8 @@ public sealed class JournalFileUpdateService(
             return currentFile;
         }
 
-        var currentFileWithoutExt = _fileSystem.GetFileNameWithoutExtension(currentFile) ?? currentFile;
+        var currentFileWithoutExt =
+            _fileSystem.GetFileNameWithoutExtension(currentFile) ?? currentFile;
         var currentParts = currentFileWithoutExt.Split(
             new[] { _journalSettings.HeadingSeparator },
             StringSplitOptions.RemoveEmptyEntries
@@ -240,16 +255,20 @@ public sealed class JournalFileUpdateService(
         if (hasNewHeadings)
         {
             prefixParts = newHeadings!
-                .Split(new[] { _journalSettings.HeadingSeparator }, StringSplitOptions.RemoveEmptyEntries)
+                .Split(
+                    new[] { _journalSettings.HeadingSeparator },
+                    StringSplitOptions.RemoveEmptyEntries
+                )
                 .Select(p => p.Trim())
                 .Where(p => !string.IsNullOrEmpty(p))
                 .ToArray();
         }
         else
         {
-            prefixParts = currentParts.Length > 1
-                ? currentParts.Take(currentParts.Length - 1).ToArray()
-                : Array.Empty<string>();
+            prefixParts =
+                currentParts.Length > 1
+                    ? currentParts.Take(currentParts.Length - 1).ToArray()
+                    : Array.Empty<string>();
         }
 
         var allParts = prefixParts.Append(entryPart).ToArray();
@@ -297,9 +316,8 @@ public sealed class JournalFileUpdateService(
             _journalSettings.HeadingSeparator,
             StringSplitOptions.RemoveEmptyEntries
         );
-        var entryNameFromFile = filenameParts.Length > 0
-            ? filenameParts[^1]
-            : currentFileWithoutExt;
+        var entryNameFromFile =
+            filenameParts.Length > 0 ? filenameParts[^1] : currentFileWithoutExt;
 
         // Convert underscores to spaces to get the expected display name
         var expectedDisplayFromFile = _entryFormatter.RemoveSpaceSeparators(entryNameFromFile);
@@ -323,7 +341,11 @@ public sealed class JournalFileUpdateService(
         return shouldUpdate;
     }
 
-    private string[] DetermineTargetTopicPath(string? newHeadings, string targetFile, string[] currentTopicPath)
+    private string[] DetermineTargetTopicPath(
+        string? newHeadings,
+        string targetFile,
+        string[] currentTopicPath
+    )
     {
         // If explicit headings provided, use those
         if (!string.IsNullOrEmpty(newHeadings))
@@ -391,7 +413,12 @@ public sealed class JournalFileUpdateService(
         return (isRenaming, isChangingHeadings, isChangingDisplayName);
     }
 
-    private void ApplyFileRename(string directory, string currentFile, string targetFile, bool isRenaming)
+    private void ApplyFileRename(
+        string directory,
+        string currentFile,
+        string targetFile,
+        bool isRenaming
+    )
     {
         if (isRenaming)
         {
@@ -420,7 +447,12 @@ public sealed class JournalFileUpdateService(
         }
     }
 
-    private void ApplyIgnoreStatusChange(string directory, string targetFile, bool ignoreFile, bool unignoreFile)
+    private void ApplyIgnoreStatusChange(
+        string directory,
+        string targetFile,
+        bool ignoreFile,
+        bool unignoreFile
+    )
     {
         if (ignoreFile)
         {
@@ -478,10 +510,19 @@ public sealed class JournalFileUpdateService(
 
         // Update the tracking index: remove old entry, add new with fresh hash
         _fileTracking.RenameFileInIndex(directory, oldFile, newFile);
-        _logger.LogDebug("Tracking index updated for rename from '{OldFile}' to '{NewFile}'", oldFile, newFile);
+        _logger.LogDebug(
+            "Tracking index updated for rename from '{OldFile}' to '{NewFile}'",
+            oldFile,
+            newFile
+        );
     }
 
-    public void UpdateEntryLocation(string directory, string fileName, string[] newTopicPath, string displayName)
+    public void UpdateEntryLocation(
+        string directory,
+        string fileName,
+        string[] newTopicPath,
+        string displayName
+    )
     {
         _logger.LogDebug(
             "Updating entry location for '{FileName}' to topic path: [{TopicPath}]",
@@ -529,11 +570,7 @@ public sealed class JournalFileUpdateService(
 
     public void SetIgnoreStatus(string directory, string fileName, bool ignored)
     {
-        _logger.LogDebug(
-            "Setting ignore status for '{FileName}' to {Ignored}",
-            fileName,
-            ignored
-        );
+        _logger.LogDebug("Setting ignore status for '{FileName}' to {Ignored}", fileName, ignored);
 
         if (ignored)
         {
@@ -545,21 +582,26 @@ public sealed class JournalFileUpdateService(
         else
         {
             // Remove from ignore list
-            _journalConfiguration.Update(directory, config =>
-            {
-                if (config.TableOfContents.IgnoreFiles is null)
+            _journalConfiguration.Update(
+                directory,
+                config =>
                 {
-                    return;
-                }
+                    if (config.TableOfContents.IgnoreFiles is null)
+                    {
+                        return;
+                    }
 
-                config.TableOfContents.IgnoreFiles = config.TableOfContents.IgnoreFiles
-                    .Where(f => !string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase))
-                    .ToArray();
-            });
+                    config.TableOfContents.IgnoreFiles = config
+                        .TableOfContents.IgnoreFiles.Where(f =>
+                            !string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)
+                        )
+                        .ToArray();
+                }
+            );
             _logger.LogDebug("File removed from ignore list");
-            
+
             // Add back to structure
-            // Get the display name from the file 
+            // Get the display name from the file
             var fileNameWithoutExt = _fileSystem.GetFileNameWithoutExtension(fileName) ?? fileName;
             _journalConfiguration.AddEntry(
                 directory,

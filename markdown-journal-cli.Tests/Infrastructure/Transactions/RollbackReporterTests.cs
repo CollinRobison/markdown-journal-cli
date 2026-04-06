@@ -68,10 +68,7 @@ public class RollbackReporterTests
     public void Should_Render_Success_Line_When_Fully_Restored()
     {
         var result = new RollbackResult(
-            Restored: new List<RollbackEntry>
-            {
-                new("/journal/entry.md", RollbackEntryKind.New),
-            },
+            Restored: new List<RollbackEntry> { new("/journal/entry.md", RollbackEntryKind.New) },
             Failed: []
         );
 
@@ -85,14 +82,13 @@ public class RollbackReporterTests
     public void Should_Render_Warning_And_Failed_Files_When_Partial()
     {
         var result = new RollbackResult(
-            Restored: new List<RollbackEntry>
-            {
-                new("/journal/a.md", RollbackEntryKind.Modify),
-            },
+            Restored: new List<RollbackEntry> { new("/journal/a.md", RollbackEntryKind.Modify) },
             Failed: new List<RollbackFailure>
             {
-                new(new RollbackEntry("/journal/b.md", RollbackEntryKind.Modify),
-                    new IOException("Access denied")),
+                new(
+                    new RollbackEntry("/journal/b.md", RollbackEntryKind.Modify),
+                    new IOException("Access denied")
+                ),
             }
         );
 
@@ -119,13 +115,13 @@ public class RollbackReporterTests
     public void Constructor_NullConsole_Throws()
     {
         Should.Throw<ArgumentNullException>(() =>
-            new RollbackReporter(null!, NullLogger<RollbackReporter>.Instance));
+            new RollbackReporter(null!, NullLogger<RollbackReporter>.Instance)
+        );
     }
 
     [Fact]
     public void Constructor_NullLogger_Throws()
     {
-        Should.Throw<ArgumentNullException>(() =>
-            new RollbackReporter(_console, null!));
+        Should.Throw<ArgumentNullException>(() => new RollbackReporter(_console, null!));
     }
 }

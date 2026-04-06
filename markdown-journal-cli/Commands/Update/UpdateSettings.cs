@@ -72,14 +72,16 @@ public class UpdateJournalSettings : UpdateSettings
 public class UpdateEntrySettings : UpdateSettings
 {
     [CommandArgument(0, "<fileName>")]
-    [Description("The name of the file you want to update. this can be with or without the .md file extension.")]
-    public required string FileName {get; set;}
+    [Description(
+        "The name of the file you want to update. this can be with or without the .md file extension."
+    )]
+    public required string FileName { get; set; }
 
     [CommandOption("-n|--name")]
     [Description(
         "The new name for the entry (last filename segment only). "
-        + "Updates both the file name and TOC title when they currently match, unless --title is also specified. "
-        + "To change the heading location use -h|--headings."
+            + "Updates both the file name and TOC title when they currently match, unless --title is also specified. "
+            + "To change the heading location use -h|--headings."
     )]
     public string? EntryName { get; set; }
 
@@ -100,23 +102,28 @@ public class UpdateEntrySettings : UpdateSettings
     public bool IgnoreFile { get; set; }
 
     [CommandOption("--unignore")]
-    [Description("Remove this entry from the ignore list so it will appear in the table of contents.")]
+    [Description(
+        "Remove this entry from the ignore list so it will appear in the table of contents."
+    )]
     public bool UnignoreFile { get; set; }
 
     [CommandOption("--nb|--no-backlinks")]
-    [Description("Skip updating inline link references in other entry files after a rename. Backlink updates are enabled by default.")]
+    [Description(
+        "Skip updating inline link references in other entry files after a rename. Backlink updates are enabled by default."
+    )]
     public bool NoBacklinks { get; set; }
 
     public override ValidationResult Validate()
     {
         if (IgnoreFile && UnignoreFile)
         {
-            return ValidationResult.Error(
-                "Cannot specify both --ignore and --unignore flags."
-            );
+            return ValidationResult.Error("Cannot specify both --ignore and --unignore flags.");
         }
 
-        if (!string.IsNullOrEmpty(EntryName) && !EntryName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' '))
+        if (
+            !string.IsNullOrEmpty(EntryName)
+            && !EntryName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' ')
+        )
         {
             return ValidationResult.Error(
                 "Entry name may only contain letters, digits, underscores, and spaces. Use -h|--headings to set the heading location."
@@ -135,4 +142,3 @@ public class UpdateEntrySettings : UpdateSettings
         return ValidationResult.Success();
     }
 }
-

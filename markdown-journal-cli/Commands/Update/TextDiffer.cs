@@ -3,7 +3,12 @@ using System.Collections.Generic;
 
 namespace markdown_journal_cli.Commands.Update;
 
-internal enum DiffLineType { Unchanged, Added, Removed }
+internal enum DiffLineType
+{
+    Unchanged,
+    Added,
+    Removed,
+}
 
 internal readonly record struct DiffLine(DiffLineType Type, string Content);
 
@@ -21,7 +26,10 @@ internal readonly record struct DiffLine(DiffLineType Type, string Content);
 /// </summary>
 internal static class TextDiffer
 {
-    internal static IReadOnlyList<DiffLine> ComputeDiff(string currentContent, string previewContent)
+    internal static IReadOnlyList<DiffLine> ComputeDiff(
+        string currentContent,
+        string previewContent
+    )
     {
         var currentLines = currentContent.Split('\n');
         var previewLines = previewContent.Split('\n');
@@ -47,9 +55,10 @@ internal static class TextDiffer
         {
             for (var j = 1; j <= previewCount; j++)
             {
-                table[i, j] = currentLines[i - 1] == previewLines[j - 1]
-                    ? table[i - 1, j - 1] + 1          // lines match — extend the LCS
-                    : Math.Max(table[i - 1, j], table[i, j - 1]); // take the longer branch
+                table[i, j] =
+                    currentLines[i - 1] == previewLines[j - 1]
+                        ? table[i - 1, j - 1] + 1 // lines match — extend the LCS
+                        : Math.Max(table[i - 1, j], table[i, j - 1]); // take the longer branch
             }
         }
 
@@ -63,7 +72,8 @@ internal static class TextDiffer
     private static List<DiffLine> BacktrackToDiff(
         string[] currentLines,
         string[] previewLines,
-        int[,] lcsTable)
+        int[,] lcsTable
+    )
     {
         var diff = new List<DiffLine>();
         var currentIdx = currentLines.Length;
@@ -72,7 +82,8 @@ internal static class TextDiffer
         while (currentIdx > 0 || previewIdx > 0)
         {
             var bothRemain = currentIdx > 0 && previewIdx > 0;
-            var linesMatch = bothRemain && currentLines[currentIdx - 1] == previewLines[previewIdx - 1];
+            var linesMatch =
+                bothRemain && currentLines[currentIdx - 1] == previewLines[previewIdx - 1];
 
             if (linesMatch)
             {
@@ -80,7 +91,13 @@ internal static class TextDiffer
                 currentIdx--;
                 previewIdx--;
             }
-            else if (previewIdx > 0 && (currentIdx == 0 || lcsTable[currentIdx, previewIdx - 1] >= lcsTable[currentIdx - 1, previewIdx]))
+            else if (
+                previewIdx > 0
+                && (
+                    currentIdx == 0
+                    || lcsTable[currentIdx, previewIdx - 1] >= lcsTable[currentIdx - 1, previewIdx]
+                )
+            )
             {
                 // Preview has a line that current doesn't — it was added
                 diff.Add(new DiffLine(DiffLineType.Added, previewLines[previewIdx - 1]));

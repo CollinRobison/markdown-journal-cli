@@ -9,7 +9,8 @@ namespace markdown_journal_cli.Infrastructure.Transactions;
 /// </summary>
 public sealed class NoOpFileTransactionCoordinator : IFileTransactionCoordinator
 {
-    public static IFileTransactionCoordinator Instance { get; } = new NoOpFileTransactionCoordinator();
+    public static IFileTransactionCoordinator Instance { get; } =
+        new NoOpFileTransactionCoordinator();
 
     public IFileTransactionScope Begin() => new NoOpFileTransactionScope();
 

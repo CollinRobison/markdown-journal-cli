@@ -1,10 +1,10 @@
 using System;
 using System.ComponentModel;
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Commands;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
@@ -75,7 +75,10 @@ public sealed class AddTableOfContents(
             using var tx = _txCoordinator.Begin();
             try
             {
-                var journalrcPath = _fileSystem.CombinePaths(settings.FilePath, _journalSettings.JournalConfigFileName);
+                var journalrcPath = _fileSystem.CombinePaths(
+                    settings.FilePath,
+                    _journalSettings.JournalConfigFileName
+                );
                 var tocAbsPath = _fileSystem.CombinePaths(settings.FilePath, tocFile);
 
                 if (configCurrent.TableOfContents.File != tocFile)
@@ -106,7 +109,13 @@ public sealed class AddTableOfContents(
             }
             catch (Exception ex)
             {
-                throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "add table of contents", settings.FilePath, ex);
+                throw _rollbackReporter.RollbackAndBuildException(
+                    tx,
+                    _txCoordinator,
+                    "add table of contents",
+                    settings.FilePath,
+                    ex
+                );
             }
         }
         catch (JournalrcNotFoundException ex)
@@ -114,10 +123,15 @@ public sealed class AddTableOfContents(
             _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
         }
-        catch (RollbackCompletedException) { throw; }
+        catch (RollbackCompletedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
+            _console.MarkupLine(
+                $"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}"
+            );
             return 1;
         }
     }

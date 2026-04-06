@@ -83,11 +83,10 @@ public sealed class DryRunRenderer(
     }
 
     private void RenderTocPreview(TocDiffResult diff, string journalPath)
-    {   
+    {
         var config = _journalConfiguration.Read(journalPath);
         var tocFileName =
-            config?.TableOfContents.File
-            ?? $"{_journalSettings.TableOfContentsFileName}.md";
+            config?.TableOfContents.File ?? $"{_journalSettings.TableOfContentsFileName}.md";
 
         if (!diff.HasChanges)
         {
@@ -115,7 +114,7 @@ public sealed class DryRunRenderer(
                 }
             );
         }
-        
+
         var panel = new Panel(new Markup(diffMarkup.ToString().TrimEnd()))
         {
             Border = BoxBorder.Rounded,

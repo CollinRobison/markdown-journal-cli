@@ -7,7 +7,7 @@ This guide covers everything developers need to know to contribute to the Markdo
 ## 🚀 Getting Started
 
 ### Prerequisites
-- .NET 9.0 SDK
+- .NET 10.0 SDK
 - Git
 - Your favorite C# IDE (VS Code, Visual Studio, Rider, etc.)
 

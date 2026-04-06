@@ -29,7 +29,8 @@ public class FileTransactionCoordinatorTests : IDisposable
             _fileSystem,
             new InMemoryFileBuffer(_fileSystem),
             new InMemoryDeletionRollbackStrategy(),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance
+        );
 
         // Fail fast if prior test left ambient state
         Coordinator.Current.ShouldBeNull();

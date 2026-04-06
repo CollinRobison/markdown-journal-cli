@@ -116,7 +116,8 @@ public class InMemoryFileBufferTests
     [Fact]
     public void Commit_ThrowsInvalidOperationException_WhenNothingStaged()
     {
-        Should.Throw<InvalidOperationException>(() => _buffer.Commit(TestPath))
+        Should
+            .Throw<InvalidOperationException>(() => _buffer.Commit(TestPath))
             .Message.ShouldContain(TestPath);
     }
 
@@ -138,7 +139,8 @@ public class InMemoryFileBufferTests
     [Fact]
     public void Restore_ThrowsInvalidOperationException_WhenNoSnapshot()
     {
-        Should.Throw<InvalidOperationException>(() => _buffer.Restore(TestPath))
+        Should
+            .Throw<InvalidOperationException>(() => _buffer.Restore(TestPath))
             .Message.ShouldContain(TestPath);
     }
 

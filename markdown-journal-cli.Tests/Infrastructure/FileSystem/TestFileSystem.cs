@@ -160,7 +160,8 @@ public class TestFileSystem : IFileSystem
         return _files[filePath];
     }
 
-    public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+    public string? GetFileNameWithoutExtension(string? path) =>
+        Path.GetFileNameWithoutExtension(path);
 
     public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 

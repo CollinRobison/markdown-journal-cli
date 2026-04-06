@@ -21,8 +21,13 @@ public class RemoveEntryServiceRollbackTests : ServiceRollbackTestBase
     private RemoveEntryService CreateService(IMarkdownLinkRewriter? linkRewriter = null)
     {
         linkRewriter ??= Mock.Of<IMarkdownLinkRewriter>(r =>
-            r.StripLinksInDirectory(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>?>()) == Array.Empty<string>() &&
-            r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>()) == Array.Empty<string>()
+            r.StripLinksInDirectory(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>?>()
+            ) == Array.Empty<string>()
+            && r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>())
+                == Array.Empty<string>()
         );
 
         return new RemoveEntryService(
@@ -52,8 +57,12 @@ public class RemoveEntryServiceRollbackTests : ServiceRollbackTestBase
         FileSystem.ResetCallCounts();
         var journalrcContent = FileSystem.GetFileContent(JournalrcPath);
 
-        // Force the config update (UpdateFile) to fail 
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Config write failed"));
+        // Force the config update (UpdateFile) to fail
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Config write failed")
+        );
 
         var service = CreateService();
 
@@ -74,7 +83,11 @@ public class RemoveEntryServiceRollbackTests : ServiceRollbackTestBase
         var journalrcContent = FileSystem.GetFileContent(JournalrcPath);
 
         // Force the 2nd UpdateFile (tracking) to fail
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 2, new IOException("Tracking failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            2,
+            new IOException("Tracking failed")
+        );
 
         var service = CreateService();
 
@@ -95,7 +108,11 @@ public class RemoveEntryServiceRollbackTests : ServiceRollbackTestBase
         FileSystem.ResetCallCounts();
 
         // TOC update is the 3rd write (config, tracking, toc)
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 3, new IOException("TOC write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            3,
+            new IOException("TOC write failed")
+        );
 
         var service = CreateService();
 

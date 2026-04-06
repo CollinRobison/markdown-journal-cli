@@ -3,9 +3,9 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.Tracking;
@@ -83,11 +83,7 @@ public class UpdateCommandTests
 
     private UpdateCommand CreateCommand()
     {
-        var renderer = new DryRunRenderer(
-            _console,
-            _journalConfiguration,
-            _journalSettings
-        );
+        var renderer = new DryRunRenderer(_console, _journalConfiguration, _journalSettings);
         return new UpdateCommand(
             _console,
             _fileSystem,
@@ -1385,11 +1381,7 @@ public class UpdateCommandTests
         SetupJournalConfig();
 
         var command = CreateCommand();
-        var settings = new UpdateJournalSettings
-        {
-            FilePath = _testPath,
-            RenameToc = "MyContents",
-        };
+        var settings = new UpdateJournalSettings { FilePath = _testPath, RenameToc = "MyContents" };
 
         // Create the current TOC file so RenameFile doesn't throw
         _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
@@ -1417,11 +1409,7 @@ public class UpdateCommandTests
         _fileSystem.CreateFile(_testPath, "MyContents.md", "# Conflicting file");
 
         var command = CreateCommand();
-        var settings = new UpdateJournalSettings
-        {
-            FilePath = _testPath,
-            RenameToc = "MyContents",
-        };
+        var settings = new UpdateJournalSettings { FilePath = _testPath, RenameToc = "MyContents" };
 
         // Act
         var result = command.Execute(CreateCommandContext(), settings);
@@ -1443,11 +1431,7 @@ public class UpdateCommandTests
         var notePath = Path.Combine(_testPath, "note.md");
 
         _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
-        _fileSystem.CreateFile(
-            _testPath,
-            "note.md",
-            "Created: 01/01/2025\n# Note\nContent."
-        );
+        _fileSystem.CreateFile(_testPath, "note.md", "Created: 01/01/2025\n# Note\nContent.");
         _hashService.SetHash(tocPath, "hash-a-toc");
         _hashService.SetHash(notePath, "hash-a-note");
         _fileTracking.UpdateIndex(_testPath);
@@ -1519,11 +1503,7 @@ public class UpdateCommandTests
         _hashService.SetHash(filePath, "hash-new");
 
         // Run 1: --tracking only (simulates the bug-triggering scenario)
-        var trackingSettings = new UpdateJournalSettings
-        {
-            FilePath = _testPath,
-            Tracking = true,
-        };
+        var trackingSettings = new UpdateJournalSettings { FilePath = _testPath, Tracking = true };
         CreateCommand().Execute(CreateCommandContext(), trackingSettings);
 
         // Verify file is in tracking but NOT in config
@@ -1532,11 +1512,7 @@ public class UpdateCommandTests
         _journalConfiguration.Read(_testPath)!.TableOfContents.Structure.Topics.ShouldBeEmpty();
 
         // Run 2: config update (previously broken — would not add file since it's "known")
-        var configSettings = new UpdateJournalSettings
-        {
-            FilePath = _testPath,
-            ConfigFlag = true,
-        };
+        var configSettings = new UpdateJournalSettings { FilePath = _testPath, ConfigFlag = true };
         var result = CreateCommand().Execute(CreateCommandContext(), configSettings);
 
         // Assert — file must now be in config
@@ -1641,16 +1617,17 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath);
         _journalConfiguration.AddEntry(_testPath, string.Empty, "note.md");
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings
-            {
-                FilePath = _testPath,
-                DryRun = true,
-                Tracking = true,
-                ConfigFlag = true,
-            }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    Tracking = true,
+                    ConfigFlag = true,
+                }
+            );
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("up to date");
@@ -1668,18 +1645,20 @@ public class UpdateCommandTests
         _fileSystem.CreateFile(_testPath, "Learning-Rust.md", "# Rust");
         _hashService.SetHash(filePath, "hash-new");
 
-        var snapshotBefore = _fileSystem.GetAllFiles()
-            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var snapshotBefore = _fileSystem.GetAllFiles().ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+            );
 
         result.ShouldBe(0);
         // All file contents must be identical to before the dry-run
         foreach (var (path, content) in snapshotBefore)
-            _fileSystem.GetAllFiles()[path].ShouldBe(content, $"File '{path}' was unexpectedly modified by --dry-run");
+            _fileSystem
+                .GetAllFiles()[path]
+                .ShouldBe(content, $"File '{path}' was unexpectedly modified by --dry-run");
     }
 
     [Fact]
@@ -1696,10 +1675,11 @@ public class UpdateCommandTests
         _fileSystem.CreateFile(_testPath, "new.md", "# New");
         _hashService.SetHash(filePath, "hash-x");
 
-        CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
-        );
+        CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+            );
 
         _console.Output.ShouldContain("No changes were applied");
     }
@@ -1710,10 +1690,11 @@ public class UpdateCommandTests
         // No tracking file created → should fail with error
         SetupJournalConfig();
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
+            );
 
         result.ShouldBe(1);
         _console.Output.ShouldContain("Error:");
@@ -1727,10 +1708,16 @@ public class UpdateCommandTests
         SetupTrackingFile();
         _fileSystem.DeleteFile(Path.Combine(_testPath, ".journalrc"));
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, ConfigFlag = true }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    ConfigFlag = true,
+                }
+            );
 
         result.ShouldBe(1);
         _console.Output.ShouldContain("Error:");
@@ -1749,10 +1736,16 @@ public class UpdateCommandTests
         _fileSystem.CreateFile(_testPath, "new-entry.md", "# New");
         _hashService.SetHash(filePath, "hash-new");
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, Tracking = true }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    Tracking = true,
+                }
+            );
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("Tracking Changes");
@@ -1769,10 +1762,16 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath); // file IS tracked
 
         // Config has no entries → drift exists
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, ConfigFlag = true }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    ConfigFlag = true,
+                }
+            );
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("Config Changes");
@@ -1791,10 +1790,16 @@ public class UpdateCommandTests
         // Current TOC is stale (missing the new entry)
         _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# Table of Contents\n");
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings { FilePath = _testPath, DryRun = true, TocFlag = true }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    TocFlag = true,
+                }
+            );
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("Table of Contents Changes");
@@ -1813,16 +1818,17 @@ public class UpdateCommandTests
         _fileTracking.UpdateIndex(_testPath); // entry.md added to index with "old-hash"
         _hashService.SetHash(filePath, "new-hash"); // simulate file modification
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings
-            {
-                FilePath = _testPath,
-                DryRun = true,
-                Tracking = true,
-                ConfigFlag = true,
-            }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    Tracking = true,
+                    ConfigFlag = true,
+                }
+            );
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("Tracking Changes");
@@ -1837,15 +1843,16 @@ public class UpdateCommandTests
         _fileSystem.CreateFile(_testPath, "1a-TableOfContents.md", "# TOC");
         _fileTracking.UpdateFileInIndex(_testPath, "1a-TableOfContents.md");
 
-        var result = CreateCommand().Execute(
-            CreateCommandContext(),
-            new UpdateJournalSettings
-            {
-                FilePath = _testPath,
-                DryRun = true,
-                RenameToc = "MyNotes",
-            }
-        );
+        var result = CreateCommand()
+            .Execute(
+                CreateCommandContext(),
+                new UpdateJournalSettings
+                {
+                    FilePath = _testPath,
+                    DryRun = true,
+                    RenameToc = "MyNotes",
+                }
+            );
 
         result.ShouldBe(0);
         _console.Output.ShouldContain("TOC Rename Preview");
@@ -1868,20 +1875,30 @@ public class UpdateCommandTests
 
         var mockService = new Mock<IJournalUpdateService>();
         mockService
-            .Setup(s => s.BuildDryRunReport(
-                It.IsAny<string>(),
-                It.IsAny<ChangeDetectionResult?>(),
-                It.IsAny<JournalConfigSyncResult?>(),
-                It.IsAny<bool>(),
-                It.IsAny<string?>()))
-            .Returns(new UpdateDryRunReport
-            {
-                TrackingChanges = new ChangeDetectionResult { AddedFiles = ["file.md"] },
-            });
+            .Setup(s =>
+                s.BuildDryRunReport(
+                    It.IsAny<string>(),
+                    It.IsAny<ChangeDetectionResult?>(),
+                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string?>()
+                )
+            )
+            .Returns(
+                new UpdateDryRunReport
+                {
+                    TrackingChanges = new ChangeDetectionResult { AddedFiles = ["file.md"] },
+                }
+            );
 
         var command = new UpdateCommand(
-            _console, _fileSystem, mockService.Object, _fileTracking,
-            _journalSettings, _journalConfiguration, NullLogger<UpdateCommand>.Instance,
+            _console,
+            _fileSystem,
+            mockService.Object,
+            _fileTracking,
+            _journalSettings,
+            _journalConfiguration,
+            NullLogger<UpdateCommand>.Instance,
             new DryRunRenderer(_console, _journalConfiguration, _journalSettings),
             NoOpFileTransactionCoordinator.Instance
         );
@@ -1891,10 +1908,19 @@ public class UpdateCommandTests
             new UpdateJournalSettings { FilePath = _testPath, DryRun = true }
         );
 
-        mockService.Verify(s => s.UpdateLastEditedDatesAndTracking(
-            It.IsAny<string>(), It.IsAny<ChangeDetectionResult>(), It.IsAny<bool>()), Times.Never);
-        mockService.Verify(s => s.UpdateJournalConfig(
-            It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()), Times.Never);
+        mockService.Verify(
+            s =>
+                s.UpdateLastEditedDatesAndTracking(
+                    It.IsAny<string>(),
+                    It.IsAny<ChangeDetectionResult>(),
+                    It.IsAny<bool>()
+                ),
+            Times.Never
+        );
+        mockService.Verify(
+            s => s.UpdateJournalConfig(It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()),
+            Times.Never
+        );
         mockService.Verify(s => s.UpdateTableOfContents(It.IsAny<string>()), Times.Never);
         mockService.Verify(s => s.RenameToc(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }

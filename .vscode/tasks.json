@@ -38,7 +38,7 @@
     {
       "label": "rollback-test: create-journal",
       "type": "shell",
-      "command": "dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll' new RollbackTest --path /tmp/rollback-test && dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll' add --path /tmp/rollback-test/RollbackTest entry Alpha && dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net9.0/markdown-journal-cli.dll' add --path /tmp/rollback-test/RollbackTest entry Beta && echo '✓ Journal ready  →  Alpha.md  Beta.md  .journalrc  .mdjournal  1a-TableOfContents.md'",
+      "command": "dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net10.0/markdown-journal-cli.dll' new RollbackTest --path /tmp/rollback-test && dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net10.0/markdown-journal-cli.dll' add --path /tmp/rollback-test/RollbackTest entry Alpha && dotnet '${workspaceFolder}/markdown-journal-cli/bin/Debug/net10.0/markdown-journal-cli.dll' add --path /tmp/rollback-test/RollbackTest entry Beta && echo '✓ Journal ready  →  Alpha.md  Beta.md  .journalrc  .mdjournal  1a-TableOfContents.md'",
       "presentation": { "reveal": "always", "panel": "dedicated", "group": "rollback-setup" }
     },
 

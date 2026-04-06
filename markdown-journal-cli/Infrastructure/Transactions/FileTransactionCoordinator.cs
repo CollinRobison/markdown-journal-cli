@@ -16,10 +16,14 @@ public sealed class FileTransactionCoordinator(
     ILoggerFactory loggerFactory
 ) : IFileTransactionCoordinator
 {
-    private readonly IFileSystem _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-    private readonly IInMemoryFileBuffer _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
-    private readonly IDeletionRollbackStrategy _deletionStrategy = deletionStrategy ?? throw new ArgumentNullException(nameof(deletionStrategy));
-    private readonly ILoggerFactory _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+    private readonly IInMemoryFileBuffer _buffer =
+        buffer ?? throw new ArgumentNullException(nameof(buffer));
+    private readonly IDeletionRollbackStrategy _deletionStrategy =
+        deletionStrategy ?? throw new ArgumentNullException(nameof(deletionStrategy));
+    private readonly ILoggerFactory _loggerFactory =
+        loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
     [ThreadStatic]
     private static IFileTransactionScope? _current;

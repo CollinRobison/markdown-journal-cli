@@ -110,7 +110,10 @@ public sealed class JournalEntryService(
 
             if (!ignoreFile)
             {
-                var tocPath = _fileSystem.CombinePaths(filePath, $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}");
+                var tocPath = _fileSystem.CombinePaths(
+                    filePath,
+                    $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}"
+                );
                 if (_fileSystem.FileExists(tocPath))
                     tx.Track(tocPath);
                 else
@@ -144,8 +147,14 @@ public sealed class JournalEntryService(
 
             if (!ignoreFile)
             {
-                _logger.LogDebug("Updating table of contents for journal at '{FilePath}'", filePath);
-                _tableOfContentsService.UpdateTableOfContents(filePath, lastEditedDate: DateTime.Now);
+                _logger.LogDebug(
+                    "Updating table of contents for journal at '{FilePath}'",
+                    filePath
+                );
+                _tableOfContentsService.UpdateTableOfContents(
+                    filePath,
+                    lastEditedDate: DateTime.Now
+                );
             }
 
             tx.Commit();
@@ -158,7 +167,13 @@ public sealed class JournalEntryService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "add journal entry", filePath, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "add journal entry",
+                filePath,
+                ex
+            );
         }
     }
 

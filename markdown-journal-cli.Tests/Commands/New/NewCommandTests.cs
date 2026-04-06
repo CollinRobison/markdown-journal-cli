@@ -2,10 +2,10 @@ using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
@@ -892,7 +892,10 @@ public class NewCommandTests
     [Theory]
     [InlineData("Journal With Spaces", "cannot contain spaces")]
     [InlineData("Invalid/Name", "invalid characters")]
-    public void ValidationFailure_AlwaysReturnsNonZeroExitCode(string invalidName, string expectedMessage)
+    public void ValidationFailure_AlwaysReturnsNonZeroExitCode(
+        string invalidName,
+        string expectedMessage
+    )
     {
         // CommandAppTester returns the raw Spectre value (-1); Program.Main normalises it to 1.
         // We assert ShouldNotBe(0) here to keep the test independent of the wrapper layer.
@@ -960,7 +963,8 @@ public class NewCommandTests
             throw new NotImplementedException();
         }
 
-        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+        public string? GetFileNameWithoutExtension(string? path) =>
+            Path.GetFileNameWithoutExtension(path);
 
         public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 
@@ -1353,7 +1357,8 @@ public class NewCommandTests
             throw new NotImplementedException();
         }
 
-        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+        public string? GetFileNameWithoutExtension(string? path) =>
+            Path.GetFileNameWithoutExtension(path);
 
         public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 
@@ -1389,7 +1394,10 @@ public class NewCommandTests
         // depend on ILogger<T> can resolve correctly inside the TypeRegistrar's ServiceProvider.
         registrar.RegisterInstance(typeof(ILoggerFactory), NullLoggerFactory.Instance);
         registrar.Register(typeof(ILogger<>), typeof(Logger<>));
-        registrar.RegisterInstance(typeof(IFileTransactionCoordinator), NoOpFileTransactionCoordinator.Instance);
+        registrar.RegisterInstance(
+            typeof(IFileTransactionCoordinator),
+            NoOpFileTransactionCoordinator.Instance
+        );
         registrar.RegisterInstance(typeof(IRollbackReporter), NoOpRollbackReporter.Instance);
 
         foreach (var service in services)

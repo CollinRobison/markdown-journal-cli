@@ -42,7 +42,8 @@ public static class RollbackReporterExtensions
         IFileTransactionCoordinator coordinator,
         string operationDescription,
         string journalRoot,
-        Exception ex)
+        Exception ex
+    )
     {
         if (coordinator is NoOpFileTransactionCoordinator)
         {
@@ -56,4 +57,3 @@ public static class RollbackReporterExtensions
         return new RollbackCompletedException(result, ex);
     }
 }
-

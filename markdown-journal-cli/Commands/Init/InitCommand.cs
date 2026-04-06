@@ -1,9 +1,9 @@
 using System.ComponentModel;
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Services;
-using markdown_journal_cli.Commands;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -70,10 +70,15 @@ public sealed class InitCommand(
             _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
         }
-        catch (RollbackCompletedException) { throw; }
+        catch (RollbackCompletedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
+            _console.MarkupLine(
+                $"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}"
+            );
             return 1;
         }
     }
