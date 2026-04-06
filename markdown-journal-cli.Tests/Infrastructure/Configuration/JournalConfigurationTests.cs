@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+
 namespace markdown_journal_cli.Tests.Infrastructure.Configuration;
 
 /// <summary>
@@ -2753,10 +2754,7 @@ public class JournalConfigurationTests
         );
 
         // Act
-        var (entry, topicPath) = _journalConfiguration.FindEntry(
-            _testDirectory,
-            "nonexistent.md"
-        );
+        var (entry, topicPath) = _journalConfiguration.FindEntry(_testDirectory, "nonexistent.md");
 
         // Assert
         entry.ShouldBeNull();
@@ -2796,11 +2794,7 @@ public class JournalConfigurationTests
         );
 
         // Act
-        _journalConfiguration.UpdateFileReferences(
-            _testDirectory,
-            "old-name.md",
-            "new-name.md"
-        );
+        _journalConfiguration.UpdateFileReferences(_testDirectory, "old-name.md", "new-name.md");
 
         // Assert
         var updated = _journalConfiguration.Read(_testDirectory);
@@ -3447,4 +3441,3 @@ public class JournalConfigurationTests
 
     #endregion
 }
-

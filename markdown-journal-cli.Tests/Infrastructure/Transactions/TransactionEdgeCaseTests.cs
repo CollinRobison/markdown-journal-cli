@@ -30,7 +30,8 @@ public class TransactionEdgeCaseTests : IDisposable
             _fileSystem,
             new InMemoryFileBuffer(_fileSystem),
             new InMemoryDeletionRollbackStrategy(),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance
+        );
     }
 
     public void Dispose() => _coordinator.Current?.Rollback();
@@ -81,7 +82,11 @@ public class TransactionEdgeCaseTests : IDisposable
     {
         var buffer = new InMemoryFileBuffer(_fileSystem);
         var coord = new FileTransactionCoordinator(
-            _fileSystem, buffer, new InMemoryDeletionRollbackStrategy(), NullLoggerFactory.Instance);
+            _fileSystem,
+            buffer,
+            new InMemoryDeletionRollbackStrategy(),
+            NullLoggerFactory.Instance
+        );
 
         // Manually seed the buffer (simulates dry-run staging or prior use)
         buffer.Snapshot(FileA);
@@ -100,7 +105,11 @@ public class TransactionEdgeCaseTests : IDisposable
     {
         var buffer = new InMemoryFileBuffer(_fileSystem);
         var coord = new FileTransactionCoordinator(
-            _fileSystem, buffer, new InMemoryDeletionRollbackStrategy(), NullLoggerFactory.Instance);
+            _fileSystem,
+            buffer,
+            new InMemoryDeletionRollbackStrategy(),
+            NullLoggerFactory.Instance
+        );
 
         var tx1 = coord.Begin();
         tx1.Track(FileA);
@@ -146,8 +155,11 @@ public class TransactionEdgeCaseTests : IDisposable
 
         var throwingFs = new ThrowOnRenameFileSystem(_fileSystem);
         var coord = new FileTransactionCoordinator(
-            throwingFs, new InMemoryFileBuffer(throwingFs),
-            new InMemoryDeletionRollbackStrategy(), NullLoggerFactory.Instance);
+            throwingFs,
+            new InMemoryFileBuffer(throwingFs),
+            new InMemoryDeletionRollbackStrategy(),
+            NullLoggerFactory.Instance
+        );
 
         var tx = coord.Begin();
         tx.TrackRename(FileA, fileC);
@@ -163,22 +175,47 @@ public class TransactionEdgeCaseTests : IDisposable
     private sealed class ThrowOnRenameFileSystem(TestFileSystem inner) : IFileSystem
     {
         private readonly TestFileSystem _inner = inner;
+
         public bool DirectoryExists(string path) => _inner.DirectoryExists(path);
+
         public bool FileExists(string path) => _inner.FileExists(path);
+
         public void CreateDirectory(string path) => _inner.CreateDirectory(path);
+
         public void DeleteDirectory(string path) => _inner.DeleteDirectory(path);
+
         public string CombinePaths(params string[] paths) => Path.Combine(paths);
-        public void CreateMarkdownFile(string path, string fileName, string body) => _inner.CreateMarkdownFile(path, fileName, body);
-        public void CreateFile(string path, string fileName, string body) => _inner.CreateFile(path, fileName, body);
-        public void UpdateFile(string path, string fileName, string body) => _inner.UpdateFile(path, fileName, body);
+
+        public void CreateMarkdownFile(string path, string fileName, string body) =>
+            _inner.CreateMarkdownFile(path, fileName, body);
+
+        public void CreateFile(string path, string fileName, string body) =>
+            _inner.CreateFile(path, fileName, body);
+
+        public void UpdateFile(string path, string fileName, string body) =>
+            _inner.UpdateFile(path, fileName, body);
+
         public void DeleteFile(string filePath) => _inner.DeleteFile(filePath);
-        public void RenameFile(string oldPath, string newPath) => throw new IOException("Cannot rename");
-        public string GetFileContent(string filePath) => ((IFileSystem)_inner).GetFileContent(filePath);
-        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+        public void RenameFile(string oldPath, string newPath) =>
+            throw new IOException("Cannot rename");
+
+        public string GetFileContent(string filePath) =>
+            ((IFileSystem)_inner).GetFileContent(filePath);
+
+        public string? GetFileNameWithoutExtension(string? path) =>
+            Path.GetFileNameWithoutExtension(path);
+
         public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
         public string? GetFileName(string? path) => Path.GetFileName(path);
+
         public string GetFullPath(string path) => Path.GetFullPath(path);
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => _inner.GetFiles(path, searchPattern, searchOption);
-        public IReadOnlyList<string> GetMarkdownFiles(string directory) => _inner.GetMarkdownFiles(directory);
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) =>
+            _inner.GetFiles(path, searchPattern, searchOption);
+
+        public IReadOnlyList<string> GetMarkdownFiles(string directory) =>
+            _inner.GetMarkdownFiles(directory);
     }
 }

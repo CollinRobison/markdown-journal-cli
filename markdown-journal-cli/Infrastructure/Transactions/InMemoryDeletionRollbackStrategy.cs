@@ -25,8 +25,11 @@ public sealed class InMemoryDeletionRollbackStrategy : IDeletionRollbackStrategy
     public void Restore(IFileSystem fileSystem, string absolutePath)
     {
         var content = _snapshots[absolutePath];
-        var directory = Path.GetDirectoryName(absolutePath)
-            ?? throw new InvalidOperationException($"Cannot determine directory for '{absolutePath}'.");
+        var directory =
+            Path.GetDirectoryName(absolutePath)
+            ?? throw new InvalidOperationException(
+                $"Cannot determine directory for '{absolutePath}'."
+            );
         var fileName = Path.GetFileName(absolutePath);
         fileSystem.CreateFile(directory, fileName, content);
     }

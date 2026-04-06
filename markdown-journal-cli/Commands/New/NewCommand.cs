@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Services;
-using markdown_journal_cli.Commands;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -65,10 +65,14 @@ public sealed class NewCommand(
             }
             // Reject characters that are valid on the filesystem but break markdown link syntax
             // or are interpreted as shell globs (e.g. my[journal] expands in bash).
-            if (!string.IsNullOrWhiteSpace(JournalName)
-                && JournalName.IndexOfAny(['[', ']', '(', ')']) >= 0)
+            if (
+                !string.IsNullOrWhiteSpace(JournalName)
+                && JournalName.IndexOfAny(['[', ']', '(', ')']) >= 0
+            )
             {
-                return ValidationResult.Error("Journal name cannot contain markdown link characters: [ ] ( )");
+                return ValidationResult.Error(
+                    "Journal name cannot contain markdown link characters: [ ] ( )"
+                );
             }
 
             return ValidationResult.Success();
@@ -103,10 +107,15 @@ public sealed class NewCommand(
             _console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
             return 1;
         }
-        catch (RollbackCompletedException) { throw; }
+        catch (RollbackCompletedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}");
+            _console.MarkupLine(
+                $"[red]Error:[/] An unexpected error occurred: {ex.Message.EscapeMarkup()}"
+            );
             return 1;
         }
     }

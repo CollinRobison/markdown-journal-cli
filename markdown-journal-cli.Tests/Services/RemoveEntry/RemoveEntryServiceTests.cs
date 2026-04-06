@@ -2,8 +2,8 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Services.RemoveEntry;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,12 +42,14 @@ public class RemoveEntryServiceTests
         _mockTocService = new Mock<ITableOfContentsService>();
         _mockLinkRewriter = new Mock<IMarkdownLinkRewriter>();
 
-        _journalSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            TableOfContentsFileName = "1a-TableOfContents",
-        });
+        _journalSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+            }
+        );
 
         SetupDefaultMockBehaviors();
 
@@ -75,18 +77,26 @@ public class RemoveEntryServiceTests
 
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalPath))
-            .Returns(new JournalConfig
-            {
-                TableOfContents = new TableOfContents
+            .Returns(
+                new JournalConfig
                 {
-                    File = "1a-TableOfContents.md",
-                    Structure = new Structure { Topics = [] },
-                    RootEntries = [],
+                    TableOfContents = new TableOfContents
+                    {
+                        File = "1a-TableOfContents.md",
+                        Structure = new Structure { Topics = [] },
+                        RootEntries = [],
+                    },
                 }
-            });
+            );
 
         _mockLinkRewriter
-            .Setup(r => r.StripLinksInDirectory(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>?>()))
+            .Setup(r =>
+                r.StripLinksInDirectory(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyCollection<string>?>()
+                )
+            )
             .Returns(Array.Empty<string>());
     }
 
@@ -103,8 +113,14 @@ public class RemoveEntryServiceTests
         // Assert
         result.ShouldBeEmpty();
         _mockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
-        _mockJournalConfiguration.Verify(jc => jc.RemoveEntry(JournalPath, EntryFileName), Times.Once);
-        _mockFileTracking.Verify(ft => ft.RemoveFileFromIndex(JournalPath, EntryFileName), Times.Once);
+        _mockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(JournalPath, EntryFileName),
+            Times.Once
+        );
+        _mockFileTracking.Verify(
+            ft => ft.RemoveFileFromIndex(JournalPath, EntryFileName),
+            Times.Once
+        );
         _mockTocService.Verify(
             t => t.UpdateTableOfContents(JournalPath, null, It.IsAny<DateTime?>()),
             Times.Once
@@ -150,7 +166,12 @@ public class RemoveEntryServiceTests
 
         // Assert
         _mockLinkRewriter.Verify(
-            r => r.StripLinksInDirectory(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>?>()),
+            r =>
+                r.StripLinksInDirectory(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyCollection<string>?>()
+                ),
             Times.Never
         );
     }
@@ -233,15 +254,17 @@ public class RemoveEntryServiceTests
         // Arrange — user renamed the TOC to my-toc.md via update journal --rename-toc
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalPath))
-            .Returns(new JournalConfig
-            {
-                TableOfContents = new TableOfContents
+            .Returns(
+                new JournalConfig
                 {
-                    File = "my-toc.md",
-                    Structure = new Structure { Topics = [] },
-                    RootEntries = [],
+                    TableOfContents = new TableOfContents
+                    {
+                        File = "my-toc.md",
+                        Structure = new Structure { Topics = [] },
+                        RootEntries = [],
+                    },
                 }
-            });
+            );
 
         // Act & Assert
         Should.Throw<ProtectedJournalFileException>(() =>
@@ -279,7 +302,10 @@ public class RemoveEntryServiceTests
 
         // Assert — delete and config/tracking calls use normalised name
         _mockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
-        _mockJournalConfiguration.Verify(jc => jc.RemoveEntry(JournalPath, EntryFileName), Times.Once);
+        _mockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(JournalPath, EntryFileName),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -295,7 +321,10 @@ public class RemoveEntryServiceTests
 
         // Assert — no double extension
         _mockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
-        _mockJournalConfiguration.Verify(jc => jc.RemoveEntry(JournalPath, EntryFileName), Times.Once);
+        _mockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(JournalPath, EntryFileName),
+            Times.Once
+        );
     }
 
     // ------------------------------------------------------------------

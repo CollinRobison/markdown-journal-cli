@@ -148,7 +148,10 @@ public class RemoveEntryCommandTests
 
         // Assert
         result.ShouldBe(0);
-        _mockRemoveEntryService.Verify(s => s.RemoveEntry(TestPath, TestFileName, true), Times.Once);
+        _mockRemoveEntryService.Verify(
+            s => s.RemoveEntry(TestPath, TestFileName, true),
+            Times.Once
+        );
         _console.Output.ShouldContain("Stripped links: other_entry.md");
         _console.Output.ShouldContain("Stripped links: another.md");
         _console.Output.ShouldContain("Cleaned dead references in 2 file(s).");
@@ -234,7 +237,11 @@ public class RemoveEntryCommandTests
         // Arrange
         _mockRemoveEntryService
             .Setup(s => s.RemoveEntry(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Throws(new FileNotFoundException($"Entry file '{TestFileNameMd}' not found at '{TestPath}'."));
+            .Throws(
+                new FileNotFoundException(
+                    $"Entry file '{TestFileNameMd}' not found at '{TestPath}'."
+                )
+            );
 
         var settings = new RemoveEntrySettings
         {
@@ -304,7 +311,11 @@ public class RemoveEntryCommandTests
         // the user is never asked to confirm an action that was never possible.
         _mockRemoveEntryService
             .Setup(s => s.ValidatePreconditions(TestPath, TestFileName))
-            .Throws(new FileNotFoundException($"Entry file '{TestFileName}.md' not found at '{TestPath}'."));
+            .Throws(
+                new FileNotFoundException(
+                    $"Entry file '{TestFileName}.md' not found at '{TestPath}'."
+                )
+            );
 
         var settings = new RemoveEntrySettings
         {

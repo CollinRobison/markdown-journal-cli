@@ -3,10 +3,10 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
-using markdown_journal_cli.Tests.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
+using markdown_journal_cli.Tests.Infrastructure.Tracking;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -43,29 +43,47 @@ public abstract class ServiceRollbackTestBase : IDisposable
         FileSystem = new FaultInjectingFileSystem();
         Buffer = new InMemoryFileBuffer(FileSystem);
         DeletionStrategy = new InMemoryDeletionRollbackStrategy();
-        Coordinator = new FileTransactionCoordinator(FileSystem, Buffer, DeletionStrategy, NullLoggerFactory.Instance);
+        Coordinator = new FileTransactionCoordinator(
+            FileSystem,
+            Buffer,
+            DeletionStrategy,
+            NullLoggerFactory.Instance
+        );
 
         Console = new TestConsole();
         RollbackConsole = new TestConsole();
-        RollbackReporter = new RollbackReporter(RollbackConsole, NullLogger<RollbackReporter>.Instance);
+        RollbackReporter = new RollbackReporter(
+            RollbackConsole,
+            NullLogger<RollbackReporter>.Instance
+        );
 
-        JournalSettings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            TableOfContentsFileName = "1a-TableOfContents",
-            TableOfContentsTitle = "Table of Contents",
-            DateFormat = "MM/dd/yyyy",
-            TitleSpaceSeparator = "_",
-            HeadingSeparator = "-",
-        });
+        JournalSettings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                DateFormat = "MM/dd/yyyy",
+                TitleSpaceSeparator = "_",
+                HeadingSeparator = "-",
+            }
+        );
 
         var hashService = new TestHashService();
         FileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
         JournalConfiguration = new JournalConfiguration(
-            FileSystem, JournalSettings, NullLogger<JournalConfiguration>.Instance, FileTracking);
+            FileSystem,
+            JournalSettings,
+            NullLogger<JournalConfiguration>.Instance,
+            FileTracking
+        );
         TableOfContentsService = new TableOfContentsService(
-            FileSystem, JournalConfiguration, JournalSettings, NullLogger<TableOfContentsService>.Instance);
+            FileSystem,
+            JournalConfiguration,
+            JournalSettings,
+            NullLogger<TableOfContentsService>.Instance
+        );
         EntryFormatter = new EntryFormatterService(JournalSettings);
 
         SetupJournal();

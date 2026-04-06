@@ -49,7 +49,7 @@ You never need to edit `.journalrc` or `.mdjournal` by hand — the CLI keeps th
 ## Installation
 
 ### Prerequisites
-- .NET 9.0 or later
+- .NET 10.0 or later
 
 ### Build from Source
 ```bash

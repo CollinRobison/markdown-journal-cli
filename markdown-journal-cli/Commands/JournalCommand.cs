@@ -10,7 +10,11 @@ namespace markdown_journal_cli.Commands;
 public abstract class JournalCommand<TSettings> : Command<TSettings>
     where TSettings : CommandSettings
 {
-    public sealed override int Execute(CommandContext context, TSettings settings)
+    protected sealed override int Execute(
+        CommandContext context,
+        TSettings settings,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
@@ -21,6 +25,14 @@ public abstract class JournalCommand<TSettings> : Command<TSettings>
             return ex.Result.IsFullyRestored ? 2 : 3;
         }
     }
+
+    /// <summary>
+    /// Public entry point for direct invocation (e.g., unit tests).
+    /// Delegates to <see cref="Execute(CommandContext, TSettings, CancellationToken)"/>
+    /// with <see cref="CancellationToken.None"/>.
+    /// </summary>
+    public int Execute(CommandContext context, TSettings settings) =>
+        Execute(context, settings, CancellationToken.None);
 
     protected abstract int ExecuteCore(CommandContext context, TSettings settings);
 }

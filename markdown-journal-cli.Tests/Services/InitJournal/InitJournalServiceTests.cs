@@ -1,8 +1,8 @@
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -108,7 +108,12 @@ public class InitJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName, null);
 
         _mockTableOfContentsService.Verify(
-            t => t.UpdateTableOfContents(JournalDirectory, It.IsAny<DateTime?>(), It.IsAny<DateTime?>()),
+            t =>
+                t.UpdateTableOfContents(
+                    JournalDirectory,
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
             Times.Once
         );
     }
@@ -230,7 +235,12 @@ public class InitJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName, null);
 
         _mockFileSystem.Verify(
-            f => f.CreateMarkdownFile(It.IsAny<string>(), It.Is<string>(n => n.Contains("Intro")), It.IsAny<string>()),
+            f =>
+                f.CreateMarkdownFile(
+                    It.IsAny<string>(),
+                    It.Is<string>(n => n.Contains("Intro")),
+                    It.IsAny<string>()
+                ),
             Times.Never
         );
     }
@@ -243,7 +253,12 @@ public class InitJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName, null);
 
         _mockFileSystem.Verify(
-            f => f.CreateMarkdownFile(It.IsAny<string>(), It.Is<string>(n => n.Contains("Template")), It.IsAny<string>()),
+            f =>
+                f.CreateMarkdownFile(
+                    It.IsAny<string>(),
+                    It.Is<string>(n => n.Contains("Template")),
+                    It.IsAny<string>()
+                ),
             Times.Never
         );
     }
@@ -256,7 +271,12 @@ public class InitJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName, null);
 
         _mockFileSystem.Verify(
-            f => f.CreateMarkdownFile(It.IsAny<string>(), It.Is<string>(n => n.Contains("Journals")), It.IsAny<string>()),
+            f =>
+                f.CreateMarkdownFile(
+                    It.IsAny<string>(),
+                    It.Is<string>(n => n.Contains("Journals")),
+                    It.IsAny<string>()
+                ),
             Times.Never
         );
     }

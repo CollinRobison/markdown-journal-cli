@@ -58,7 +58,11 @@ public class InitJournalServiceRollbackTests : ServiceRollbackTestBase
         // UpdateFile #1 = FileTracking.UpdateIndex → .md-journal
         // CreateFile #1 = JournalConfiguration.Create → .journalrc
         // UpdateFile #2 = TableOfContentsService → TOC (inject fault here)
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 2, new IOException("TOC write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            2,
+            new IOException("TOC write failed")
+        );
 
         var service = CreateService();
 
@@ -78,7 +82,11 @@ public class InitJournalServiceRollbackTests : ServiceRollbackTestBase
         // CreateFile #1 = JournalConfiguration.Create → .journalrc
         // UpdateFile #2 = TableOfContentsService → TOC
         // UpdateFile #3 = FileTracking.UpdateIndex (2nd call) — inject fault here
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 3, new IOException("2nd tracking update failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            3,
+            new IOException("2nd tracking update failed")
+        );
 
         var service = CreateService();
 

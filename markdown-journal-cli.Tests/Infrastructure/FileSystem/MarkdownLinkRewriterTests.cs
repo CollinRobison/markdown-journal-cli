@@ -21,7 +21,10 @@ public class MarkdownLinkRewriterTests
     public MarkdownLinkRewriterTests()
     {
         _fileSystem = new TestFileSystem();
-        _rewriter = new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
+        _rewriter = new MarkdownLinkRewriter(
+            _fileSystem,
+            NullLogger<MarkdownLinkRewriter>.Instance
+        );
     }
 
     // ------------------------------------------------------------------
@@ -105,10 +108,8 @@ public class MarkdownLinkRewriterTests
     {
         const string journalPath = "/journal";
         _fileSystem.CreateDirectory(journalPath);
-        _fileSystem.CreateFile(journalPath, "intro.md",
-            $"Welcome. See [TOC]({OldFileName}).");
-        _fileSystem.CreateFile(journalPath, "chapter-1.md",
-            "No link here.");
+        _fileSystem.CreateFile(journalPath, "intro.md", $"Welcome. See [TOC]({OldFileName}).");
+        _fileSystem.CreateFile(journalPath, "chapter-1.md", "No link here.");
 
         var results = _rewriter.FindFilesWithLinkTo(journalPath, OldFileName);
 
@@ -144,12 +145,9 @@ public class MarkdownLinkRewriterTests
     {
         const string journalPath = "/journal";
         _fileSystem.CreateDirectory(journalPath);
-        _fileSystem.CreateFile(journalPath, "intro.md",
-            $"[TOC]({OldFileName})");
-        _fileSystem.CreateFile(journalPath, "chapter-1.md",
-            $"Back to [TOC]({OldFileName})");
-        _fileSystem.CreateFile(journalPath, "other.md",
-            "No link.");
+        _fileSystem.CreateFile(journalPath, "intro.md", $"[TOC]({OldFileName})");
+        _fileSystem.CreateFile(journalPath, "chapter-1.md", $"Back to [TOC]({OldFileName})");
+        _fileSystem.CreateFile(journalPath, "other.md", "No link.");
 
         var results = _rewriter.FindFilesWithLinkTo(journalPath, OldFileName);
 
@@ -163,8 +161,7 @@ public class MarkdownLinkRewriterTests
     {
         const string journalPath = "/journal";
         _fileSystem.CreateDirectory(journalPath);
-        _fileSystem.CreateFile(journalPath, "note.md",
-            $"See [TOC]({OldFileName}).");
+        _fileSystem.CreateFile(journalPath, "note.md", $"See [TOC]({OldFileName}).");
 
         var results = _rewriter.FindFilesWithLinkTo(journalPath, OldFileName);
 
@@ -188,8 +185,11 @@ public class MarkdownLinkRewriterTests
         const string journalPath = "/journal";
         const string deletedFile = "removed_entry.md";
         _fileSystem.CreateDirectory(journalPath);
-        _fileSystem.CreateFile(journalPath, "note.md",
-            $"See [Meeting Notes]({deletedFile}) for details.");
+        _fileSystem.CreateFile(
+            journalPath,
+            "note.md",
+            $"See [Meeting Notes]({deletedFile}) for details."
+        );
 
         // Act
         var modified = _rewriter.StripLinksInDirectory(journalPath, deletedFile);
@@ -197,7 +197,8 @@ public class MarkdownLinkRewriterTests
         // Assert
         modified.ShouldHaveSingleItem();
         modified[0].ShouldBe("note.md");
-        _fileSystem._files[Path.Combine(journalPath, "note.md")]
+        _fileSystem
+            ._files[Path.Combine(journalPath, "note.md")]
             .ShouldBe("See Meeting Notes for details.");
     }
 
@@ -208,8 +209,11 @@ public class MarkdownLinkRewriterTests
         const string journalPath = "/journal";
         const string deletedFile = "removed_entry.md";
         _fileSystem.CreateDirectory(journalPath);
-        _fileSystem.CreateFile(journalPath, "note.md",
-            $"See [Meeting Notes]({deletedFile}) for details.");
+        _fileSystem.CreateFile(
+            journalPath,
+            "note.md",
+            $"See [Meeting Notes]({deletedFile}) for details."
+        );
 
         // Act
         var modified = _rewriter.StripLinksInDirectory(
@@ -220,8 +224,7 @@ public class MarkdownLinkRewriterTests
 
         // Assert
         modified.ShouldBeEmpty();
-        _fileSystem._files[Path.Combine(journalPath, "note.md")]
-            .ShouldContain(deletedFile); // unchanged
+        _fileSystem._files[Path.Combine(journalPath, "note.md")].ShouldContain(deletedFile); // unchanged
     }
 
     [Fact]
@@ -246,8 +249,11 @@ public class MarkdownLinkRewriterTests
         const string journalPath = "/journal";
         const string deletedFile = "removed_entry.md";
         _fileSystem.CreateDirectory(journalPath);
-        _fileSystem.CreateFile(journalPath, "note.md",
-            $"See [Notes]({deletedFile}) and also [Notes again]({deletedFile}).");
+        _fileSystem.CreateFile(
+            journalPath,
+            "note.md",
+            $"See [Notes]({deletedFile}) and also [Notes again]({deletedFile})."
+        );
 
         // Act
         var modified = _rewriter.StripLinksInDirectory(journalPath, deletedFile);

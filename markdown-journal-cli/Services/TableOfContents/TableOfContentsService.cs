@@ -474,7 +474,12 @@ public class TableOfContentsService(
     /// <summary>
     /// Recursively checks if a topic has any visible files that start with the given prefix.
     /// </summary>
-    private static bool HasFilesWithPrefix(Topic topic, string prefix, string[] ignoreFiles, IFileSystem fileSystem)
+    private static bool HasFilesWithPrefix(
+        Topic topic,
+        string prefix,
+        string[] ignoreFiles,
+        IFileSystem fileSystem
+    )
     {
         // Check entries
         if (topic.Entries != null)
@@ -485,7 +490,10 @@ public class TableOfContentsService(
                 {
                     var filePath = fileSystem.GetFileNameWithoutExtension(entry.File);
                     // Check if file path starts with prefix followed by separator
-                    if (filePath != null && filePath.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase))
+                    if (
+                        filePath != null
+                        && filePath.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase)
+                    )
                     {
                         return true;
                     }

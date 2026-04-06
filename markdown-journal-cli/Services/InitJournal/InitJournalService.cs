@@ -60,8 +60,14 @@ public sealed class InitJournalService(
         using var tx = _txCoordinator.Begin();
         try
         {
-            var trackingPath = _fileSystem.CombinePaths(journalDirectory, $".{_journalSettings.AppName}");
-            var journalrcPath = _fileSystem.CombinePaths(journalDirectory, _journalSettings.JournalConfigFileName);
+            var trackingPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                $".{_journalSettings.AppName}"
+            );
+            var journalrcPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                _journalSettings.JournalConfigFileName
+            );
 
             tx.TrackNew(trackingPath);
             tx.TrackNew(journalrcPath);
@@ -72,13 +78,18 @@ public sealed class InitJournalService(
             _fileTracking.UpdateIndex(journalDirectory);
 
             // 2. Create journal configuration
-            _configGenerator.GenerateFromTrackingIndex(journalDirectory, resolvedTocName, journalName);
+            _configGenerator.GenerateFromTrackingIndex(
+                journalDirectory,
+                resolvedTocName,
+                journalName
+            );
 
             // 3. Create table of contents (reads from configuration)
             _tableOfContentsService.UpdateTableOfContents(
                 journalDirectory,
                 createdDate: DateTime.Now,
-                lastEditedDate: DateTime.Now);
+                lastEditedDate: DateTime.Now
+            );
 
             // 4. Add TOC to file tracking after creation
             _fileTracking.UpdateIndex(journalDirectory);
@@ -87,7 +98,13 @@ public sealed class InitJournalService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "initialize journal", journalDirectory, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "initialize journal",
+                journalDirectory,
+                ex
+            );
         }
     }
 }

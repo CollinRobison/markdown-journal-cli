@@ -143,8 +143,10 @@ public class TableOfContentsServiceTests
     [Fact]
     public void UpdateTableOfContents_CallsUpdateFileWithCorrectPaths()
     {
-        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
-        
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
+            .Returns(TocFilePath);
+
         _service.UpdateTableOfContents(JournalDirectory);
 
         _mockFileSystem.Verify(
@@ -156,7 +158,9 @@ public class TableOfContentsServiceTests
     [Fact]
     public void UpdateTableOfContents_WhenTocFileExists_ReadsExistingContent()
     {
-        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
+            .Returns(TocFilePath);
         _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         _mockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))
@@ -199,7 +203,9 @@ public class TableOfContentsServiceTests
     [Fact]
     public void UpdateTableOfContents_ExistingTocHasCreatedDate_PreservesCreatedDateWhenNotProvided()
     {
-        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
+            .Returns(TocFilePath);
         _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         _mockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))
@@ -655,9 +661,7 @@ public class TableOfContentsServicePreviewTests
         );
 
         _mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
-        _mockJournalConfiguration
-            .Setup(jc => jc.Read(JournalDirectory))
-            .Returns(BuildConfig());
+        _mockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns(BuildConfig());
 
         _service = new TableOfContentsService(
             _mockFileSystem.Object,
@@ -688,9 +692,7 @@ public class TableOfContentsServicePreviewTests
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
             .Returns(
-                BuildConfig(
-                    rootEntries: [new Entries { Name = "My Entry", File = "my-entry.md" }]
-                )
+                BuildConfig(rootEntries: [new Entries { Name = "My Entry", File = "my-entry.md" }])
             );
 
         var result = _service.PreviewTableOfContents(JournalDirectory);
@@ -707,8 +709,11 @@ public class TableOfContentsServicePreviewTests
     [Fact]
     public void PreviewTableOfContents_PreservesExistingDatesFromTocFile()
     {
-        var existingTocContent = "Created: 01/15/2024\nLast Edited: 03/01/2024\n\n# Table of Contents\n";
-        _mockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
+        var existingTocContent =
+            "Created: 01/15/2024\nLast Edited: 03/01/2024\n\n# Table of Contents\n";
+        _mockFileSystem
+            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
+            .Returns(TocFilePath);
         _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         _mockFileSystem.Setup(fs => fs.GetFileContent(TocFilePath)).Returns(existingTocContent);
 
@@ -730,7 +735,10 @@ public class TableOfContentsServicePreviewTests
     [Fact]
     public void PreviewTableOfContents_OutputMatchesUpdateTableOfContents_OnIdenticalState()
     {
-        var entries = new[] { new Entries { Name = "Note", File = "note.md" } };
+        var entries = new[]
+        {
+            new Entries { Name = "Note", File = "note.md" },
+        };
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
             .Returns(BuildConfig(rootEntries: entries));
@@ -745,7 +753,10 @@ public class TableOfContentsServicePreviewTests
         var previewContent = _service.PreviewTableOfContents(JournalDirectory);
 
         writtenContent.ShouldNotBeNull();
-        previewContent.ShouldBe(writtenContent, "Preview must produce the same output as live update");
+        previewContent.ShouldBe(
+            writtenContent,
+            "Preview must produce the same output as live update"
+        );
     }
 
     [Fact]
@@ -762,14 +773,13 @@ public class TableOfContentsServicePreviewTests
     {
         // Arrange — projected config has different entries than what's on disk in .journalrc
         var projectedConfig = BuildConfig(
-            rootEntries:
-            [
-                new Entries { Name = "Projected Entry", File = "projected-entry.md" },
-            ]
+            rootEntries: [new Entries { Name = "Projected Entry", File = "projected-entry.md" }]
         );
 
         // Verify the mock returns NO config (so we know the overload doesn't call Read())
-        _mockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns((JournalConfig?)null);
+        _mockJournalConfiguration
+            .Setup(jc => jc.Read(JournalDirectory))
+            .Returns((JournalConfig?)null);
 
         // Act
         var content = _service.PreviewTableOfContents(JournalDirectory, projectedConfig);
@@ -785,9 +795,7 @@ public class TableOfContentsServicePreviewTests
     public void PreviewTableOfContents_WithProjectedConfig_PreservesExistingTocDates()
     {
         // Arrange — existing TOC file with known dates
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(TocFilePath))
-            .Returns(true);
+        _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         _mockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))
             .Returns("Created: 01/15/2024\nLast Edited: 06/01/2024\n\n# Table of Contents\n");
@@ -827,9 +835,7 @@ public class TableOfContentsServicePreviewTests
         Should.Throw<ArgumentException>(() =>
             _service.PreviewTableOfContents(string.Empty, config)
         );
-        Should.Throw<ArgumentException>(() =>
-            _service.PreviewTableOfContents("   ", config)
-        );
+        Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents("   ", config));
     }
 
     [Fact]

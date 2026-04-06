@@ -20,10 +20,13 @@ public class JournalFileUpdateServiceRollbackTests : ServiceRollbackTestBase
     private JournalFileUpdateService CreateService(IMarkdownLinkRewriter? linkRewriter = null)
     {
         linkRewriter ??= Mock.Of<IMarkdownLinkRewriter>(r =>
-            r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>()) == Array.Empty<string>() &&
-            r.ReplaceLinksInDirectory(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IReadOnlyCollection<string>?>()) == Array.Empty<string>()
+            r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>()) == Array.Empty<string>()
+            && r.ReplaceLinksInDirectory(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>?>()
+            ) == Array.Empty<string>()
         );
 
         return new JournalFileUpdateService(
@@ -55,7 +58,11 @@ public class JournalFileUpdateServiceRollbackTests : ServiceRollbackTestBase
         var journalrcBefore = FileSystem.GetFileContent(JournalrcPath);
 
         // RenameFile #1 succeeds; UpdateFile #1 (journalrc via UpdateFileReferences) fails
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Config update failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Config update failed")
+        );
 
         var service = CreateService();
 
@@ -78,7 +85,11 @@ public class JournalFileUpdateServiceRollbackTests : ServiceRollbackTestBase
         var journalrcBefore = FileSystem.GetFileContent(JournalrcPath);
 
         // UpdateFile #1 (journalrc) and #2 (tracking) succeed; UpdateFile #3 (TOC) fails
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 3, new IOException("TOC regeneration failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            3,
+            new IOException("TOC regeneration failed")
+        );
 
         var service = CreateService();
 
@@ -101,7 +112,11 @@ public class JournalFileUpdateServiceRollbackTests : ServiceRollbackTestBase
         var journalrcBefore = FileSystem.GetFileContent(JournalrcPath);
 
         // UpdateFile #1 (journalrc display name change) succeeds; UpdateFile #2 (TOC) fails
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 2, new IOException("TOC write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            2,
+            new IOException("TOC write failed")
+        );
 
         var service = CreateService();
 

@@ -161,7 +161,7 @@ public void Should_Create_New_Journal_With_Default_Name()
 
 ## Notes
 
-- The test project targets .NET 9.0, matching the main project
+- The test project targets .NET 10.0, matching the main project
 - Tests are organized by command in the `Commands/` directory
 - Infrastructure helpers are in the `Infrastructure/` directory
 - Each test class focuses on a single command with comprehensive scenario coverage

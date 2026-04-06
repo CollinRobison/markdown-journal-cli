@@ -85,8 +85,14 @@ public sealed class NewJournalService(
                 journalDirectory,
                 $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}"
             );
-            var journalrcAbsPath = _fileSystem.CombinePaths(journalDirectory, _journalSettings.JournalConfigFileName);
-            var mdjournalAbsPath = _fileSystem.CombinePaths(journalDirectory, $".{_journalSettings.AppName}");
+            var journalrcAbsPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                _journalSettings.JournalConfigFileName
+            );
+            var mdjournalAbsPath = _fileSystem.CombinePaths(
+                journalDirectory,
+                $".{_journalSettings.AppName}"
+            );
 
             if (!directoryAlreadyExisted)
                 tx.TrackNewDirectory(journalDirectory);
@@ -117,7 +123,13 @@ public sealed class NewJournalService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "create new journal", journalDirectory, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "create new journal",
+                journalDirectory,
+                ex
+            );
         }
     }
 

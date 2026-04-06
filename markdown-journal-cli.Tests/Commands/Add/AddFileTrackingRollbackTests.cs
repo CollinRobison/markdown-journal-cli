@@ -34,11 +34,19 @@ public class AddFileTrackingRollbackTests : IDisposable
         _fileSystem = new FaultInjectingFileSystem();
         var buffer = new InMemoryFileBuffer(_fileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
-        _coordinator = new FileTransactionCoordinator(_fileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance);
+        _coordinator = new FileTransactionCoordinator(
+            _fileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
+        );
 
         _console = new TestConsole();
         var rollbackConsole = new TestConsole();
-        _rollbackReporter = new RollbackReporter(rollbackConsole, NullLogger<RollbackReporter>.Instance);
+        _rollbackReporter = new RollbackReporter(
+            rollbackConsole,
+            NullLogger<RollbackReporter>.Instance
+        );
 
         _journalSettings = new JournalSettings
         {
@@ -71,7 +79,11 @@ public class AddFileTrackingRollbackTests : IDisposable
     public void Should_Delete_Created_Tracking_File_When_UpdateIndex_Throws()
     {
         // UpdateFile #1 is FileTracking.UpdateIndex → .md-journal write; inject fault
-        _fileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Tracking write failed"));
+        _fileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Tracking write failed")
+        );
 
         var command = CreateCommand();
         var result = command.Execute(null!, new AddFileTrackingSettings { FilePath = JournalPath });

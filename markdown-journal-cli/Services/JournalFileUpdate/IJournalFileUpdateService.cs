@@ -47,7 +47,12 @@ public interface IJournalFileUpdateService
     /// <param name="fileName">The filename of the entry to relocate.</param>
     /// <param name="newTopicPath">The new topic path (empty array for root level).</param>
     /// <param name="displayName">The display name to use for the entry at its new location.</param>
-    void UpdateEntryLocation(string directory, string fileName, string[] newTopicPath, string displayName);
+    void UpdateEntryLocation(
+        string directory,
+        string fileName,
+        string[] newTopicPath,
+        string displayName
+    );
 
     /// <summary>
     /// Updates an entry's display name in the table of contents.

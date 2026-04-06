@@ -33,7 +33,9 @@ public class NewJournalServiceRollbackTests : ServiceRollbackTestBase
     private static ITemplateManager CreateDefaultTemplateManager()
     {
         var mock = new Mock<ITemplateManager>();
-        mock.Setup(t => t.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>()))
+        mock.Setup(t =>
+                t.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>())
+            )
             .Returns("# Generated Content");
         return mock.Object;
     }
@@ -41,8 +43,12 @@ public class NewJournalServiceRollbackTests : ServiceRollbackTestBase
     [Fact]
     public void Should_Delete_All_Created_Files_And_Directory_When_Config_Write_Throws()
     {
-        // Force config (UpdateFile) to fail 
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Config write failed"));
+        // Force config (UpdateFile) to fail
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Config write failed")
+        );
 
         var service = CreateService();
         var ex = Should.Throw<RollbackCompletedException>(() =>
@@ -61,7 +67,11 @@ public class NewJournalServiceRollbackTests : ServiceRollbackTestBase
     public void Should_Delete_Created_Files_When_CreateMarkdownFile_Throws_Early()
     {
         // First markdown file creation fails (TOC)
-        FileSystem.InjectFaultOn(FaultInjectPoint.CreateMarkdownFile, 1, new IOException("Disk write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.CreateMarkdownFile,
+            1,
+            new IOException("Disk write failed")
+        );
 
         var service = CreateService();
         Should.Throw<RollbackCompletedException>(() =>
@@ -77,7 +87,11 @@ public class NewJournalServiceRollbackTests : ServiceRollbackTestBase
     {
         // Directory pre-exists — TrackNewDirectory should NOT be called
         FileSystem.CreateDirectory(NewJournalPath);
-        FileSystem.InjectFaultOn(FaultInjectPoint.CreateMarkdownFile, 1, new IOException("Disk write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.CreateMarkdownFile,
+            1,
+            new IOException("Disk write failed")
+        );
 
         var service = CreateService();
         Should.Throw<RollbackCompletedException>(() =>

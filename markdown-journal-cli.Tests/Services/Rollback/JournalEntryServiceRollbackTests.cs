@@ -35,7 +35,9 @@ public class JournalEntryServiceRollbackTests : ServiceRollbackTestBase
     private static ITemplateManager CreateDefaultTemplateManager()
     {
         var mock = new Mock<ITemplateManager>();
-        mock.Setup(t => t.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+        mock.Setup(t =>
+                t.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>())
+            )
             .Returns("# Generated Entry");
         return mock.Object;
     }
@@ -45,7 +47,11 @@ public class JournalEntryServiceRollbackTests : ServiceRollbackTestBase
     {
         // Arrange — reset write-call counters, then inject fault on first config/tracking write
         FileSystem.ResetCallCounts();
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Config write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Config write failed")
+        );
 
         var service = CreateService();
         var entryPath = $"{JournalPath}/my_entry.md";
@@ -64,10 +70,14 @@ public class JournalEntryServiceRollbackTests : ServiceRollbackTestBase
     {
         // Arrange — reset write-call counters, inject on 2nd UpdateFile (after entry markdown written)
         FileSystem.ResetCallCounts();
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 2, new IOException("Tracking update failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            2,
+            new IOException("Tracking update failed")
+        );
 
-        var configBefore = System.IO.File.Exists(JournalrcPath) 
-            ? null 
+        var configBefore = System.IO.File.Exists(JournalrcPath)
+            ? null
             : FileSystem.GetFileContent(JournalrcPath);
         var journalrcContent = FileSystem.GetFileContent(JournalrcPath);
 

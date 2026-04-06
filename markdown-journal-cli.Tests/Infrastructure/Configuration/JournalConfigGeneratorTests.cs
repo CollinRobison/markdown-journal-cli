@@ -460,7 +460,11 @@ public class JournalConfigGeneratorTests
         _fileSystem.CreateFile(directory, $".{_journalSettings.AppName}", emptyIndexJson);
 
         // Act
-        var result = _generator.GenerateFromTrackingIndex(directory, "1a-TableOfContents", "EmptyJournal");
+        var result = _generator.GenerateFromTrackingIndex(
+            directory,
+            "1a-TableOfContents",
+            "EmptyJournal"
+        );
 
         // Assert — must return a valid (empty) config, not null
         Assert.NotNull(result);
