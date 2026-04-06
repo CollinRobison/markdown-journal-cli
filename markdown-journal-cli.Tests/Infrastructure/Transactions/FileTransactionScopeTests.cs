@@ -33,7 +33,11 @@ public class FileTransactionScopeTests : IDisposable
         _buffer = new InMemoryFileBuffer(_fileSystem);
         _deletionStrategy = new InMemoryDeletionRollbackStrategy();
         _coordinator = new FileTransactionCoordinator(
-            _fileSystem, _buffer, _deletionStrategy, NullLoggerFactory.Instance);
+            _fileSystem,
+            _buffer,
+            _deletionStrategy,
+            NullLoggerFactory.Instance
+        );
 
         _fileSystem.CreateDirectory(JournalRoot);
         _fileSystem.CreateFile(JournalRoot, "a.md", "original-a");
@@ -220,8 +224,11 @@ public class FileTransactionScopeTests : IDisposable
         throwingFs.CreateDirectory(SubDir);
 
         var coord = new FileTransactionCoordinator(
-            throwingFs, new InMemoryFileBuffer(throwingFs),
-            new InMemoryDeletionRollbackStrategy(), NullLoggerFactory.Instance);
+            throwingFs,
+            new InMemoryFileBuffer(throwingFs),
+            new InMemoryDeletionRollbackStrategy(),
+            NullLoggerFactory.Instance
+        );
 
         var tx = coord.Begin();
         tx.TrackNewDirectory(SubDir);
@@ -306,11 +313,15 @@ public class FileTransactionScopeTests : IDisposable
         fs.CreateFile("/j", "y.md", "orig-y");
 
         var coord = new FileTransactionCoordinator(
-            fs, new InMemoryFileBuffer(fs), new InMemoryDeletionRollbackStrategy(), NullLoggerFactory.Instance);
+            fs,
+            new InMemoryFileBuffer(fs),
+            new InMemoryDeletionRollbackStrategy(),
+            NullLoggerFactory.Instance
+        );
 
         var tx = coord.Begin();
-        tx.Track("/j/x.md");  // index 0 — should be rolled back last
-        tx.Track("/j/y.md");  // index 1 — should be rolled back first
+        tx.Track("/j/x.md"); // index 0 — should be rolled back last
+        tx.Track("/j/y.md"); // index 1 — should be rolled back first
 
         fs.UpdateFile("/j", "x.md", "new-x");
         fs.UpdateFile("/j", "y.md", "new-y");
@@ -350,8 +361,11 @@ public class FileTransactionScopeTests : IDisposable
 
         var failingFs = new FailOnUpdateFileSystem(FileB, realFs);
         var coord = new FileTransactionCoordinator(
-            failingFs, new InMemoryFileBuffer(failingFs),
-            new InMemoryDeletionRollbackStrategy(), NullLoggerFactory.Instance);
+            failingFs,
+            new InMemoryFileBuffer(failingFs),
+            new InMemoryDeletionRollbackStrategy(),
+            NullLoggerFactory.Instance
+        );
 
         var tx = coord.Begin();
         tx.Track(FileA);
@@ -425,8 +439,8 @@ public class FileTransactionScopeTests : IDisposable
     public void Should_Rollback_Mixed_Operations_In_Correct_Reverse_Order()
     {
         using var tx = _coordinator.Begin();
-        tx.Track(FileA);       // modify snapshot
-        tx.TrackNew(FileC);    // new file
+        tx.Track(FileA); // modify snapshot
+        tx.TrackNew(FileC); // new file
         tx.TrackRename(FileA, FileB); // rename (conceptual, won't actually move)
 
         _fileSystem.UpdateFile(JournalRoot, "a.md", "modified");
@@ -467,36 +481,72 @@ public class FileTransactionScopeTests : IDisposable
     private sealed class ThrowOnDeleteDirectoryFileSystem(TestFileSystem inner) : IFileSystem
     {
         private readonly TestFileSystem _inner = inner;
+
         public bool DirectoryExists(string path) => _inner.DirectoryExists(path);
+
         public bool FileExists(string path) => _inner.FileExists(path);
+
         public void CreateDirectory(string path) => _inner.CreateDirectory(path);
-        public void DeleteDirectory(string path) => throw new IOException("Cannot delete directory");
+
+        public void DeleteDirectory(string path) =>
+            throw new IOException("Cannot delete directory");
+
         public string CombinePaths(params string[] paths) => Path.Combine(paths);
-        public void CreateMarkdownFile(string path, string fileName, string body) => _inner.CreateMarkdownFile(path, fileName, body);
-        public void CreateFile(string path, string fileName, string body) => _inner.CreateFile(path, fileName, body);
-        public void UpdateFile(string path, string fileName, string body) => _inner.UpdateFile(path, fileName, body);
+
+        public void CreateMarkdownFile(string path, string fileName, string body) =>
+            _inner.CreateMarkdownFile(path, fileName, body);
+
+        public void CreateFile(string path, string fileName, string body) =>
+            _inner.CreateFile(path, fileName, body);
+
+        public void UpdateFile(string path, string fileName, string body) =>
+            _inner.UpdateFile(path, fileName, body);
+
         public void DeleteFile(string filePath) => _inner.DeleteFile(filePath);
-        public void RenameFile(string oldPath, string newPath) => _inner.RenameFile(oldPath, newPath);
-        public string GetFileContent(string filePath) => ((IFileSystem)_inner).GetFileContent(filePath);
-        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+        public void RenameFile(string oldPath, string newPath) =>
+            _inner.RenameFile(oldPath, newPath);
+
+        public string GetFileContent(string filePath) =>
+            ((IFileSystem)_inner).GetFileContent(filePath);
+
+        public string? GetFileNameWithoutExtension(string? path) =>
+            Path.GetFileNameWithoutExtension(path);
+
         public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
         public string? GetFileName(string? path) => Path.GetFileName(path);
+
         public string GetFullPath(string path) => Path.GetFullPath(path);
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => _inner.GetFiles(path, searchPattern, searchOption);
-        public IReadOnlyList<string> GetMarkdownFiles(string directory) => _inner.GetMarkdownFiles(directory);
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) =>
+            _inner.GetFiles(path, searchPattern, searchOption);
+
+        public IReadOnlyList<string> GetMarkdownFiles(string directory) =>
+            _inner.GetMarkdownFiles(directory);
     }
 
     private sealed class FailOnUpdateFileSystem(string failPath, TestFileSystem inner) : IFileSystem
     {
         private readonly string _failPath = failPath;
         private readonly TestFileSystem _inner = inner;
+
         public bool DirectoryExists(string path) => _inner.DirectoryExists(path);
+
         public bool FileExists(string path) => _inner.FileExists(path);
+
         public void CreateDirectory(string path) => _inner.CreateDirectory(path);
+
         public void DeleteDirectory(string path) => _inner.DeleteDirectory(path);
+
         public string CombinePaths(params string[] paths) => Path.Combine(paths);
-        public void CreateMarkdownFile(string path, string fileName, string body) => _inner.CreateMarkdownFile(path, fileName, body);
-        public void CreateFile(string path, string fileName, string body) => _inner.CreateFile(path, fileName, body);
+
+        public void CreateMarkdownFile(string path, string fileName, string body) =>
+            _inner.CreateMarkdownFile(path, fileName, body);
+
+        public void CreateFile(string path, string fileName, string body) =>
+            _inner.CreateFile(path, fileName, body);
+
         public void UpdateFile(string path, string fileName, string body)
         {
             var abs = Path.Combine(path, fileName);
@@ -504,20 +554,35 @@ public class FileTransactionScopeTests : IDisposable
                 throw new IOException("Simulated update failure");
             _inner.UpdateFile(path, fileName, body);
         }
+
         public void DeleteFile(string filePath) => _inner.DeleteFile(filePath);
-        public void RenameFile(string oldPath, string newPath) => _inner.RenameFile(oldPath, newPath);
-        public string GetFileContent(string filePath) => ((IFileSystem)_inner).GetFileContent(filePath);
-        public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+
+        public void RenameFile(string oldPath, string newPath) =>
+            _inner.RenameFile(oldPath, newPath);
+
+        public string GetFileContent(string filePath) =>
+            ((IFileSystem)_inner).GetFileContent(filePath);
+
+        public string? GetFileNameWithoutExtension(string? path) =>
+            Path.GetFileNameWithoutExtension(path);
+
         public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
+
         public string? GetFileName(string? path) => Path.GetFileName(path);
+
         public string GetFullPath(string path) => Path.GetFullPath(path);
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => _inner.GetFiles(path, searchPattern, searchOption);
-        public IReadOnlyList<string> GetMarkdownFiles(string directory) => _inner.GetMarkdownFiles(directory);
+
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) =>
+            _inner.GetFiles(path, searchPattern, searchOption);
+
+        public IReadOnlyList<string> GetMarkdownFiles(string directory) =>
+            _inner.GetMarkdownFiles(directory);
     }
 
     private sealed class OrderTrackingFileSystem(List<string> order) : TestFileSystem
     {
         private readonly List<string> _order = order;
+
         public override void UpdateFile(string path, string fileName, string body)
         {
             _order.Add(Path.Combine(path, fileName));

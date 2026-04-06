@@ -63,5 +63,9 @@ public interface IFileTracking
     /// <param name="path">the journal directory path.</param>
     /// <param name="oldRelativeFilePath">the relative file path of the old (source) file.</param>
     /// <param name="newRelativeFilePath">the relative file path of the new (destination) file.</param>
-    public void RenameFileInIndex(string path, string oldRelativeFilePath, string newRelativeFilePath);
+    public void RenameFileInIndex(
+        string path,
+        string oldRelativeFilePath,
+        string newRelativeFilePath
+    );
 }

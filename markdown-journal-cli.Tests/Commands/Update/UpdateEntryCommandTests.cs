@@ -33,10 +33,7 @@ public class UpdateEntryCommandTests
     // ------------------------------------------------------------------
 
     private UpdateEntryCommand CreateCommand() =>
-        new UpdateEntryCommand(
-            _console,
-            _mockFileUpdateService.Object
-        );
+        new UpdateEntryCommand(_console, _mockFileUpdateService.Object);
 
     private static CommandContext CreateCommandContext() =>
         new CommandContext([], Mock.Of<IRemainingArguments>(), "file", null);
@@ -57,17 +54,21 @@ public class UpdateEntryCommandTests
         };
 
         _mockFileUpdateService
-            .Setup(s => s.UpdateEntry(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()
-            ))
-            .Throws(new FileNotFoundException("File 'nonexistent.md' not found at '/test/journal'."));
+            .Setup(s =>
+                s.UpdateEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                )
+            )
+            .Throws(
+                new FileNotFoundException("File 'nonexistent.md' not found at '/test/journal'.")
+            );
 
         // Act
         var result = CreateCommand().Execute(CreateCommandContext(), settings);
@@ -91,16 +92,18 @@ public class UpdateEntryCommandTests
         };
 
         _mockFileUpdateService
-            .Setup(s => s.UpdateEntry(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()
-            ))
+            .Setup(s =>
+                s.UpdateEntry(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>()
+                )
+            )
             .Throws(new JournalrcNotFoundException(noRcPath));
 
         // Act
@@ -123,7 +126,7 @@ public class UpdateEntryCommandTests
         var settings = new UpdateEntrySettings
         {
             FilePath = TestPath,
-            FileName = "My_Entry",  // no .md
+            FileName = "My_Entry", // no .md
             EntryName = null!,
         };
 
@@ -155,16 +158,7 @@ public class UpdateEntryCommandTests
 
         // Assert - UpdateEntry service method was called with the new name
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                "New Entry",
-                null,
-                null,
-                false,
-                false,
-                true
-            ),
+            x => x.UpdateEntry(TestPath, TestFileName, "New Entry", null, null, false, false, true),
             Times.Once
         );
     }
@@ -185,16 +179,7 @@ public class UpdateEntryCommandTests
 
         // Assert - UpdateEntry was called with the new name
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                "New Entry",
-                null,
-                null,
-                false,
-                false,
-                true
-            ),
+            x => x.UpdateEntry(TestPath, TestFileName, "New Entry", null, null, false, false, true),
             Times.Once
         );
     }
@@ -221,16 +206,17 @@ public class UpdateEntryCommandTests
         // Assert
         result.ShouldBe(0);
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                null,
-                "Custom Title",
-                null,
-                false,
-                false,
-                true
-            ),
+            x =>
+                x.UpdateEntry(
+                    TestPath,
+                    TestFileName,
+                    null,
+                    "Custom Title",
+                    null,
+                    false,
+                    false,
+                    true
+                ),
             Times.Once
         );
     }
@@ -252,16 +238,17 @@ public class UpdateEntryCommandTests
 
         // Assert - UpdateEntry is called with both name and title
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                "New Entry",
-                "Override Title",
-                null,
-                false,
-                false,
-                true
-            ),
+            x =>
+                x.UpdateEntry(
+                    TestPath,
+                    TestFileName,
+                    "New Entry",
+                    "Override Title",
+                    null,
+                    false,
+                    false,
+                    true
+                ),
             Times.Once
         );
     }
@@ -288,16 +275,17 @@ public class UpdateEntryCommandTests
         // Assert - UpdateEntry is called with the new headings
         result.ShouldBe(0);
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                null,
-                null,
-                "Projects-2024",
-                false,
-                false,
-                true
-            ),
+            x =>
+                x.UpdateEntry(
+                    TestPath,
+                    TestFileName,
+                    null,
+                    null,
+                    "Projects-2024",
+                    false,
+                    false,
+                    true
+                ),
             Times.Once
         );
     }
@@ -324,16 +312,7 @@ public class UpdateEntryCommandTests
         // Assert
         result.ShouldBe(0);
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                null,
-                null,
-                null,
-                true,
-                false,
-                true
-            ),
+            x => x.UpdateEntry(TestPath, TestFileName, null, null, null, true, false, true),
             Times.Once
         );
     }
@@ -356,16 +335,7 @@ public class UpdateEntryCommandTests
         // Assert — UpdateEntry is called with unignoreFile = true
         result.ShouldBe(0);
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                null,
-                null,
-                null,
-                false,
-                true,
-                true
-            ),
+            x => x.UpdateEntry(TestPath, TestFileName, null, null, null, false, true, true),
             Times.Once
         );
     }
@@ -394,16 +364,17 @@ public class UpdateEntryCommandTests
 
         // Assert
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                "New_Name",
-                "Updated Title",
-                "Projects-2024",
-                false,
-                false,
-                true
-            ),
+            x =>
+                x.UpdateEntry(
+                    TestPath,
+                    TestFileName,
+                    "New_Name",
+                    "Updated Title",
+                    "Projects-2024",
+                    false,
+                    false,
+                    true
+                ),
             Times.Once
         );
     }
@@ -428,16 +399,7 @@ public class UpdateEntryCommandTests
 
         // Assert
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                "New_Name",
-                null,
-                null,
-                false,
-                false,
-                true
-            ),
+            x => x.UpdateEntry(TestPath, TestFileName, "New_Name", null, null, false, false, true),
             Times.Once
         );
     }
@@ -459,16 +421,7 @@ public class UpdateEntryCommandTests
 
         // Assert
         _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(
-                TestPath,
-                TestFileName,
-                "New_Name",
-                null,
-                null,
-                false,
-                false,
-                false
-            ),
+            x => x.UpdateEntry(TestPath, TestFileName, "New_Name", null, null, false, false, false),
             Times.Once
         );
     }

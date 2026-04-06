@@ -1,9 +1,9 @@
 using System;
 using System.ComponentModel;
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Commands;
 using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
@@ -97,7 +97,11 @@ public sealed class AddJournalrc(
                 _console.MarkupLine(
                     $"[yellow]No table of contents or tracking index found. Scanning directory...[/]"
                 );
-                result = _configGenerator.GenerateFromDirectory(directory, tocFileName, journalName);
+                result = _configGenerator.GenerateFromDirectory(
+                    directory,
+                    tocFileName,
+                    journalName
+                );
                 tx.Commit();
                 _console.MarkupLine(
                     $"[green]✓[/] Created journal configuration with {result.FileCount} entries from directory scan"
@@ -106,7 +110,13 @@ public sealed class AddJournalrc(
             }
             catch (Exception ex)
             {
-                throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "add journal configuration", settings.FilePath, ex);
+                throw _rollbackReporter.RollbackAndBuildException(
+                    tx,
+                    _txCoordinator,
+                    "add journal configuration",
+                    settings.FilePath,
+                    ex
+                );
             }
         }
         catch (ArgumentException ex)
@@ -114,7 +124,10 @@ public sealed class AddJournalrc(
             _console.MarkupLine($"[red]Error: {ex.Message}[/]");
             return 1;
         }
-        catch (RollbackCompletedException) { throw; }
+        catch (RollbackCompletedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _console.MarkupLine($"[red]An unexpected error occurred: {ex.Message}[/]");

@@ -2,8 +2,8 @@ using markdown_journal_cli;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -130,9 +130,13 @@ public class JournalFileUpdateServiceTests
         exception.Message.ShouldContain(OldFile);
         exception.Message.ShouldContain(Directory);
 
-        _mockFileSystem.Verify(fs => fs.RenameFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _mockFileSystem.Verify(
+            fs => fs.RenameFile(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
         _mockJournalConfiguration.Verify(
-            jc => jc.UpdateFileReferences(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            jc =>
+                jc.UpdateFileReferences(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Never
         );
     }
@@ -242,29 +246,29 @@ public class JournalFileUpdateServiceTests
         // Arrange
         _mockJournalConfiguration
             .Setup(jc => jc.Update(Directory, It.IsAny<Action<JournalConfig>>()))
-            .Callback<string, Action<JournalConfig>>((dir, action) =>
-            {
-                var config = new JournalConfig
+            .Callback<string, Action<JournalConfig>>(
+                (dir, action) =>
                 {
-                    JournalName = "Test",
-                    TableOfContents = new TableOfContents
+                    var config = new JournalConfig
                     {
-                        File = "toc.md",
-                        RootEntries = Array.Empty<Entries>(),
-                        Structure = new Structure { Topics = Array.Empty<Topic>() },
-                        IgnoreFiles = new[] { TestFile, "other_file.md" },
-                    },
-                };
-                action(config);
+                        JournalName = "Test",
+                        TableOfContents = new TableOfContents
+                        {
+                            File = "toc.md",
+                            RootEntries = Array.Empty<Entries>(),
+                            Structure = new Structure { Topics = Array.Empty<Topic>() },
+                            IgnoreFiles = new[] { TestFile, "other_file.md" },
+                        },
+                    };
+                    action(config);
 
-                // Verify the ignore files were updated correctly
-                config.TableOfContents.IgnoreFiles.ShouldNotContain(TestFile);
-                config.TableOfContents.IgnoreFiles.ShouldContain("other_file.md");
-            });
-        
-        _mockFileSystem
-            .Setup(fs => fs.GetFileNameWithoutExtension(TestFile))
-            .Returns("test");
+                    // Verify the ignore files were updated correctly
+                    config.TableOfContents.IgnoreFiles.ShouldNotContain(TestFile);
+                    config.TableOfContents.IgnoreFiles.ShouldContain("other_file.md");
+                }
+            );
+
+        _mockFileSystem.Setup(fs => fs.GetFileNameWithoutExtension(TestFile)).Returns("test");
 
         // Act
         _service.SetIgnoreStatus(Directory, TestFile, false);
@@ -274,18 +278,10 @@ public class JournalFileUpdateServiceTests
             jc => jc.Update(Directory, It.IsAny<Action<JournalConfig>>()),
             Times.Once
         );
-        
+
         // Verify that AddEntry was called to add the file back to the structure
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                Directory,
-                "",
-                TestFile,
-                null,
-                null,
-                true,
-                false
-            ),
+            jc => jc.AddEntry(Directory, "", TestFile, null, null, true, false),
             Times.Once
         );
     }
@@ -296,25 +292,25 @@ public class JournalFileUpdateServiceTests
         // Arrange
         _mockJournalConfiguration
             .Setup(jc => jc.Update(Directory, It.IsAny<Action<JournalConfig>>()))
-            .Callback<string, Action<JournalConfig>>((dir, action) =>
-            {
-                var config = new JournalConfig
+            .Callback<string, Action<JournalConfig>>(
+                (dir, action) =>
                 {
-                    JournalName = "Test",
-                    TableOfContents = new TableOfContents
+                    var config = new JournalConfig
                     {
-                        File = "toc.md",
-                        RootEntries = Array.Empty<Entries>(),
-                        Structure = new Structure { Topics = Array.Empty<Topic>() },
-                        IgnoreFiles = null,
-                    },
-                };
-                action(config);
-            });
-        
-        _mockFileSystem
-            .Setup(fs => fs.GetFileNameWithoutExtension(TestFile))
-            .Returns("test");
+                        JournalName = "Test",
+                        TableOfContents = new TableOfContents
+                        {
+                            File = "toc.md",
+                            RootEntries = Array.Empty<Entries>(),
+                            Structure = new Structure { Topics = Array.Empty<Topic>() },
+                            IgnoreFiles = null,
+                        },
+                    };
+                    action(config);
+                }
+            );
+
+        _mockFileSystem.Setup(fs => fs.GetFileNameWithoutExtension(TestFile)).Returns("test");
 
         // Act
         _service.SetIgnoreStatus(Directory, TestFile, false);
@@ -324,18 +320,10 @@ public class JournalFileUpdateServiceTests
             jc => jc.Update(Directory, It.IsAny<Action<JournalConfig>>()),
             Times.Once
         );
-        
+
         // Verify that AddEntry was called to add the file back to the structure
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                Directory,
-                "",
-                TestFile,
-                null,
-                null,
-                true,
-                false
-            ),
+            jc => jc.AddEntry(Directory, "", TestFile, null, null, true, false),
             Times.Once
         );
     }
@@ -360,26 +348,20 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = new[] { "abc", "test 2" };
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
-            .Returns(newEntryName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
 
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns(newFileNameWithoutExt);
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("abc"))
-            .Returns("abc");
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("abc")).Returns("abc");
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("test_2"))
-            .Returns("test 2");
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("test_2")).Returns("test 2");
 
         _mockEntryFormatter
             .Setup(ef => ef.RemoveSpaceSeparators("test_file_10"))
@@ -406,11 +388,7 @@ public class JournalFileUpdateServiceTests
             .Returns(newFileNameWithoutExt);
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newEntryName: newEntryName
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newEntryName: newEntryName);
 
         // Assert - should rename file (heading prefix preserved)
         _mockFileSystem.Verify(
@@ -452,8 +430,11 @@ public class JournalFileUpdateServiceTests
 
         // DetermineTargetFileName (--headings path): AddHeadingSeparators(["robison","test"])
         _mockEntryFormatter
-            .Setup(ef => ef.AddHeadingSeparators(It.Is<string[]>(a =>
-                a.Length == 2 && a[0] == "robison" && a[1] == "test")))
+            .Setup(ef =>
+                ef.AddHeadingSeparators(
+                    It.Is<string[]>(a => a.Length == 2 && a[0] == "robison" && a[1] == "test")
+                )
+            )
             .Returns("robison-test");
 
         // DetermineTargetTopicPath (--headings explicit): SeperateSubheadingString("robison")
@@ -465,20 +446,14 @@ public class JournalFileUpdateServiceTests
             .Setup(fs => fs.CombinePaths(Directory, newFileName))
             .Returns($"{Directory}/{newFileName}");
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists($"{Directory}/{newFileName}"))
-            .Returns(false);
+        _mockFileSystem.Setup(fs => fs.FileExists($"{Directory}/{newFileName}")).Returns(false);
 
         _mockFileSystem
             .Setup(fs => fs.GetFileNameWithoutExtension(currentFile))
             .Returns(currentFileWithoutExt);
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newHeadings: "robison"
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newHeadings: "robison");
 
         // Assert - file renamed from collin-test.md to robison-test.md
         _mockFileSystem.Verify(
@@ -487,12 +462,18 @@ public class JournalFileUpdateServiceTests
         );
 
         // Assert - entry moved to robison heading with display name "test" (unchanged)
+        _mockJournalConfiguration.Verify(jc => jc.RemoveEntry(Directory, newFileName), Times.Once);
         _mockJournalConfiguration.Verify(
-            jc => jc.RemoveEntry(Directory, newFileName),
-            Times.Once
-        );
-        _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(Directory, displayName, newFileName, new[] { "robison" }, null, true, false),
+            jc =>
+                jc.AddEntry(
+                    Directory,
+                    displayName,
+                    newFileName,
+                    new[] { "robison" },
+                    null,
+                    true,
+                    false
+                ),
             Times.Once
         );
 
@@ -525,26 +506,20 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = new[] { "abc", "test 2" };
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
-            .Returns(newEntryName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
 
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns(newFileNameWithoutExt);
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("abc"))
-            .Returns("abc");
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("abc")).Returns("abc");
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("test_2"))
-            .Returns("test 2");
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("test_2")).Returns("test 2");
 
         _mockEntryFormatter
             .Setup(ef => ef.RemoveSpaceSeparators("test_file_10"))
@@ -567,11 +542,7 @@ public class JournalFileUpdateServiceTests
             .Returns(newFileNameWithoutExt);
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newEntryName: newEntryName
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newEntryName: newEntryName);
 
         // Assert - should rename file (heading prefix preserved)
         _mockFileSystem.Verify(
@@ -606,25 +577,19 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = Array.Empty<string>();
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators(newTitle))
-            .Returns(newDisplayName);
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators(newTitle)).Returns(newDisplayName);
 
         _mockFileSystem
             .Setup(fs => fs.CombinePaths(Directory, currentFile))
             .Returns($"{Directory}/{currentFile}");
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newEntryTitle: newTitle
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newEntryTitle: newTitle);
 
         // Assert - should NOT rename file (no --name)
         _mockFileSystem.Verify(
@@ -661,14 +626,12 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = Array.Empty<string>();
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
-            .Returns(newEntryName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
 
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -729,7 +692,7 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = Array.Empty<string>();
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
@@ -742,8 +705,16 @@ public class JournalFileUpdateServiceTests
         // DetermineTargetFileName (--headings path):
         // headingParts=["Projects","2024_Goals"], entryNamePart="test_file"
         _mockEntryFormatter
-            .Setup(ef => ef.AddHeadingSeparators(It.Is<string[]>(a =>
-                a.Length == 3 && a[0] == "Projects" && a[1] == "2024_Goals" && a[2] == "test_file")))
+            .Setup(ef =>
+                ef.AddHeadingSeparators(
+                    It.Is<string[]>(a =>
+                        a.Length == 3
+                        && a[0] == "Projects"
+                        && a[1] == "2024_Goals"
+                        && a[2] == "test_file"
+                    )
+                )
+            )
             .Returns("Projects-2024_Goals-test_file");
 
         _mockFileSystem
@@ -754,16 +725,10 @@ public class JournalFileUpdateServiceTests
             .Setup(fs => fs.CombinePaths(Directory, newFileName))
             .Returns($"{Directory}/{newFileName}");
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists($"{Directory}/{newFileName}"))
-            .Returns(false);
+        _mockFileSystem.Setup(fs => fs.FileExists($"{Directory}/{newFileName}")).Returns(false);
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newHeadings: newHeadings
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newHeadings: newHeadings);
 
         // Assert - file renamed
         _mockFileSystem.Verify(
@@ -772,10 +737,7 @@ public class JournalFileUpdateServiceTests
         );
 
         // Assert - config entry moved to new heading location with new filename
-        _mockJournalConfiguration.Verify(
-            jc => jc.RemoveEntry(Directory, newFileName),
-            Times.Once
-        );
+        _mockJournalConfiguration.Verify(jc => jc.RemoveEntry(Directory, newFileName), Times.Once);
         _mockJournalConfiguration.Verify(
             jc => jc.AddEntry(Directory, displayName, newFileName, newTopicPath, null, true, false),
             Times.Once
@@ -800,7 +762,7 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = Array.Empty<string>();
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
@@ -810,17 +772,10 @@ public class JournalFileUpdateServiceTests
             .Returns($"{Directory}/{currentFile}");
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            ignoreFile: true
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, ignoreFile: true);
 
         // Assert
-        _mockJournalConfiguration.Verify(
-            jc => jc.RemoveEntry(Directory, currentFile),
-            Times.Once
-        );
+        _mockJournalConfiguration.Verify(jc => jc.RemoveEntry(Directory, currentFile), Times.Once);
         _mockJournalConfiguration.Verify(
             jc => jc.AddIgnoreEntry(Directory, currentFile),
             Times.Once
@@ -845,7 +800,7 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = Array.Empty<string>();
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
@@ -853,53 +808,43 @@ public class JournalFileUpdateServiceTests
         _mockFileSystem
             .Setup(fs => fs.CombinePaths(Directory, currentFile))
             .Returns($"{Directory}/{currentFile}");
-        
+
         _mockFileSystem
             .Setup(fs => fs.GetFileNameWithoutExtension(currentFile))
             .Returns(currentFileWithoutExt);
 
         _mockJournalConfiguration
             .Setup(jc => jc.Update(Directory, It.IsAny<Action<JournalConfig>>()))
-            .Callback<string, Action<JournalConfig>>((dir, action) =>
-            {
-                var config = new JournalConfig
+            .Callback<string, Action<JournalConfig>>(
+                (dir, action) =>
                 {
-                    JournalName = "Test",
-                    TableOfContents = new TableOfContents
+                    var config = new JournalConfig
                     {
-                        File = "toc.md",
-                        RootEntries = Array.Empty<Entries>(),
-                        Structure = new Structure { Topics = Array.Empty<Topic>() },
-                        IgnoreFiles = new[] { currentFile },
-                    },
-                };
-                action(config);
-            });
+                        JournalName = "Test",
+                        TableOfContents = new TableOfContents
+                        {
+                            File = "toc.md",
+                            RootEntries = Array.Empty<Entries>(),
+                            Structure = new Structure { Topics = Array.Empty<Topic>() },
+                            IgnoreFiles = new[] { currentFile },
+                        },
+                    };
+                    action(config);
+                }
+            );
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            unignoreFile: true
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, unignoreFile: true);
 
         // Assert
         _mockJournalConfiguration.Verify(
             jc => jc.Update(Directory, It.IsAny<Action<JournalConfig>>()),
             Times.Once
         );
-        
+
         // Verify that AddEntry was called to add the file back to the structure
         _mockJournalConfiguration.Verify(
-            jc => jc.AddEntry(
-                Directory,
-                "",
-                currentFile,
-                null,
-                null,
-                true,
-                false
-            ),
+            jc => jc.AddEntry(Directory, "", currentFile, null, null, true, false),
             Times.Once
         );
 
@@ -917,13 +862,9 @@ public class JournalFileUpdateServiceTests
         const string currentFile = "nonexistent.md";
         var currentPath = $"{Directory}/{currentFile}";
 
-        _mockFileSystem
-            .Setup(fs => fs.CombinePaths(Directory, currentFile))
-            .Returns(currentPath);
+        _mockFileSystem.Setup(fs => fs.CombinePaths(Directory, currentFile)).Returns(currentPath);
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(currentPath))
-            .Returns(false);
+        _mockFileSystem.Setup(fs => fs.FileExists(currentPath)).Returns(false);
 
         // Act & Assert
         var exception = Should.Throw<FileNotFoundException>(() =>
@@ -942,21 +883,15 @@ public class JournalFileUpdateServiceTests
         var currentPath = $"{Directory}/{currentFile}";
         var journalrcPath = $"{Directory}/.journalrc";
 
-        _mockFileSystem
-            .Setup(fs => fs.CombinePaths(Directory, currentFile))
-            .Returns(currentPath);
+        _mockFileSystem.Setup(fs => fs.CombinePaths(Directory, currentFile)).Returns(currentPath);
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(currentPath))
-            .Returns(true);
+        _mockFileSystem.Setup(fs => fs.FileExists(currentPath)).Returns(true);
 
         _mockFileSystem
             .Setup(fs => fs.CombinePaths(Directory, ".journalrc"))
             .Returns(journalrcPath);
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(journalrcPath))
-            .Returns(false);
+        _mockFileSystem.Setup(fs => fs.FileExists(journalrcPath)).Returns(false);
 
         // Act & Assert
         Should.Throw<markdown_journal_cli.Exceptions.JournalrcNotFoundException>(() =>
@@ -980,30 +915,24 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = new[] { "collin" };
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
-            .Returns(newEntryName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
 
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns(newFileNameWithoutExt);
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("collin"))
-            .Returns("collin");
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("collin")).Returns("collin");
 
         _mockEntryFormatter
             .Setup(ef => ef.RemoveSpaceSeparators(newEntryName))
             .Returns(newEntryName);
 
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("entry"))
-            .Returns("entry");
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("entry")).Returns("entry");
 
         _mockFileSystem
             .Setup(fs => fs.CombinePaths(Directory, currentFile))
@@ -1022,11 +951,7 @@ public class JournalFileUpdateServiceTests
             .Returns(newFileNameWithoutExt);
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newEntryName: newEntryName
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newEntryName: newEntryName);
 
         // Assert - renamed with prefix intact: collin-entry.md → collin-robison.md
         _mockFileSystem.Verify(
@@ -1062,14 +987,12 @@ public class JournalFileUpdateServiceTests
         var currentTopicPath = Array.Empty<string>();
 
         SetupBasicFileAndJournalrcExists(currentFile);
-        
+
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
-            .Returns(newEntryName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
 
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -1096,11 +1019,7 @@ public class JournalFileUpdateServiceTests
             .Returns(currentFileWithoutExt);
 
         // Act
-        _service.UpdateEntry(
-            Directory,
-            currentFileWithoutExt,
-            newEntryName: newEntryName
-        );
+        _service.UpdateEntry(Directory, currentFileWithoutExt, newEntryName: newEntryName);
 
         // Assert - file renamed at root level
         _mockFileSystem.Verify(
@@ -1144,9 +1063,7 @@ public class JournalFileUpdateServiceTests
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
-            .Returns(newEntryName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
 
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -1216,21 +1133,15 @@ public class JournalFileUpdateServiceTests
         var filePath = $"{Directory}/{fileName}";
         var journalrcPath = $"{Directory}/.journalrc";
 
-        _mockFileSystem
-            .Setup(fs => fs.CombinePaths(Directory, fileName))
-            .Returns(filePath);
+        _mockFileSystem.Setup(fs => fs.CombinePaths(Directory, fileName)).Returns(filePath);
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(filePath))
-            .Returns(true);
+        _mockFileSystem.Setup(fs => fs.FileExists(filePath)).Returns(true);
 
         _mockFileSystem
             .Setup(fs => fs.CombinePaths(Directory, ".journalrc"))
             .Returns(journalrcPath);
 
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(journalrcPath))
-            .Returns(true);
+        _mockFileSystem.Setup(fs => fs.FileExists(journalrcPath)).Returns(true);
     }
 
     #endregion
@@ -1251,13 +1162,9 @@ public class JournalFileUpdateServiceTests
         _mockFileSystem
             .Setup(fs => fs.GetFileNameWithoutExtension(currentFile))
             .Returns(currentStem);
-        _mockFileSystem
-            .Setup(fs => fs.GetFileNameWithoutExtension(newFile))
-            .Returns(newStem);
+        _mockFileSystem.Setup(fs => fs.GetFileNameWithoutExtension(newFile)).Returns(newStem);
 
-        _mockEntryFormatter
-            .Setup(ef => ef.AddSpaceSeparators(newName))
-            .Returns(newName);
+        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators(newName)).Returns(newName);
         _mockEntryFormatter
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns(newStem);
@@ -1269,12 +1176,8 @@ public class JournalFileUpdateServiceTests
             .Returns(newName.Replace("_", " "));
 
         var targetFilePath = $"{Directory}/{newFile}";
-        _mockFileSystem
-            .Setup(fs => fs.CombinePaths(Directory, newFile))
-            .Returns(targetFilePath);
-        _mockFileSystem
-            .Setup(fs => fs.FileExists(targetFilePath))
-            .Returns(false);
+        _mockFileSystem.Setup(fs => fs.CombinePaths(Directory, newFile)).Returns(targetFilePath);
+        _mockFileSystem.Setup(fs => fs.FileExists(targetFilePath)).Returns(false);
     }
 
     [Fact]
@@ -1292,14 +1195,16 @@ public class JournalFileUpdateServiceTests
 
         // Assert
         _mockMarkdownLinkRewriter.Verify(
-            r => r.ReplaceLinksInDirectory(
-                Directory,
-                currentFile,
-                expectedNewFile,
-                It.Is<IReadOnlyCollection<string>>(ex =>
-                    ex.Contains(expectedNewFile, StringComparer.OrdinalIgnoreCase) &&
-                    ex.Contains(TocFile, StringComparer.OrdinalIgnoreCase))
-            ),
+            r =>
+                r.ReplaceLinksInDirectory(
+                    Directory,
+                    currentFile,
+                    expectedNewFile,
+                    It.Is<IReadOnlyCollection<string>>(ex =>
+                        ex.Contains(expectedNewFile, StringComparer.OrdinalIgnoreCase)
+                        && ex.Contains(TocFile, StringComparer.OrdinalIgnoreCase)
+                    )
+                ),
             Times.Once
         );
     }
@@ -1314,30 +1219,32 @@ public class JournalFileUpdateServiceTests
 
         _mockJournalConfiguration
             .Setup(jc => jc.FindEntry(Directory, currentFile))
-            .Returns((new markdown_journal_cli.Infrastructure.Configuration.Models.Entries
-            {
-                Name = "My Entry",
-                File = currentFile
-            }, Array.Empty<string>()));
+            .Returns(
+                (
+                    new markdown_journal_cli.Infrastructure.Configuration.Models.Entries
+                    {
+                        Name = "My Entry",
+                        File = currentFile,
+                    },
+                    Array.Empty<string>()
+                )
+            );
 
-        _mockFileSystem
-            .Setup(fs => fs.GetFileNameWithoutExtension(currentFile))
-            .Returns(stem);
-        _mockEntryFormatter
-            .Setup(ef => ef.RemoveSpaceSeparators("New Title"))
-            .Returns("New Title");
+        _mockFileSystem.Setup(fs => fs.GetFileNameWithoutExtension(currentFile)).Returns(stem);
+        _mockEntryFormatter.Setup(ef => ef.RemoveSpaceSeparators("New Title")).Returns("New Title");
 
         // Act — title-only: no file rename
         _service.UpdateEntry(Directory, currentFile, newEntryTitle: "New Title");
 
         // Assert — no rename means no backlink scan
         _mockMarkdownLinkRewriter.Verify(
-            r => r.ReplaceLinksInDirectory(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<IReadOnlyCollection<string>>()
-            ),
+            r =>
+                r.ReplaceLinksInDirectory(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyCollection<string>>()
+                ),
             Times.Never
         );
     }
@@ -1357,12 +1264,13 @@ public class JournalFileUpdateServiceTests
 
         // Assert — rewriter must NOT be called
         _mockMarkdownLinkRewriter.Verify(
-            r => r.ReplaceLinksInDirectory(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<IReadOnlyCollection<string>>()
-            ),
+            r =>
+                r.ReplaceLinksInDirectory(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyCollection<string>>()
+                ),
             Times.Never
         );
     }
@@ -1382,13 +1290,15 @@ public class JournalFileUpdateServiceTests
 
         // Assert — TOC file must be in the exclusion list
         _mockMarkdownLinkRewriter.Verify(
-            r => r.ReplaceLinksInDirectory(
-                Directory,
-                currentFile,
-                expectedNewFile,
-                It.Is<IReadOnlyCollection<string>>(ex =>
-                    ex.Contains(TocFile, StringComparer.OrdinalIgnoreCase))
-            ),
+            r =>
+                r.ReplaceLinksInDirectory(
+                    Directory,
+                    currentFile,
+                    expectedNewFile,
+                    It.Is<IReadOnlyCollection<string>>(ex =>
+                        ex.Contains(TocFile, StringComparer.OrdinalIgnoreCase)
+                    )
+                ),
             Times.Once
         );
     }
@@ -1408,13 +1318,15 @@ public class JournalFileUpdateServiceTests
 
         // Assert — the newly renamed file itself must be excluded
         _mockMarkdownLinkRewriter.Verify(
-            r => r.ReplaceLinksInDirectory(
-                Directory,
-                currentFile,
-                expectedNewFile,
-                It.Is<IReadOnlyCollection<string>>(ex =>
-                    ex.Contains(expectedNewFile, StringComparer.OrdinalIgnoreCase))
-            ),
+            r =>
+                r.ReplaceLinksInDirectory(
+                    Directory,
+                    currentFile,
+                    expectedNewFile,
+                    It.Is<IReadOnlyCollection<string>>(ex =>
+                        ex.Contains(expectedNewFile, StringComparer.OrdinalIgnoreCase)
+                    )
+                ),
             Times.Once
         );
     }

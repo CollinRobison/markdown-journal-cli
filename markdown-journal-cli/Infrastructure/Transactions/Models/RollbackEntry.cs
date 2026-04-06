@@ -14,8 +14,4 @@ namespace markdown_journal_cli.Infrastructure.Transactions.Models;
 /// For <see cref="RollbackEntryKind.Rename"/> only: the path the file was renamed <em>to</em>.
 /// <see langword="null"/> for all other kinds.
 /// </param>
-public record RollbackEntry(
-    string AbsolutePath,
-    RollbackEntryKind Kind,
-    string? NewPath = null
-);
+public record RollbackEntry(string AbsolutePath, RollbackEntryKind Kind, string? NewPath = null);

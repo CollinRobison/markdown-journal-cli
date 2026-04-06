@@ -7,9 +7,7 @@ namespace markdown_journal_cli.Commands.Init;
 public sealed class InitSettings : CommandSettings
 {
     [CommandArgument(0, "[name]")]
-    [Description(
-        "The name of the journal. If not specified, the directory name will be used."
-    )]
+    [Description("The name of the journal. If not specified, the directory name will be used.")]
     public string? JournalName { get; set; }
 
     [CommandOption("-p|--path")]
@@ -41,9 +39,13 @@ public sealed class InitSettings : CommandSettings
 
         // Reject characters that are valid on the filesystem but break markdown link syntax
         // or are interpreted as shell globs (e.g. my[journal] expands in bash).
-        if (!string.IsNullOrWhiteSpace(JournalName)
-            && JournalName.IndexOfAny(['[', ']', '(', ')']) >= 0)
-            return ValidationResult.Error("Journal name cannot contain markdown link characters: [ ] ( )");
+        if (
+            !string.IsNullOrWhiteSpace(JournalName)
+            && JournalName.IndexOfAny(['[', ']', '(', ')']) >= 0
+        )
+            return ValidationResult.Error(
+                "Journal name cannot contain markdown link characters: [ ] ( )"
+            );
 
         return ValidationResult.Success();
     }

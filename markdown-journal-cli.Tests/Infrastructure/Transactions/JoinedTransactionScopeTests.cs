@@ -26,7 +26,11 @@ public class JoinedTransactionScopeTests : IDisposable
         var buffer = new InMemoryFileBuffer(_fileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
         _coordinator = new FileTransactionCoordinator(
-            _fileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance);
+            _fileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
+        );
 
         _fileSystem.CreateDirectory(JournalRoot);
         _fileSystem.CreateFile(JournalRoot, "a.md", "original-a");

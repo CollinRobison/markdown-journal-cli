@@ -1,12 +1,12 @@
 using System;
 using markdown_journal_cli.Exceptions;
-using Microsoft.Extensions.Logging;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 
@@ -187,7 +187,11 @@ public sealed class JournalUpdateService(
 
         var filesToRemove = configFiles.Where(f => !projectedFiles.Contains(f)).ToList();
 
-        return new JournalConfigSyncResult { FilesToAdd = filesToAdd, FilesToRemove = filesToRemove };
+        return new JournalConfigSyncResult
+        {
+            FilesToAdd = filesToAdd,
+            FilesToRemove = filesToRemove,
+        };
     }
 
     private static void CollectConfigEntryFiles(IEnumerable<Topic> topics, HashSet<string> fileSet)
@@ -215,8 +219,8 @@ public sealed class JournalUpdateService(
         var tocFile = original.TableOfContents.File;
 
         // Remove deleted files from root entries
-        var rootEntries = original.TableOfContents.RootEntries
-            .Where(e =>
+        var rootEntries = original
+            .TableOfContents.RootEntries.Where(e =>
                 !configSync.FilesToRemove.Any(f =>
                     string.Equals(f, e.File, StringComparison.OrdinalIgnoreCase)
                 )
@@ -229,12 +233,19 @@ public sealed class JournalUpdateService(
             var alreadyPresent = rootEntries.Any(e =>
                 string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase)
             );
-            if (!alreadyPresent && !string.Equals(file, tocFile, StringComparison.OrdinalIgnoreCase))
-                rootEntries.Add(new Entries { Name = Path.GetFileNameWithoutExtension(file), File = file });
+            if (
+                !alreadyPresent && !string.Equals(file, tocFile, StringComparison.OrdinalIgnoreCase)
+            )
+                rootEntries.Add(
+                    new Entries { Name = Path.GetFileNameWithoutExtension(file), File = file }
+                );
         }
 
         // Remove deleted files from topic structure recursively
-        var topics = ProjectTopics(original.TableOfContents.Structure.Topics, configSync.FilesToRemove);
+        var topics = ProjectTopics(
+            original.TableOfContents.Structure.Topics,
+            configSync.FilesToRemove
+        );
 
         return new JournalConfig
         {
@@ -250,13 +261,13 @@ public sealed class JournalUpdateService(
         };
     }
 
-    private static Topic[] ProjectTopics(Topic[] topics, IReadOnlyList<string> filesToRemove)
-        => topics.Select(t => ProjectTopic(t, filesToRemove)).ToArray();
+    private static Topic[] ProjectTopics(Topic[] topics, IReadOnlyList<string> filesToRemove) =>
+        topics.Select(t => ProjectTopic(t, filesToRemove)).ToArray();
 
     private static Topic ProjectTopic(Topic topic, IReadOnlyList<string> filesToRemove)
     {
-        var filteredEntries = topic.Entries
-            .Where(e =>
+        var filteredEntries = topic
+            .Entries.Where(e =>
                 !filesToRemove.Any(f =>
                     string.Equals(f, e.File, StringComparison.OrdinalIgnoreCase)
                 )
@@ -280,7 +291,10 @@ public sealed class JournalUpdateService(
         using var tx = _txCoordinator.BeginOrJoin();
         try
         {
-            var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
+            var journalrcPath = _fileSystem.CombinePaths(
+                journalPath,
+                _journalSettings.JournalConfigFileName
+            );
             if (_fileSystem.FileExists(journalrcPath))
                 tx.Track(journalrcPath);
 
@@ -301,7 +315,9 @@ public sealed class JournalUpdateService(
                 }
                 else
                 {
-                    _console.MarkupLine($"[yellow]Warning:[/] config entry not found for deleted file: {relativePath.EscapeMarkup()}");
+                    _console.MarkupLine(
+                        $"[yellow]Warning:[/] config entry not found for deleted file: {relativePath.EscapeMarkup()}"
+                    );
                 }
             }
 
@@ -314,7 +330,13 @@ public sealed class JournalUpdateService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update journal configuration", journalPath, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "update journal configuration",
+                journalPath,
+                ex
+            );
         }
     }
 
@@ -334,11 +356,17 @@ public sealed class JournalUpdateService(
             else
                 tx.TrackNew(tocAbsPath);
 
-            var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
+            var trackingPath = _fileSystem.CombinePaths(
+                journalPath,
+                $".{_journalSettings.AppName}"
+            );
             if (_fileSystem.FileExists(trackingPath))
                 tx.Track(trackingPath);
 
-            _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+            _tableOfContentsService.UpdateTableOfContents(
+                journalPath,
+                lastEditedDate: DateTime.Now
+            );
             _fileTracking.UpdateFileInIndex(journalPath, tocFile);
 
             _console.MarkupLine($"[green]Table of contents updated.[/]");
@@ -346,7 +374,13 @@ public sealed class JournalUpdateService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update table of contents", journalPath, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "update table of contents",
+                journalPath,
+                ex
+            );
         }
     }
 
@@ -359,7 +393,10 @@ public sealed class JournalUpdateService(
         using var tx = _txCoordinator.BeginOrJoin();
         try
         {
-            var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
+            var trackingPath = _fileSystem.CombinePaths(
+                journalPath,
+                $".{_journalSettings.AppName}"
+            );
             if (_fileSystem.FileExists(trackingPath))
                 tx.Track(trackingPath);
 
@@ -410,7 +447,9 @@ public sealed class JournalUpdateService(
                     $"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]"
                 );
             if (fileResults.AddedFiles.Count > 0)
-                _console.MarkupLine($"[green]Tracked {fileResults.AddedFiles.Count} new file(s).[/]");
+                _console.MarkupLine(
+                    $"[green]Tracked {fileResults.AddedFiles.Count} new file(s).[/]"
+                );
             if (fileResults.DeletedFiles.Count > 0)
                 _console.MarkupLine(
                     $"[yellow]Removed {fileResults.DeletedFiles.Count} deleted file(s) from tracking.[/]"
@@ -420,7 +459,13 @@ public sealed class JournalUpdateService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "update dates and tracking", journalPath, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "update dates and tracking",
+                journalPath,
+                ex
+            );
         }
     }
 
@@ -429,14 +474,19 @@ public sealed class JournalUpdateService(
         // Pre-flight guard: resolve current TOC name and check for a rename conflict before
         // touching any files. This ensures a conflicting target returns exit 1 (guard) rather
         // than triggering a full transaction rollback (exit 2).
-        var preflightConfig = _journalConfiguration.Read(journalPath)
+        var preflightConfig =
+            _journalConfiguration.Read(journalPath)
             ?? throw new JournalrcNotFoundException(journalPath);
 
         var currentTocFile = preflightConfig.TableOfContents.File;
         var newTocFile = newTocName + FileConstants.MarkdownExtension;
         var newTocAbsPath = _fileSystem.CombinePaths(journalPath, newTocFile);
 
-        var isAlreadyNamed = string.Equals(currentTocFile, newTocFile, StringComparison.OrdinalIgnoreCase);
+        var isAlreadyNamed = string.Equals(
+            currentTocFile,
+            newTocFile,
+            StringComparison.OrdinalIgnoreCase
+        );
 
         // Guard: only check for a name conflict when an actual rename is needed.
         // If the TOC is already named correctly, there is nothing to do — skip the guard.
@@ -446,8 +496,14 @@ public sealed class JournalUpdateService(
         using var tx = _txCoordinator.BeginOrJoin();
         try
         {
-            var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
-            var trackingPath = _fileSystem.CombinePaths(journalPath, $".{_journalSettings.AppName}");
+            var journalrcPath = _fileSystem.CombinePaths(
+                journalPath,
+                _journalSettings.JournalConfigFileName
+            );
+            var trackingPath = _fileSystem.CombinePaths(
+                journalPath,
+                $".{_journalSettings.AppName}"
+            );
             if (_fileSystem.FileExists(journalrcPath))
                 tx.Track(journalrcPath);
             if (_fileSystem.FileExists(trackingPath))
@@ -455,20 +511,29 @@ public sealed class JournalUpdateService(
 
             if (!isAlreadyNamed)
             {
-                foreach (var relative in _markdownLinkRewriter.FindFilesWithLinkTo(journalPath, currentTocFile))
+                foreach (
+                    var relative in _markdownLinkRewriter.FindFilesWithLinkTo(
+                        journalPath,
+                        currentTocFile
+                    )
+                )
                     tx.Track(_fileSystem.CombinePaths(journalPath, relative));
 
                 var currentTocAbsPath = _fileSystem.CombinePaths(journalPath, currentTocFile);
                 tx.TrackRename(currentTocAbsPath, newTocAbsPath);
 
                 _fileSystem.RenameFile(currentTocAbsPath, newTocAbsPath);
-                _console.MarkupLine($"Renamed TOC: {currentTocFile.EscapeMarkup()} → {newTocFile.EscapeMarkup()}");
+                _console.MarkupLine(
+                    $"Renamed TOC: {currentTocFile.EscapeMarkup()} → {newTocFile.EscapeMarkup()}"
+                );
 
                 _journalConfiguration.Update(
                     journalPath,
                     cfg => cfg.TableOfContents.File = newTocFile
                 );
-                _console.MarkupLine($"[green]Updated .journalrc table-of-contents filename to '{newTocFile.EscapeMarkup()}'.[/]");
+                _console.MarkupLine(
+                    $"[green]Updated .journalrc table-of-contents filename to '{newTocFile.EscapeMarkup()}'.[/]"
+                );
                 _fileTracking.RenameFileInIndex(journalPath, currentTocFile, newTocFile);
 
                 var modifiedFiles = _markdownLinkRewriter.ReplaceLinksInDirectory(
@@ -515,8 +580,13 @@ public sealed class JournalUpdateService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "rename table of contents", journalPath, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "rename table of contents",
+                journalPath,
+                ex
+            );
         }
     }
-
 }

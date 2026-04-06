@@ -1,9 +1,9 @@
 using System;
 using System.ComponentModel;
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
-using markdown_journal_cli.Commands;
 using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
@@ -76,7 +76,13 @@ public sealed class AddFileTracking(
             }
             catch (Exception ex)
             {
-                throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "add file tracking", settings.FilePath, ex);
+                throw _rollbackReporter.RollbackAndBuildException(
+                    tx,
+                    _txCoordinator,
+                    "add file tracking",
+                    settings.FilePath,
+                    ex
+                );
             }
         }
         catch (JournalrcNotFoundException ex)
@@ -86,7 +92,10 @@ public sealed class AddFileTracking(
             );
             return 1;
         }
-        catch (RollbackCompletedException) { throw; }
+        catch (RollbackCompletedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _console.MarkupLine($"[red]Error:[/] An unexpected error occurred: {ex.Message}");

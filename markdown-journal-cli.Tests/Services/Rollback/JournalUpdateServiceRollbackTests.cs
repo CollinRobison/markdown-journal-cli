@@ -18,10 +18,13 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
     private JournalUpdateService CreateService(IMarkdownLinkRewriter? linkRewriter = null)
     {
         linkRewriter ??= Mock.Of<IMarkdownLinkRewriter>(r =>
-            r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>()) == Array.Empty<string>() &&
-            r.ReplaceLinksInDirectory(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IReadOnlyCollection<string>?>()) == Array.Empty<string>()
+            r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>()) == Array.Empty<string>()
+            && r.ReplaceLinksInDirectory(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>?>()
+            ) == Array.Empty<string>()
         );
 
         return new JournalUpdateService(
@@ -46,7 +49,11 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
         FileSystem.ResetCallCounts();
 
         // UpdateFile #1 is the .journalrc write from JournalConfiguration.AddEntry
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Config write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Config write failed")
+        );
 
         var service = CreateService();
         var syncResult = new JournalConfigSyncResult
@@ -71,13 +78,15 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
         FileSystem.ResetCallCounts();
 
         // UpdateFile #1 is the TOC write from TableOfContentsService
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("TOC write failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("TOC write failed")
+        );
 
         var service = CreateService();
 
-        Should.Throw<RollbackCompletedException>(() =>
-            service.UpdateTableOfContents(JournalPath)
-        );
+        Should.Throw<RollbackCompletedException>(() => service.UpdateTableOfContents(JournalPath));
 
         // TOC should be restored to pre-operation content
         FileSystem.GetFileContent(TocPath).ShouldBe(tocBefore);
@@ -95,13 +104,15 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
         FileSystem.ResetCallCounts();
 
         // UpdateFile #1 = journalrc update (from _journalConfiguration.Update in RenameToc)
-        FileSystem.InjectFaultOn(FaultInjectPoint.UpdateFile, 1, new IOException("Config update failed"));
+        FileSystem.InjectFaultOn(
+            FaultInjectPoint.UpdateFile,
+            1,
+            new IOException("Config update failed")
+        );
 
         var service = CreateService();
 
-        Should.Throw<RollbackCompletedException>(() =>
-            service.RenameToc(JournalPath, newTocName)
-        );
+        Should.Throw<RollbackCompletedException>(() => service.RenameToc(JournalPath, newTocName));
 
         // The physical rename should have been reversed — original TOC exists, new one does not
         FileSystem.FileExists(originalTocPath).ShouldBeTrue();
@@ -127,16 +138,19 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
             .Setup(r => r.FindFilesWithLinkTo(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(Array.Empty<string>());
         throwingRewriter
-            .Setup(r => r.ReplaceLinksInDirectory(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IReadOnlyCollection<string>?>()))
+            .Setup(r =>
+                r.ReplaceLinksInDirectory(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyCollection<string>?>()
+                )
+            )
             .Throws(new IOException("Link scan failed"));
 
         var service = CreateService(throwingRewriter.Object);
 
-        Should.Throw<RollbackCompletedException>(() =>
-            service.RenameToc(JournalPath, newTocName)
-        );
+        Should.Throw<RollbackCompletedException>(() => service.RenameToc(JournalPath, newTocName));
 
         // Rename + config + tracking all happened before throw — rollback must undo all
         FileSystem.FileExists(originalTocPath).ShouldBeTrue();

@@ -142,7 +142,8 @@ public static class Program
                     update
                         .AddCommand<UpdateCommand>("journal")
                         .WithExample("update", "--path", "Source/Repos/TestJournal", "journal");
-                    update.AddCommand<UpdateEntryCommand>("entry")
+                    update
+                        .AddCommand<UpdateEntryCommand>("entry")
                         .WithExample(
                             "update",
                             "--path",
@@ -154,21 +155,43 @@ public static class Program
                             "--headings",
                             "Projects-Completed_Tasks"
                         );
-                        
                 }
             );
 
-            config.AddBranch<RemoveSettings>(
-                "remove",
-                remove =>
-                {
-                    remove.SetDescription("Removes a specified file from an existing journal.");
-                    remove.AddCommand<RemoveEntryCommand>("entry")
-                        .WithExample("remove", "--path", "Source/Repos/TestJournal", "entry", "old_notes")
-                        .WithExample("remove", "--path", "Source/Repos/TestJournal", "entry", "old_notes", "--force")
-                        .WithExample("remove", "--path", "Source/Repos/TestJournal", "entry", "old_notes", "--clean-refs");
-                }
-            ).WithAlias("rm");
+            config
+                .AddBranch<RemoveSettings>(
+                    "remove",
+                    remove =>
+                    {
+                        remove.SetDescription("Removes a specified file from an existing journal.");
+                        remove
+                            .AddCommand<RemoveEntryCommand>("entry")
+                            .WithExample(
+                                "remove",
+                                "--path",
+                                "Source/Repos/TestJournal",
+                                "entry",
+                                "old_notes"
+                            )
+                            .WithExample(
+                                "remove",
+                                "--path",
+                                "Source/Repos/TestJournal",
+                                "entry",
+                                "old_notes",
+                                "--force"
+                            )
+                            .WithExample(
+                                "remove",
+                                "--path",
+                                "Source/Repos/TestJournal",
+                                "entry",
+                                "old_notes",
+                                "--clean-refs"
+                            );
+                    }
+                )
+                .WithAlias("rm");
         });
 
         // Spectre.Console returns -1 for validation failures; normalise to 1 so callers

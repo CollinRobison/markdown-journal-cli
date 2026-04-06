@@ -1,9 +1,9 @@
 using System;
 using System.ComponentModel;
-using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Services;
 using markdown_journal_cli.Commands;
+using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Services;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

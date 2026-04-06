@@ -330,7 +330,10 @@ public class JournalConfiguration(
         if (ignoreFile)
         {
             AddIgnoreEntry(directory, file);
-            _logger.LogDebug("File '{File}' added to ignore list only (not added to structure)", file);
+            _logger.LogDebug(
+                "File '{File}' added to ignore list only (not added to structure)",
+                file
+            );
             return;
         }
 
@@ -507,28 +510,35 @@ public class JournalConfiguration(
 
     public void UpdateFileReferences(string directory, string oldFile, string newFile)
     {
-        Update(directory, config =>
-        {
-            // Update root entries
-            foreach (var entry in config.TableOfContents.RootEntries)
+        Update(
+            directory,
+            config =>
             {
-                if (string.Equals(entry.File, oldFile, StringComparison.OrdinalIgnoreCase))
+                // Update root entries
+                foreach (var entry in config.TableOfContents.RootEntries)
                 {
-                    entry.File = newFile;
+                    if (string.Equals(entry.File, oldFile, StringComparison.OrdinalIgnoreCase))
+                    {
+                        entry.File = newFile;
+                    }
+                }
+
+                // Update topic entries recursively
+                UpdateFileInTopics(config.TableOfContents.Structure.Topics, oldFile, newFile);
+
+                // Update ignore list
+                if (config.TableOfContents.IgnoreFiles is { Length: > 0 })
+                {
+                    config.TableOfContents.IgnoreFiles = config
+                        .TableOfContents.IgnoreFiles.Select(f =>
+                            string.Equals(f, oldFile, StringComparison.OrdinalIgnoreCase)
+                                ? newFile
+                                : f
+                        )
+                        .ToArray();
                 }
             }
-
-            // Update topic entries recursively
-            UpdateFileInTopics(config.TableOfContents.Structure.Topics, oldFile, newFile);
-
-            // Update ignore list
-            if (config.TableOfContents.IgnoreFiles is { Length: > 0 })
-            {
-                config.TableOfContents.IgnoreFiles = config.TableOfContents.IgnoreFiles
-                    .Select(f => string.Equals(f, oldFile, StringComparison.OrdinalIgnoreCase) ? newFile : f)
-                    .ToArray();
-            }
-        });
+        );
     }
 
     public JournalConfigSyncResult DetectConfigChanges(string journalPath)
@@ -565,7 +575,11 @@ public class JournalConfiguration(
 
         var filesToRemove = configFiles.Where(f => !trackedFiles.Contains(f)).ToList();
 
-        return new JournalConfigSyncResult { FilesToAdd = filesToAdd, FilesToRemove = filesToRemove };
+        return new JournalConfigSyncResult
+        {
+            FilesToAdd = filesToAdd,
+            FilesToRemove = filesToRemove,
+        };
     }
 
     private static void CollectTopicEntryFiles(IEnumerable<Topic> topics, HashSet<string> fileSet)

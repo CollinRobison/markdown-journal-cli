@@ -12,8 +12,10 @@ namespace markdown_journal_cli.Infrastructure.Transactions;
 public sealed class RollbackReporter(IAnsiConsole console, ILogger<RollbackReporter> logger)
     : IRollbackReporter
 {
-    private readonly IAnsiConsole _console = console ?? throw new ArgumentNullException(nameof(console));
-    private readonly ILogger<RollbackReporter> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IAnsiConsole _console =
+        console ?? throw new ArgumentNullException(nameof(console));
+    private readonly ILogger<RollbackReporter> _logger =
+        logger ?? throw new ArgumentNullException(nameof(logger));
 
     public void ReportRollbackStarting(string operationDescription, Exception cause)
     {
@@ -50,7 +52,10 @@ public sealed class RollbackReporter(IAnsiConsole console, ILogger<RollbackRepor
                 RollbackEntryKind.Modify => ("Restored", rel),
                 RollbackEntryKind.Delete => ("Restored", rel),
                 RollbackEntryKind.New => ("Deleted", $"{rel} [dim](never committed)[/]"),
-                RollbackEntryKind.NewDirectory => ("Dir Deleted", $"{rel} [dim](empty dir removed)[/]"),
+                RollbackEntryKind.NewDirectory => (
+                    "Dir Deleted",
+                    $"{rel} [dim](empty dir removed)[/]"
+                ),
                 RollbackEntryKind.Rename => ("Renamed back", $"{relNew} [dim]-> {rel}[/]"),
                 _ => ("Restored", rel),
             };
@@ -62,14 +67,17 @@ public sealed class RollbackReporter(IAnsiConsole console, ILogger<RollbackRepor
 
         if (result.IsFullyRestored)
         {
-            _console.MarkupLine("[green]All changes have been rolled back. Your journal is unchanged.[/]");
+            _console.MarkupLine(
+                "[green]All changes have been rolled back. Your journal is unchanged.[/]"
+            );
             _console.MarkupLine("[dim]To retry, fix the error above and run the command again.[/]");
         }
         else
         {
             foreach (var failure in result.Failed)
             {
-                var rel = Path.GetRelativePath(journalRoot, failure.Entry.AbsolutePath).EscapeMarkup();
+                var rel = Path.GetRelativePath(journalRoot, failure.Entry.AbsolutePath)
+                    .EscapeMarkup();
                 _console.MarkupLine($"[red]  x  {rel}: {failure.Error.Message.EscapeMarkup()}[/]");
             }
 

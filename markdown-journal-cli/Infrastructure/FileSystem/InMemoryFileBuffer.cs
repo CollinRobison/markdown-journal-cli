@@ -11,8 +11,7 @@ public class InMemoryFileBuffer(IFileSystem fileSystem) : IInMemoryFileBuffer
     public void Snapshot(string absolutePath) =>
         _snapshots[absolutePath] = _fileSystem.GetFileContent(absolutePath);
 
-    public void Stage(string absolutePath, string content) =>
-        _staged[absolutePath] = content;
+    public void Stage(string absolutePath, string content) => _staged[absolutePath] = content;
 
     public string? GetStaged(string absolutePath) =>
         _staged.TryGetValue(absolutePath, out var content) ? content : null;

@@ -12,14 +12,21 @@ internal sealed class FileTransactionScope(
     Action onDisposed
 ) : IFileTransactionScope
 {
-    private readonly IFileSystem _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-    private readonly IInMemoryFileBuffer _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
-    private readonly IDeletionRollbackStrategy _deletionStrategy = deletionStrategy ?? throw new ArgumentNullException(nameof(deletionStrategy));
-    private readonly ILogger<FileTransactionScope> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly Action _onDisposed = onDisposed ?? throw new ArgumentNullException(nameof(onDisposed));
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+    private readonly IInMemoryFileBuffer _buffer =
+        buffer ?? throw new ArgumentNullException(nameof(buffer));
+    private readonly IDeletionRollbackStrategy _deletionStrategy =
+        deletionStrategy ?? throw new ArgumentNullException(nameof(deletionStrategy));
+    private readonly ILogger<FileTransactionScope> _logger =
+        logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly Action _onDisposed =
+        onDisposed ?? throw new ArgumentNullException(nameof(onDisposed));
 
     private readonly List<RollbackEntry> _entries = [];
-    private readonly Dictionary<string, string> _modifySnapshots = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _modifySnapshots = new(
+        StringComparer.OrdinalIgnoreCase
+    );
     private bool _committed;
     private bool _rolledBack;
     private bool _disposed;
@@ -106,11 +113,21 @@ internal sealed class FileTransactionScope(
                 {
                     case RollbackEntryKind.Modify:
                     {
-                        var directory = _fileSystem.GetDirectoryName(entry.AbsolutePath)
-                            ?? throw new InvalidOperationException($"Cannot determine directory for '{entry.AbsolutePath}'.");
-                        var fileName = _fileSystem.GetFileName(entry.AbsolutePath)
-                            ?? throw new InvalidOperationException($"Cannot determine file name for '{entry.AbsolutePath}'.");
-                        _fileSystem.UpdateFile(directory, fileName, _modifySnapshots[entry.AbsolutePath]);
+                        var directory =
+                            _fileSystem.GetDirectoryName(entry.AbsolutePath)
+                            ?? throw new InvalidOperationException(
+                                $"Cannot determine directory for '{entry.AbsolutePath}'."
+                            );
+                        var fileName =
+                            _fileSystem.GetFileName(entry.AbsolutePath)
+                            ?? throw new InvalidOperationException(
+                                $"Cannot determine file name for '{entry.AbsolutePath}'."
+                            );
+                        _fileSystem.UpdateFile(
+                            directory,
+                            fileName,
+                            _modifySnapshots[entry.AbsolutePath]
+                        );
                         break;
                     }
                     case RollbackEntryKind.New:
@@ -131,12 +148,21 @@ internal sealed class FileTransactionScope(
                 }
 
                 restored.Add(entry);
-                _logger.LogInformation("Rolled back {Kind} for {AbsolutePath}", entry.Kind, entry.AbsolutePath);
+                _logger.LogInformation(
+                    "Rolled back {Kind} for {AbsolutePath}",
+                    entry.Kind,
+                    entry.AbsolutePath
+                );
             }
             catch (Exception ex)
             {
                 failed.Add(new RollbackFailure(entry, ex));
-                _logger.LogError(ex, "Rollback failed for {Kind} at {AbsolutePath}", entry.Kind, entry.AbsolutePath);
+                _logger.LogError(
+                    ex,
+                    "Rollback failed for {Kind} at {AbsolutePath}",
+                    entry.Kind,
+                    entry.AbsolutePath
+                );
             }
         }
 

@@ -25,7 +25,9 @@ public sealed class RemoveEntrySettings : RemoveSettings
     public bool Force { get; set; }
 
     [CommandOption("--clean-refs")]
-    [Description("Scan all other entry files and strip inline links pointing to the removed entry.")]
+    [Description(
+        "Scan all other entry files and strip inline links pointing to the removed entry."
+    )]
     public bool CleanRefs { get; set; }
 
     public override ValidationResult Validate()

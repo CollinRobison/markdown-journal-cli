@@ -1,10 +1,10 @@
+using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
-using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.Tracking;
@@ -780,11 +780,7 @@ public class JournalUpdateServiceTests
         _fileSystem.CreateFile(_testPath, tocFile, "# TOC");
         _fileTracking.UpdateFileInIndex(_testPath, tocFile);
 
-        _fileSystem.CreateFile(
-            _testPath,
-            "note.md",
-            $"[TOC]({tocFile})"
-        );
+        _fileSystem.CreateFile(_testPath, "note.md", $"[TOC]({tocFile})");
         _fileTracking.UpdateFileInIndex(_testPath, "note.md");
 
         // Act — pass same stem (no change in name)
@@ -811,9 +807,7 @@ public class JournalUpdateServiceTests
         _fileSystem.CreateFile(_testPath, conflictingFile, "# Other file");
 
         // Act & Assert
-        Should.Throw<TocRenameConflictException>(
-            () => _service.RenameToc(_testPath, "MyContents")
-        );
+        Should.Throw<TocRenameConflictException>(() => _service.RenameToc(_testPath, "MyContents"));
     }
 
     [Fact]
@@ -846,10 +840,16 @@ public class JournalUpdateServiceTests
         _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
         _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
 
-        _fileSystem.CreateFile(_testPath, "intro.md",
-            $"Created: 01/01/2025\n# Intro\n[TOC]({oldTocFile})");
-        _fileSystem.CreateFile(_testPath, "chapter-1.md",
-            $"Created: 01/01/2025\n# Chapter 1\n[TOC]({oldTocFile})");
+        _fileSystem.CreateFile(
+            _testPath,
+            "intro.md",
+            $"Created: 01/01/2025\n# Intro\n[TOC]({oldTocFile})"
+        );
+        _fileSystem.CreateFile(
+            _testPath,
+            "chapter-1.md",
+            $"Created: 01/01/2025\n# Chapter 1\n[TOC]({oldTocFile})"
+        );
         _fileSystem.CreateFile(_testPath, "other.md", "No link.");
         _fileTracking.UpdateFileInIndex(_testPath, "intro.md");
         _fileTracking.UpdateFileInIndex(_testPath, "chapter-1.md");
@@ -895,9 +895,7 @@ public class JournalUpdateServiceTests
         var entryContentBefore = _fileSystem.GetFileContent(Path.Combine(_testPath, entryWithLink));
 
         // Act & Assert — throws TocRenameConflictException (not a rollback exception)
-        Should.Throw<TocRenameConflictException>(
-            () => _service.RenameToc(_testPath, "NewName")
-        );
+        Should.Throw<TocRenameConflictException>(() => _service.RenameToc(_testPath, "NewName"));
 
         // Verify: the entry was NOT modified — no link rewrites occurred
         var entryContentAfter = _fileSystem.GetFileContent(Path.Combine(_testPath, entryWithLink));
@@ -916,8 +914,8 @@ public class JournalUpdateServiceTests
         _fileSystem.CreateFile(_testPath, conflictingFile, "# Other");
         _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
 
-        var exception = Should.Throw<TocRenameConflictException>(
-            () => _service.RenameToc(_testPath, "AnotherFile")
+        var exception = Should.Throw<TocRenameConflictException>(() =>
+            _service.RenameToc(_testPath, "AnotherFile")
         );
         exception.ShouldNotBeNull();
     }
@@ -933,10 +931,7 @@ public class JournalUpdateServiceTests
     /// then optionally adds extra files to each.
     /// Returns the relative path of the TOC file.
     /// </summary>
-    private string SetupDryRunJournal(
-        string[]? trackedFiles = null,
-        string[]? configFiles = null
-    )
+    private string SetupDryRunJournal(string[]? trackedFiles = null, string[]? configFiles = null)
     {
         const string tocFile = "1a-TableOfContents.md";
 
@@ -973,10 +968,7 @@ public class JournalUpdateServiceTests
 
         // Simulate a new file on disk that tracking will detect as "added"
         _fileSystem.CreateFile(_testPath, "new-entry.md", "# New Entry\n");
-        var trackingChanges = new ChangeDetectionResult
-        {
-            AddedFiles = ["new-entry.md"],
-        };
+        var trackingChanges = new ChangeDetectionResult { AddedFiles = ["new-entry.md"] };
         var naiveConfigChanges = _journalConfiguration.DetectConfigChanges(_testPath);
 
         // Act
@@ -1004,10 +996,7 @@ public class JournalUpdateServiceTests
         SetupDryRunJournal(trackedFiles: ["going-away.md"]);
         _journalConfiguration.AddEntry(_testPath, string.Empty, "going-away.md");
 
-        var trackingChanges = new ChangeDetectionResult
-        {
-            DeletedFiles = ["going-away.md"],
-        };
+        var trackingChanges = new ChangeDetectionResult { DeletedFiles = ["going-away.md"] };
         var naiveConfigChanges = _journalConfiguration.DetectConfigChanges(_testPath);
 
         // Act

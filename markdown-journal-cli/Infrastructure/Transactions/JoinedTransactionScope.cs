@@ -4,7 +4,8 @@ namespace markdown_journal_cli.Infrastructure.Transactions;
 
 internal sealed class JoinedTransactionScope(IFileTransactionScope root) : IFileTransactionScope
 {
-    private readonly IFileTransactionScope _root = root ?? throw new ArgumentNullException(nameof(root));
+    private readonly IFileTransactionScope _root =
+        root ?? throw new ArgumentNullException(nameof(root));
     private bool _sealed;
     private bool _committed;
 

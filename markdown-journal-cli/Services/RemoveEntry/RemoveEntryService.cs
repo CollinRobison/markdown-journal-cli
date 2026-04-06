@@ -43,15 +43,23 @@ public sealed class RemoveEntryService(
 
     public IReadOnlyList<string> RemoveEntry(string journalPath, string fileName, bool cleanRefs)
     {
-        _logger.LogDebug("RemoveEntry called for '{FileName}' in '{JournalPath}'", fileName, journalPath);
+        _logger.LogDebug(
+            "RemoveEntry called for '{FileName}' in '{JournalPath}'",
+            fileName,
+            journalPath
+        );
 
         // Run all guard checks (same as ValidatePreconditions) before any writes.
         var (resolvedFileName, absoluteEntryPath) = ResolveAndValidate(journalPath, fileName);
 
         var trackingFileName = $".{_journalSettings.AppName}";
-        var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
+        var journalrcPath = _fileSystem.CombinePaths(
+            journalPath,
+            _journalSettings.JournalConfigFileName
+        );
         var config = _journalConfiguration.Read(journalPath);
-        var tocFile = config?.TableOfContents.File
+        var tocFile =
+            config?.TableOfContents.File
             ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
 
         using var tx = _txCoordinator.Begin();
@@ -62,7 +70,8 @@ public sealed class RemoveEntryService(
 
             if (cleanRefs)
             {
-                var backlinkFiles = _markdownLinkRewriter.FindFilesWithLinkTo(journalPath, resolvedFileName) ?? [];
+                var backlinkFiles =
+                    _markdownLinkRewriter.FindFilesWithLinkTo(journalPath, resolvedFileName) ?? [];
                 foreach (var relative in backlinkFiles)
                     tx.Track(_fileSystem.CombinePaths(journalPath, relative));
             }
@@ -89,13 +98,22 @@ public sealed class RemoveEntryService(
 
             // 9. Regenerate TOC
             _logger.LogDebug("Regenerating table of contents");
-            _tableOfContentsService.UpdateTableOfContents(journalPath, lastEditedDate: DateTime.Now);
+            _tableOfContentsService.UpdateTableOfContents(
+                journalPath,
+                lastEditedDate: DateTime.Now
+            );
 
             // 10. Optionally strip dead links across the journal
             if (cleanRefs)
             {
-                _logger.LogDebug("Stripping dead links to '{FileName}' across journal", resolvedFileName);
-                var modifiedFiles = _markdownLinkRewriter.StripLinksInDirectory(journalPath, resolvedFileName);
+                _logger.LogDebug(
+                    "Stripping dead links to '{FileName}' across journal",
+                    resolvedFileName
+                );
+                var modifiedFiles = _markdownLinkRewriter.StripLinksInDirectory(
+                    journalPath,
+                    resolvedFileName
+                );
 
                 foreach (var relativePath in modifiedFiles)
                 {
@@ -119,7 +137,13 @@ public sealed class RemoveEntryService(
         }
         catch (Exception ex)
         {
-            throw _rollbackReporter.RollbackAndBuildException(tx, _txCoordinator, "remove entry", journalPath, ex);
+            throw _rollbackReporter.RollbackAndBuildException(
+                tx,
+                _txCoordinator,
+                "remove entry",
+                journalPath,
+                ex
+            );
         }
     }
 
@@ -129,15 +153,22 @@ public sealed class RemoveEntryService(
     /// </summary>
     private (string resolvedFileName, string absoluteEntryPath) ResolveAndValidate(
         string journalPath,
-        string fileName)
+        string fileName
+    )
     {
         // 1. Normalise fileName — append .md if missing
-        var resolvedFileName = fileName.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)
+        var resolvedFileName = fileName.EndsWith(
+            FileConstants.MarkdownExtension,
+            StringComparison.OrdinalIgnoreCase
+        )
             ? fileName
             : $"{fileName}{FileConstants.MarkdownExtension}";
 
         // 2. Validate .journalrc exists
-        var journalrcPath = _fileSystem.CombinePaths(journalPath, _journalSettings.JournalConfigFileName);
+        var journalrcPath = _fileSystem.CombinePaths(
+            journalPath,
+            _journalSettings.JournalConfigFileName
+        );
         if (!_fileSystem.FileExists(journalrcPath))
         {
             _logger.LogWarning("Journal config not found at '{JournalPath}'", journalPath);
@@ -149,23 +180,33 @@ public sealed class RemoveEntryService(
         var trackingFilePath = _fileSystem.CombinePaths(journalPath, trackingFileName);
         if (!_fileSystem.FileExists(trackingFilePath))
         {
-            _logger.LogWarning("Tracking index '{TrackingFileName}' not found at '{JournalPath}'", trackingFileName, journalPath);
+            _logger.LogWarning(
+                "Tracking index '{TrackingFileName}' not found at '{JournalPath}'",
+                trackingFileName,
+                journalPath
+            );
             throw new TrackingIndexNotFoundException(journalPath, trackingFileName);
         }
 
         // 4. Guard against protected files — read live TOC filename from config
         _logger.LogDebug("Checking if '{FileName}' is a protected journal file", resolvedFileName);
         var config = _journalConfiguration.Read(journalPath);
-        var tocFile = config?.TableOfContents.File
+        var tocFile =
+            config?.TableOfContents.File
             ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
 
-        var protectedFiles = new[] { _journalSettings.JournalConfigFileName, trackingFileName, tocFile };
+        var protectedFiles = new[]
+        {
+            _journalSettings.JournalConfigFileName,
+            trackingFileName,
+            tocFile,
+        };
 
         // Check both the raw input and the normalised name: non-.md infrastructure files
         // (e.g. .journalrc) would otherwise be missed once .md is appended.
         var targetedProtectedFile = protectedFiles.FirstOrDefault(f =>
-            string.Equals(f, resolvedFileName, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)
+            string.Equals(f, resolvedFileName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)
         );
         if (targetedProtectedFile is not null)
             throw new ProtectedJournalFileException(fileName);

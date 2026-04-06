@@ -87,7 +87,8 @@ public class FileSystem : IFileSystem
         return File.ReadAllText(filePath);
     }
 
-    public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
+    public string? GetFileNameWithoutExtension(string? path) =>
+        Path.GetFileNameWithoutExtension(path);
 
     public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 

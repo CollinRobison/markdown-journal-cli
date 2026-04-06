@@ -186,7 +186,11 @@ public class FileTracking(
         SaveIndex(index, path);
     }
 
-    public void RenameFileInIndex(string path, string oldRelativeFilePath, string newRelativeFilePath)
+    public void RenameFileInIndex(
+        string path,
+        string oldRelativeFilePath,
+        string newRelativeFilePath
+    )
     {
         RemoveFileFromIndex(path, oldRelativeFilePath);
         UpdateFileInIndex(path, newRelativeFilePath);
