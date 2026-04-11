@@ -473,6 +473,13 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
 - ⏳ update the `delete entry` command when using the `--clean-refs` flag, after a file has already been deleted, to allow it to still clean up the references to that file link in other files.
+- ⏳ Look into making the .journalrc only handle journal settings and breaking off the toc structure into its own file. 
+  - ⏳ look into putting .mdjournal and the toc structure file into their own directory so they are less likely to get edited by the user. 
+    - (maybe make the directory .mdjournal -> rename current tracking file from .mdjournal to .entrytracking and toc structure to .journaltoc)
+- ⏳ add a mdjournal sync alias that does mdjournal update journal but doesn't update the last edited date.
+  - for example when people pull from a git repo and have to merge changes so the entry hash tracking might be messed up so you don't want entries looking like they were edited but weren't. 
+  - add a flag that stops the update journal command from updating dates as well if they want to go that route. 
+- ⏳ should the business logic be in an sdk that way devs can extend this if it ever becomes useful for others? 
 
 **Known Limitations:**
 - Global tool installation not yet configured
