@@ -8,11 +8,60 @@ using Xunit;
 namespace markdown_journal_cli.Tests.Infrastructure;
 
 /// <summary>
-/// Smoke tests validating the four quickstart test patterns described in
-/// <c>specs/002-test-suite-cleanup/quickstart.md</c>.
-/// Each test simply instantiates the relevant base class and asserts that the
-/// expected infrastructure is wired up correctly.
+/// Smoke tests validating the four quickstart test patterns for this project.
+/// Each test instantiates the relevant base class and asserts the expected
+/// infrastructure is wired up correctly.
 /// </summary>
+/// <remarks>
+/// <para><b>Pattern 1 — Command unit test</b> (<see cref="CommandTestBase"/>)</para>
+/// <para>
+/// Extend <c>CommandTestBase</c>. Six mocks (<c>MockFileSystem</c>,
+/// <c>MockJournalConfiguration</c>, <c>MockFileTracking</c>, <c>MockTemplateManager</c>,
+/// <c>MockTableOfContentsService</c>, <c>MockEntryFormatterService</c>) and
+/// <c>JournalSettings</c> are ready to use. Call <c>BuildApp(config =&gt; ...)</c>
+/// for a fresh <c>CommandAppTester</c> per test — no manual <c>ServiceCollection</c>
+/// or <c>TestConsole</c> required.
+/// </para>
+/// <para><b>Pattern 2 — Service unit test</b> (<see cref="ServiceTestBase"/>)</para>
+/// <para>
+/// Extend <c>ServiceTestBase</c>. Same six mocks plus <c>NoOpCoordinator</c> and
+/// <c>NoOpReporter</c> are provided. Create the SUT in a private <c>CreateSut()</c>
+/// factory method, passing <c>MockXxx.Object</c> and <c>NoOpCoordinator</c>/<c>NoOpReporter</c>
+/// for dependencies not under test. Use <c>NullLogger&lt;T&gt;()</c> for loggers.
+/// </para>
+/// <para><b>Pattern 3 — Integration test</b> (<see cref="JournalIntegrationTestBase"/>)</para>
+/// <para>
+/// Extend <c>JournalIntegrationTestBase</c>. A unique temp directory
+/// (<c>journal-{Guid}</c> under <c>Path.GetTempPath()</c>) is created on construction
+/// and deleted automatically by <c>Dispose()</c>. Wire real service implementations
+/// using <c>FileSystem</c>, <c>JournalPath</c>, and <c>JournalSettings</c> from the base.
+/// Do NOT call <c>Directory.Delete</c> yourself. No mocks — use real implementations only.
+/// </para>
+/// <para><b>Pattern 4 — Rollback / fault-injection test</b> (<see cref="Services.Rollback.ServiceRollbackTestBase"/>)</para>
+/// <para>
+/// Extend <c>ServiceRollbackTestBase</c> (NOT <c>ServiceTestBase</c>). Call
+/// <c>FileSystem.ResetCallCounts()</c> before injecting faults via
+/// <c>FileSystem.InjectFaultOn(...)</c>. Assert with
+/// <c>Should.Throw&lt;RollbackCompletedException&gt;()</c> for fully-rolled-back
+/// scenarios or <c>Should.Throw&lt;RollbackFailedException&gt;()</c> when rollback itself fails.
+/// </para>
+/// <para><b>Naming convention</b></para>
+/// <para>
+/// All test methods must follow: <c>Method_Should_ExpectedBehavior_When_Condition</c><br/>
+/// ✅ <c>Execute_Should_ReturnExitCode0_When_ValidPath</c><br/>
+/// ✅ <c>AddEntry_Should_ThrowArgumentNull_When_PathIsNull</c><br/>
+/// ❌ <c>TestExecute</c>, <c>AddEntry_Works</c>, <c>Should_Rollback</c>
+/// </para>
+/// <para><b>Which base class?</b></para>
+/// <list type="table">
+/// <listheader><term>Test type</term><description>Base class</description></listheader>
+/// <item><term>Command unit test</term><description><see cref="CommandTestBase"/></description></item>
+/// <item><term>Service unit test</term><description><see cref="ServiceTestBase"/></description></item>
+/// <item><term>Integration test (real disk)</term><description><see cref="JournalIntegrationTestBase"/></description></item>
+/// <item><term>Rollback / fault-injection</term><description><see cref="Services.Rollback.ServiceRollbackTestBase"/></description></item>
+/// <item><term>Infrastructure unit test</term><description>Plain xUnit class (no base)</description></item>
+/// </list>
+/// </remarks>
 public class QuickstartValidationTests
 {
     /// <summary>
