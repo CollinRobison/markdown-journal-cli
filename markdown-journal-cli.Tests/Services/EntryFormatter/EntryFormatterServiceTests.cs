@@ -7,7 +7,7 @@ namespace markdown_journal_cli.Tests.Services;
 
 public class EntryFormatterServiceTests : ServiceTestBase
 {
-    private IEntryFormatterService _formatterService = null!;
+    private IEntryFormatterService _formatterService;
 
     public EntryFormatterServiceTests()
     {

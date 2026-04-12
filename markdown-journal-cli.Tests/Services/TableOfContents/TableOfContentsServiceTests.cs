@@ -640,13 +640,13 @@ public class TableOfContentsServicePreviewTests
     private const string TocFile = "1a-TableOfContents.md";
     private string TocFilePath => Path.Combine(JournalDirectory, TocFile);
 
-    private readonly Mock<IFileSystem> MockFileSystem;
-    private readonly Mock<IJournalConfiguration> MockJournalConfiguration;
+    private readonly Mock<IFileSystem> _mockFileSystem;
+    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
 
     public TableOfContentsServicePreviewTests()
     {
-        MockFileSystem = new Mock<IFileSystem>();
-        MockJournalConfiguration = new Mock<IJournalConfiguration>();
+        _mockFileSystem = new Mock<IFileSystem>();
+        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
 
         _journalSettings = Options.Create(
             new JournalSettings
@@ -657,12 +657,12 @@ public class TableOfContentsServicePreviewTests
             }
         );
 
-        MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
-        MockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns(BuildConfig());
+        _mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _mockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns(BuildConfig());
 
         _service = new TableOfContentsService(
-            MockFileSystem.Object,
-            MockJournalConfiguration.Object,
+            _mockFileSystem.Object,
+            _mockJournalConfiguration.Object,
             _journalSettings,
             NullLogger<TableOfContentsService>.Instance
         );
@@ -686,7 +686,7 @@ public class TableOfContentsServicePreviewTests
     [Fact]
     public void PreviewTableOfContents_ReturnsGeneratedContent_WithoutWritingToDisk()
     {
-        MockJournalConfiguration
+        _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
             .Returns(
                 BuildConfig(rootEntries: [new Entries { Name = "My Entry", File = "my-entry.md" }])
@@ -696,7 +696,7 @@ public class TableOfContentsServicePreviewTests
 
         result.ShouldContain("# Table of Contents");
         result.ShouldContain("[My Entry](my-entry.md)");
-        MockFileSystem.Verify(
+        _mockFileSystem.Verify(
             fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Never,
             "PreviewTableOfContents must not write to disk"
@@ -708,11 +708,11 @@ public class TableOfContentsServicePreviewTests
     {
         var existingTocContent =
             "Created: 01/15/2024\nLast Edited: 03/01/2024\n\n# Table of Contents\n";
-        MockFileSystem
+        _mockFileSystem
             .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
             .Returns(TocFilePath);
-        MockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
-        MockFileSystem.Setup(fs => fs.GetFileContent(TocFilePath)).Returns(existingTocContent);
+        _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
+        _mockFileSystem.Setup(fs => fs.GetFileContent(TocFilePath)).Returns(existingTocContent);
 
         var result = _service.PreviewTableOfContents(JournalDirectory);
 
@@ -736,13 +736,13 @@ public class TableOfContentsServicePreviewTests
         {
             new Entries { Name = "Note", File = "note.md" },
         };
-        MockJournalConfiguration
+        _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
             .Returns(BuildConfig(rootEntries: entries));
 
         // Capture what UpdateTableOfContents would write
         string? writtenContent = null;
-        MockFileSystem
+        _mockFileSystem
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, c) => writtenContent = c);
 
@@ -774,7 +774,7 @@ public class TableOfContentsServicePreviewTests
         );
 
         // Verify the mock returns NO config (so we know the overload doesn't call Read())
-        MockJournalConfiguration
+        _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
             .Returns((JournalConfig?)null);
 
@@ -785,18 +785,18 @@ public class TableOfContentsServicePreviewTests
         content.ShouldContain("projected-entry.md");
 
         // The projected-config overload must NOT call IJournalConfiguration.Read()
-        MockJournalConfiguration.Verify(jc => jc.Read(It.IsAny<string>()), Times.Never);
+        _mockJournalConfiguration.Verify(jc => jc.Read(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void PreviewTableOfContents_WithProjectedConfig_PreservesExistingTocDates()
     {
         // Arrange — existing TOC file with known dates
-        MockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
-        MockFileSystem
+        _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
+        _mockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))
             .Returns("Created: 01/15/2024\nLast Edited: 06/01/2024\n\n# Table of Contents\n");
-        MockFileSystem
+        _mockFileSystem
             .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
             .Returns(TocFilePath);
 
@@ -819,7 +819,7 @@ public class TableOfContentsServicePreviewTests
 
         _service.PreviewTableOfContents(JournalDirectory, projectedConfig);
 
-        MockFileSystem.Verify(
+        _mockFileSystem.Verify(
             fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Never
         );
