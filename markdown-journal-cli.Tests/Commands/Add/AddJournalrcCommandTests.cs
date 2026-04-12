@@ -1,3 +1,4 @@
+using Shouldly;
 using markdown_journal_cli;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
@@ -149,7 +150,7 @@ public class AddJournalrcCommandTests : CommandTestBase
 
         // Verify the config uses the custom TOC filename
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Equal($"{customTocName}.md", config.TableOfContents.File);
     }
 
@@ -280,7 +281,7 @@ public class AddJournalrcCommandTests : CommandTestBase
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Single(config.TableOfContents.RootEntries);
         Assert.Equal(2, config.TableOfContents.Structure.Topics.Length);
     }
@@ -314,7 +315,7 @@ public class AddJournalrcCommandTests : CommandTestBase
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
 
         // 1b and 1c match root entry pattern (1a-9z), but my_entry does not
         // So 2 root entries (1b-Intro and 1c-Journal-Entry-Template)
@@ -358,7 +359,7 @@ public class AddJournalrcCommandTests : CommandTestBase
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Equal("MyAwesomeJournal", config.JournalName);
     }
 
@@ -380,7 +381,7 @@ public class AddJournalrcCommandTests : CommandTestBase
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Equal([".md"], config.TableOfContents.Extensions);
     }
 }

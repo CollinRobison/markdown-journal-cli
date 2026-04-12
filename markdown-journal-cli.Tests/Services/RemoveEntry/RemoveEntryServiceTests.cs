@@ -1,4 +1,5 @@
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -18,7 +19,7 @@ namespace markdown_journal_cli.Tests.Services.RemoveEntry;
 /// Unit tests for <see cref="RemoveEntryService"/> covering orchestration sequence,
 /// protected-file guard, normalisation, and clean-refs behaviour.
 /// </summary>
-public class RemoveEntryServiceTests
+public class RemoveEntryServiceTests : ServiceTestBase
 {
     private const string JournalPath = "/test/journal";
     private const string JournalrcPath = "/test/journal/.journalrc";
@@ -26,56 +27,38 @@ public class RemoveEntryServiceTests
     private const string EntryFileName = "my_entry.md";
     private const string EntryFilePath = "/test/journal/my_entry.md";
 
-    private readonly Mock<IFileSystem> _mockFileSystem;
-    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
-    private readonly Mock<IFileTracking> _mockFileTracking;
-    private readonly Mock<ITableOfContentsService> _mockTocService;
     private readonly Mock<IMarkdownLinkRewriter> _mockLinkRewriter;
-    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly RemoveEntryService _service;
 
     public RemoveEntryServiceTests()
     {
-        _mockFileSystem = new Mock<IFileSystem>();
-        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
-        _mockFileTracking = new Mock<IFileTracking>();
-        _mockTocService = new Mock<ITableOfContentsService>();
         _mockLinkRewriter = new Mock<IMarkdownLinkRewriter>();
-
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                AppName = "md-journal",
-                JournalConfigFileName = ".journalrc",
-                TableOfContentsFileName = "1a-TableOfContents",
-            }
-        );
 
         SetupDefaultMockBehaviors();
 
         _service = new RemoveEntryService(
-            _mockFileSystem.Object,
-            _mockJournalConfiguration.Object,
-            _mockFileTracking.Object,
-            _mockTocService.Object,
+            MockFileSystem.Object,
+            MockJournalConfiguration.Object,
+            MockFileTracking.Object,
+            MockTableOfContentsService.Object,
             _mockLinkRewriter.Object,
-            _journalSettings,
-            NoOpFileTransactionCoordinator.Instance,
-            NoOpRollbackReporter.Instance,
-            NullLogger<RemoveEntryService>.Instance
+            JournalSettings,
+            NoOpCoordinator,
+            NoOpReporter,
+            NullLogger<RemoveEntryService>()
         );
     }
 
     private void SetupDefaultMockBehaviors()
     {
-        _mockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(true);
-        _mockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(true);
-        _mockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(true);
-        _mockFileSystem
+        MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(true);
+        MockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(true);
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(true);
+        MockFileSystem
             .Setup(fs => fs.CombinePaths(It.IsAny<string[]>()))
             .Returns((string[] paths) => Path.Combine(paths));
 
-        _mockJournalConfiguration
+        MockJournalConfiguration
             .Setup(jc => jc.Read(JournalPath))
             .Returns(
                 new JournalConfig
@@ -112,16 +95,16 @@ public class RemoveEntryServiceTests
 
         // Assert
         result.ShouldBeEmpty();
-        _mockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
-        _mockJournalConfiguration.Verify(
+        MockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
+        MockJournalConfiguration.Verify(
             jc => jc.RemoveEntry(JournalPath, EntryFileName),
             Times.Once
         );
-        _mockFileTracking.Verify(
+        MockFileTracking.Verify(
             ft => ft.RemoveFileFromIndex(JournalPath, EntryFileName),
             Times.Once
         );
-        _mockTocService.Verify(
+        MockTableOfContentsService.Verify(
             t => t.UpdateTableOfContents(JournalPath, null, It.IsAny<DateTime?>()),
             Times.Once
         );
@@ -154,8 +137,8 @@ public class RemoveEntryServiceTests
 
         // Assert
         result.ShouldBe(modifiedFiles);
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, "other.md"), Times.Once);
-        _mockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, "another.md"), Times.Once);
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, "other.md"), Times.Once);
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, "another.md"), Times.Once);
     }
 
     [Fact]
@@ -184,7 +167,7 @@ public class RemoveEntryServiceTests
     public void RemoveEntry_JournalrcNotFound_ThrowsJournalrcNotFoundException()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
 
         // Act & Assert
         Should.Throw<JournalrcNotFoundException>(() =>
@@ -196,7 +179,7 @@ public class RemoveEntryServiceTests
     public void RemoveEntry_TrackingIndexNotFound_ThrowsTrackingIndexNotFoundException()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(false);
 
         // Act & Assert
         Should.Throw<TrackingIndexNotFoundException>(() =>
@@ -211,7 +194,7 @@ public class RemoveEntryServiceTests
         Should.Throw<ProtectedJournalFileException>(() =>
             _service.RemoveEntry(JournalPath, ".journalrc", cleanRefs: false)
         );
-        _mockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -221,7 +204,7 @@ public class RemoveEntryServiceTests
         Should.Throw<ProtectedJournalFileException>(() =>
             _service.RemoveEntry(JournalPath, ".md-journal", cleanRefs: false)
         );
-        _mockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -231,14 +214,14 @@ public class RemoveEntryServiceTests
         Should.Throw<ProtectedJournalFileException>(() =>
             _service.RemoveEntry(JournalPath, "1a-TableOfContents.md", cleanRefs: false)
         );
-        _mockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void RemoveEntry_TargetsTocFile_CaseInsensitive_ThrowsProtectedJournalFileException()
     {
         // Arrange
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.CombinePaths(JournalPath, "1A-TABLEOFCONTENTS.md"))
             .Returns("/test/journal/1A-TABLEOFCONTENTS.md");
 
@@ -252,7 +235,7 @@ public class RemoveEntryServiceTests
     public void RemoveEntry_TargetsRenamedTocFile_ThrowsProtectedJournalFileException()
     {
         // Arrange — user renamed the TOC to my-toc.md via update journal --rename-toc
-        _mockJournalConfiguration
+        MockJournalConfiguration
             .Setup(jc => jc.Read(JournalPath))
             .Returns(
                 new JournalConfig
@@ -276,13 +259,13 @@ public class RemoveEntryServiceTests
     public void RemoveEntry_FileNotFound_ThrowsFileNotFoundException()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
 
         // Act & Assert
         Should.Throw<FileNotFoundException>(() =>
             _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false)
         );
-        _mockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
     // ------------------------------------------------------------------
@@ -293,7 +276,7 @@ public class RemoveEntryServiceTests
     public void RemoveEntry_FileNameWithoutExtension_NormalisesAndResolvesCorrectly()
     {
         // Arrange — pass "my_entry" (no .md), expect service to append .md
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.CombinePaths(JournalPath, EntryFileName))
             .Returns(EntryFilePath);
 
@@ -301,8 +284,8 @@ public class RemoveEntryServiceTests
         _service.RemoveEntry(JournalPath, "my_entry", cleanRefs: false);
 
         // Assert — delete and config/tracking calls use normalised name
-        _mockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
-        _mockJournalConfiguration.Verify(
+        MockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
+        MockJournalConfiguration.Verify(
             jc => jc.RemoveEntry(JournalPath, EntryFileName),
             Times.Once
         );
@@ -312,7 +295,7 @@ public class RemoveEntryServiceTests
     public void RemoveEntry_FileNameWithExtension_ResolvesCorrectly()
     {
         // Arrange — pass "my_entry.md" (already has .md)
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.CombinePaths(JournalPath, EntryFileName))
             .Returns(EntryFilePath);
 
@@ -320,8 +303,8 @@ public class RemoveEntryServiceTests
         _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
 
         // Assert — no double extension
-        _mockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
-        _mockJournalConfiguration.Verify(
+        MockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
+        MockJournalConfiguration.Verify(
             jc => jc.RemoveEntry(JournalPath, EntryFileName),
             Times.Once
         );
@@ -336,7 +319,7 @@ public class RemoveEntryServiceTests
     {
         // Arrange — verify that targeting a protected file never reaches DeleteFile,
         // even though the entry file "exists" in the mock.
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains("1a-TableOfContents"))))
             .Returns(true);
 
@@ -345,6 +328,6 @@ public class RemoveEntryServiceTests
             _service.RemoveEntry(JournalPath, "1a-TableOfContents.md", cleanRefs: false)
         );
 
-        _mockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 }

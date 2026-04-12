@@ -1,4 +1,5 @@
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
@@ -15,15 +16,8 @@ namespace markdown_journal_cli.Tests.Services;
 /// <summary>
 /// Unit tests for JournalEntryService covering all public AddEntry behavior.
 /// </summary>
-public class JournalEntryServiceTests
+public class JournalEntryServiceTests : ServiceTestBase
 {
-    private readonly Mock<IFileSystem> _mockFileSystem;
-    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
-    private readonly Mock<IEntryFormatterService> _mockEntryFormatter;
-    private readonly Mock<ITemplateManager> _mockTemplateManager;
-    private readonly Mock<IFileTracking> _mockFileTracking;
-    private readonly Mock<ITableOfContentsService> _mockTocService;
-    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly JournalEntryService _service;
 
     private const string JournalPath = "/test/journal";
@@ -32,73 +26,57 @@ public class JournalEntryServiceTests
 
     public JournalEntryServiceTests()
     {
-        _mockFileSystem = new Mock<IFileSystem>();
-        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
-        _mockEntryFormatter = new Mock<IEntryFormatterService>();
-        _mockTemplateManager = new Mock<ITemplateManager>();
-        _mockFileTracking = new Mock<IFileTracking>();
-        _mockTocService = new Mock<ITableOfContentsService>();
-
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                AppName = "md-journal",
-                JournalConfigFileName = ".journalrc",
-                TableOfContentsFileName = "1a-TableOfContents",
-            }
-        );
-
         SetupDefaultMockBehaviors();
 
         _service = new JournalEntryService(
-            _mockFileSystem.Object,
-            _mockJournalConfiguration.Object,
-            _journalSettings,
-            _mockEntryFormatter.Object,
-            _mockTemplateManager.Object,
-            _mockFileTracking.Object,
-            _mockTocService.Object,
-            NoOpFileTransactionCoordinator.Instance,
-            NoOpRollbackReporter.Instance,
-            NullLogger<JournalEntryService>.Instance
+            MockFileSystem.Object,
+            MockJournalConfiguration.Object,
+            JournalSettings,
+            MockEntryFormatterService.Object,
+            MockTemplateManager.Object,
+            MockFileTracking.Object,
+            MockTableOfContentsService.Object,
+            NoOpCoordinator,
+            NoOpReporter,
+            NullLogger<JournalEntryService>()
         );
     }
 
     private void SetupDefaultMockBehaviors()
     {
         // Journal config and tracking index exist by default
-        _mockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(true);
-        _mockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(true);
+        MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(true);
+        MockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(true);
 
         // Entry file does not yet exist by default
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.EndsWith(".md"))))
             .Returns(false);
 
         // Entry formatter: replace underscores with spaces for title, replace spaces with underscores for filename
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.RemoveSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input.Replace("_", " ").Trim());
 
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.AddSpaceSeparators(It.IsAny<string>()))
             .Returns((string input) => input.Replace(" ", "_"));
 
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
             .Returns((string[] parts) => string.Join("-", parts));
 
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.BuildHeadingArray(It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(Array.Empty<string>());
 
-        _mockTemplateManager
+        MockTemplateManager
             .Setup(tm =>
                 tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>())
             )
             .Returns("# Entry Content");
 
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.CombinePaths(It.IsAny<string[]>()))
             .Returns((string[] paths) => Path.Combine(paths));
     }
@@ -119,11 +97,11 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs => fs.CreateMarkdownFile(JournalPath, It.IsAny<string>(), It.IsAny<string>()),
             Times.Once
         );
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc =>
                 jc.AddEntry(
                     JournalPath,
@@ -136,11 +114,11 @@ public class JournalEntryServiceTests
                 ),
             Times.Once
         );
-        _mockFileTracking.Verify(
+        MockFileTracking.Verify(
             ft => ft.UpdateFileInIndex(JournalPath, It.IsAny<string>()),
             Times.Once
         );
-        _mockTocService.Verify(
+        MockTableOfContentsService.Verify(
             toc =>
                 toc.UpdateTableOfContents(
                     JournalPath,
@@ -155,7 +133,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WithHeading_PassesHeadingToConfig()
     {
         // Arrange
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.BuildHeadingArray("Tech", null))
             .Returns(new[] { "Tech" });
 
@@ -170,7 +148,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc =>
                 jc.AddEntry(
                     JournalPath,
@@ -189,7 +167,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WithSubheading_PassesSubheadingArrayToConfig()
     {
         // Arrange
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.BuildHeadingArray(null, "AI-ML"))
             .Returns(new[] { "AI", "ML" });
 
@@ -204,7 +182,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc =>
                 jc.AddEntry(
                     JournalPath,
@@ -225,7 +203,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WithHeadingAndSubheading_IncludesAllInTopicPath()
     {
         // Arrange
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.BuildHeadingArray("Tech", "AI-ML"))
             .Returns(new[] { "Tech", "AI", "ML" });
 
@@ -240,7 +218,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc =>
                 jc.AddEntry(
                     JournalPath,
@@ -269,7 +247,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
@@ -295,14 +273,14 @@ public class JournalEntryServiceTests
         );
 
         // Assert: RemoveSpaceSeparators is called with entryName as fallback
-        _mockEntryFormatter.Verify(ef => ef.RemoveSpaceSeparators("MyEntry"), Times.Once);
+        MockEntryFormatterService.Verify(ef => ef.RemoveSpaceSeparators("MyEntry"), Times.Once);
     }
 
     [Fact]
     public void AddEntry_WithEmptyHeadingArray_PassesNullTopicPathToConfig()
     {
         // Arrange: no heading/subheading → BuildHeadingArray returns empty
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.BuildHeadingArray(null, null))
             .Returns(Array.Empty<string>());
 
@@ -317,7 +295,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert: null topicPath passed when headings array is empty
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc =>
                 jc.AddEntry(
                     JournalPath,
@@ -350,7 +328,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockTocService.Verify(
+        MockTableOfContentsService.Verify(
             toc =>
                 toc.UpdateTableOfContents(
                     It.IsAny<string>(),
@@ -375,7 +353,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert
-        _mockTocService.Verify(
+        MockTableOfContentsService.Verify(
             toc => toc.UpdateTableOfContents(JournalPath, null, It.IsAny<DateTime?>()),
             Times.Once
         );
@@ -395,7 +373,7 @@ public class JournalEntryServiceTests
         );
 
         // Assert: tracking is always updated regardless of ignoreFile
-        _mockFileTracking.Verify(
+        MockFileTracking.Verify(
             ft => ft.UpdateFileInIndex(JournalPath, It.IsAny<string>()),
             Times.Once
         );
@@ -409,7 +387,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WhenJournalrcMissing_ThrowsJournalrcNotFoundException()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
 
         // Act & Assert
         Should.Throw<JournalrcNotFoundException>(() =>
@@ -421,7 +399,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WhenJournalrcMissing_DoesNotCreateFile()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
 
         // Act
         try
@@ -431,7 +409,7 @@ public class JournalEntryServiceTests
         catch { }
 
         // Assert
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Never
         );
@@ -441,7 +419,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WhenTrackingFileMissing_ThrowsTrackingIndexNotFoundException()
     {
         // Arrange
-        _mockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(false);
 
         // Act & Assert
         Should.Throw<TrackingIndexNotFoundException>(() =>
@@ -453,7 +431,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WhenEntryAlreadyExists_ThrowsJournalEntryAlreadyExistsException()
     {
         // Arrange: entry file already exists
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.EndsWith(".md"))))
             .Returns(true);
 
@@ -467,7 +445,7 @@ public class JournalEntryServiceTests
     public void AddEntry_WhenEntryAlreadyExists_DoesNotUpdateIndexes()
     {
         // Arrange
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.EndsWith(".md"))))
             .Returns(true);
 
@@ -479,11 +457,11 @@ public class JournalEntryServiceTests
         catch { }
 
         // Assert
-        _mockFileTracking.Verify(
+        MockFileTracking.Verify(
             ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()),
             Times.Never
         );
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc =>
                 jc.AddEntry(
                     It.IsAny<string>(),
@@ -506,13 +484,13 @@ public class JournalEntryServiceTests
     public void AddEntry_WithNoHeadingOrSubheading_FileNameContainsOnlyEntryName()
     {
         // Arrange: AddSpaceSeparators turns spaces into underscores
-        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators("MyEntry")).Returns("MyEntry");
-        _mockEntryFormatter
+        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators("MyEntry")).Returns("MyEntry");
+        MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(new[] { "MyEntry" }))
             .Returns("MyEntry");
 
         string? capturedFileName = null;
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs =>
                 fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())
             )
@@ -538,17 +516,17 @@ public class JournalEntryServiceTests
     public void AddEntry_WithHeading_FileNameContainsHeadingPrefix()
     {
         // Arrange
-        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators("Tech")).Returns("Tech");
-        _mockEntryFormatter.Setup(ef => ef.AddSpaceSeparators("MyEntry")).Returns("MyEntry");
-        _mockEntryFormatter
+        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators("Tech")).Returns("Tech");
+        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators("MyEntry")).Returns("MyEntry");
+        MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.Is<string[]>(a => a.Contains("Tech"))))
             .Returns("Tech-MyEntry");
-        _mockEntryFormatter
+        MockEntryFormatterService
             .Setup(ef => ef.BuildHeadingArray("Tech", null))
             .Returns(new[] { "Tech" });
 
         string? capturedFileName = null;
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs =>
                 fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())
             )

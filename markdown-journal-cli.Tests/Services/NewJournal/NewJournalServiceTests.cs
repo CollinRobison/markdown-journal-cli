@@ -1,3 +1,4 @@
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -15,12 +16,8 @@ namespace markdown_journal_cli.Tests.Services;
 /// <summary>
 /// Unit tests for NewJournalService covering initialization behavior.
 /// </summary>
-public class NewJournalServiceTests
+public class NewJournalServiceTests : ServiceTestBase
 {
-    private readonly Mock<IFileSystem> _mockFileSystem;
-    private readonly Mock<ITemplateManager> _mockTemplateManager;
-    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
-    private readonly Mock<IFileTracking> _mockFileTracking;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly NewJournalService _service;
 
@@ -29,11 +26,6 @@ public class NewJournalServiceTests
 
     public NewJournalServiceTests()
     {
-        _mockFileSystem = new Mock<IFileSystem>();
-        _mockTemplateManager = new Mock<ITemplateManager>();
-        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
-        _mockFileTracking = new Mock<IFileTracking>();
-
         _journalSettings = Options.Create(
             new JournalSettings
             {
@@ -47,21 +39,21 @@ public class NewJournalServiceTests
             }
         );
 
-        _mockTemplateManager
+        MockTemplateManager
             .Setup(tm =>
                 tm.GenerateFromTemplate(It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>())
             )
             .Returns("generated content");
 
         _service = new NewJournalService(
-            _mockFileSystem.Object,
-            _mockTemplateManager.Object,
-            _mockJournalConfiguration.Object,
-            _mockFileTracking.Object,
+            MockFileSystem.Object,
+            MockTemplateManager.Object,
+            MockJournalConfiguration.Object,
+            MockFileTracking.Object,
             _journalSettings,
-            NoOpFileTransactionCoordinator.Instance,
-            NoOpRollbackReporter.Instance,
-            NullLogger<NewJournalService>.Instance
+            NoOpCoordinator,
+            NoOpReporter,
+            NullLogger<NewJournalService>()
         );
     }
 
@@ -73,13 +65,13 @@ public class NewJournalServiceTests
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
                 null!,
-                _mockTemplateManager.Object,
-                _mockJournalConfiguration.Object,
-                _mockFileTracking.Object,
+                MockTemplateManager.Object,
+                MockJournalConfiguration.Object,
+                MockFileTracking.Object,
                 _journalSettings,
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<NewJournalService>()
             )
         );
     }
@@ -89,14 +81,14 @@ public class NewJournalServiceTests
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
-                _mockFileSystem.Object,
+                MockFileSystem.Object,
                 null!,
-                _mockJournalConfiguration.Object,
-                _mockFileTracking.Object,
+                MockJournalConfiguration.Object,
+                MockFileTracking.Object,
                 _journalSettings,
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<NewJournalService>()
             )
         );
     }
@@ -106,14 +98,14 @@ public class NewJournalServiceTests
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
-                _mockFileSystem.Object,
-                _mockTemplateManager.Object,
+                MockFileSystem.Object,
+                MockTemplateManager.Object,
                 null!,
-                _mockFileTracking.Object,
+                MockFileTracking.Object,
                 _journalSettings,
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<NewJournalService>()
             )
         );
     }
@@ -123,14 +115,14 @@ public class NewJournalServiceTests
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
-                _mockFileSystem.Object,
-                _mockTemplateManager.Object,
-                _mockJournalConfiguration.Object,
+                MockFileSystem.Object,
+                MockTemplateManager.Object,
+                MockJournalConfiguration.Object,
                 null!,
                 _journalSettings,
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<NewJournalService>()
             )
         );
     }
@@ -140,13 +132,13 @@ public class NewJournalServiceTests
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
-                _mockFileSystem.Object,
-                _mockTemplateManager.Object,
-                _mockJournalConfiguration.Object,
-                _mockFileTracking.Object,
+                MockFileSystem.Object,
+                MockTemplateManager.Object,
+                MockJournalConfiguration.Object,
+                MockFileTracking.Object,
                 _journalSettings,
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
+                NoOpCoordinator,
+                NoOpReporter,
                 null!
             )
         );
@@ -157,14 +149,14 @@ public class NewJournalServiceTests
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
-                _mockFileSystem.Object,
-                _mockTemplateManager.Object,
-                _mockJournalConfiguration.Object,
-                _mockFileTracking.Object,
+                MockFileSystem.Object,
+                MockTemplateManager.Object,
+                MockJournalConfiguration.Object,
+                MockFileTracking.Object,
                 _journalSettings,
                 null!,
-                NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NoOpReporter,
+                NullLogger<NewJournalService>()
             )
         );
     }
@@ -174,14 +166,14 @@ public class NewJournalServiceTests
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
-                _mockFileSystem.Object,
-                _mockTemplateManager.Object,
-                _mockJournalConfiguration.Object,
-                _mockFileTracking.Object,
+                MockFileSystem.Object,
+                MockTemplateManager.Object,
+                MockJournalConfiguration.Object,
+                MockFileTracking.Object,
                 _journalSettings,
-                NoOpFileTransactionCoordinator.Instance,
+                NoOpCoordinator,
                 null!,
-                NullLogger<NewJournalService>.Instance
+                NullLogger<NewJournalService>()
             )
         );
     }
@@ -217,7 +209,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileSystem.Verify(fs => fs.CreateDirectory(JournalDirectory), Times.Once);
+        MockFileSystem.Verify(fs => fs.CreateDirectory(JournalDirectory), Times.Once);
     }
 
     #endregion
@@ -229,7 +221,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(4)
         );
@@ -240,7 +232,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs => fs.CreateMarkdownFile(JournalDirectory, "1a-TableOfContents", It.IsAny<string>()),
             Times.Once
         );
@@ -251,7 +243,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs => fs.CreateMarkdownFile(JournalDirectory, "1b-Intro", It.IsAny<string>()),
             Times.Once
         );
@@ -262,7 +254,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs =>
                 fs.CreateMarkdownFile(
                     JournalDirectory,
@@ -278,7 +270,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             fs => fs.CreateMarkdownFile(JournalDirectory, "1h-All-My-Journals", It.IsAny<string>()),
             Times.Once
         );
@@ -293,7 +285,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm => tm.GenerateFromTemplate("table-of-contents", null),
             Times.Once
         );
@@ -304,7 +296,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
@@ -323,7 +315,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
@@ -344,7 +336,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
@@ -363,7 +355,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm =>
                 tm.GenerateFromTemplate(
                     "journal-entry",
@@ -385,7 +377,7 @@ public class NewJournalServiceTests
         _service.Initialize(JournalDirectory, JournalName);
 
         // The JournalEntryTemplate file uses null params (no title/body customization)
-        _mockTemplateManager.Verify(
+        MockTemplateManager.Verify(
             tm => tm.GenerateFromTemplate("journal-entry", null),
             Times.Once
         );
@@ -400,7 +392,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockJournalConfiguration.Verify(
+        MockJournalConfiguration.Verify(
             jc => jc.Create(JournalDirectory, It.IsAny<JournalConfig>()),
             Times.Once
         );
@@ -410,7 +402,7 @@ public class NewJournalServiceTests
     public void Initialize_ConfigurationHasCorrectJournalName()
     {
         JournalConfig? capturedConfig = null;
-        _mockJournalConfiguration
+        MockJournalConfiguration
             .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
             .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
 
@@ -424,7 +416,7 @@ public class NewJournalServiceTests
     public void Initialize_ConfigurationHasExactlyThreeRootEntries()
     {
         JournalConfig? capturedConfig = null;
-        _mockJournalConfiguration
+        MockJournalConfiguration
             .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
             .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
 
@@ -438,7 +430,7 @@ public class NewJournalServiceTests
     public void Initialize_AllRootEntriesHaveMdExtension()
     {
         JournalConfig? capturedConfig = null;
-        _mockJournalConfiguration
+        MockJournalConfiguration
             .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
             .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
 
@@ -460,7 +452,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileTracking.Verify(ft => ft.LoadIndex(JournalDirectory), Times.Once);
+        MockFileTracking.Verify(ft => ft.LoadIndex(JournalDirectory), Times.Once);
     }
 
     [Fact]
@@ -468,7 +460,7 @@ public class NewJournalServiceTests
     {
         _service.Initialize(JournalDirectory, JournalName);
 
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Once);
+        MockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Once);
     }
 
     #endregion

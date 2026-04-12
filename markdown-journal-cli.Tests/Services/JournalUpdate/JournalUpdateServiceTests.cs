@@ -1,4 +1,5 @@
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -21,7 +22,7 @@ namespace markdown_journal_cli.Tests.Services;
 /// last-edited date tracking, and table of contents management.
 /// Uses concrete infrastructure implementations with in-memory test doubles.
 /// </summary>
-public class JournalUpdateServiceTests
+public class JournalUpdateServiceTests : ServiceTestBase
 {
     private readonly TestConsole _console;
     private readonly TestFileSystem _fileSystem;
@@ -56,7 +57,7 @@ public class JournalUpdateServiceTests
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             _journalSettings,
-            NullLogger<JournalConfiguration>.Instance,
+            NullLogger<JournalConfiguration>(),
             _fileTracking
         );
 
@@ -64,7 +65,7 @@ public class JournalUpdateServiceTests
             _fileSystem,
             _journalConfiguration,
             _journalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>()
         );
 
         _service = new JournalUpdateService(
@@ -74,10 +75,10 @@ public class JournalUpdateServiceTests
             _fileTracking,
             _tableOfContentsService,
             _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
-            NoOpFileTransactionCoordinator.Instance,
-            NoOpRollbackReporter.Instance,
-            NullLogger<JournalUpdateService>.Instance
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>()),
+            NoOpCoordinator,
+            NoOpReporter,
+            NullLogger<JournalUpdateService>()
         );
 
         _fileSystem.CreateDirectory(_testPath);
@@ -114,9 +115,9 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<JournalUpdateService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -133,9 +134,9 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<JournalUpdateService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -152,9 +153,9 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<JournalUpdateService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -171,9 +172,9 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<JournalUpdateService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -190,9 +191,9 @@ public class JournalUpdateServiceTests
                 null!,
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
-                NoOpFileTransactionCoordinator.Instance,
-                NoOpRollbackReporter.Instance,
-                NullLogger<JournalUpdateService>.Instance
+                NoOpCoordinator,
+                NoOpReporter,
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -210,8 +211,8 @@ public class JournalUpdateServiceTests
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 null!,
-                NoOpRollbackReporter.Instance,
-                NullLogger<JournalUpdateService>.Instance
+                NoOpReporter,
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -228,9 +229,9 @@ public class JournalUpdateServiceTests
                 Mock.Of<ITableOfContentsService>(),
                 _journalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
-                NoOpFileTransactionCoordinator.Instance,
+                NoOpCoordinator,
                 null!,
-                NullLogger<JournalUpdateService>.Instance
+                NullLogger<JournalUpdateService>()
             )
         );
     }
@@ -702,10 +703,10 @@ public class JournalUpdateServiceTests
             _fileTracking,
             mockTocService.Object,
             _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>.Instance),
-            NoOpFileTransactionCoordinator.Instance,
-            NoOpRollbackReporter.Instance,
-            NullLogger<JournalUpdateService>.Instance
+            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>()),
+            NoOpCoordinator,
+            NoOpReporter,
+            NullLogger<JournalUpdateService>()
         );
 
         // Arrange — create the TOC file so it can be tracked (UpdateFileInIndex only tracks existing files)
