@@ -7,6 +7,7 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,73 +28,53 @@ namespace markdown_journal_cli.Tests.Commands.New;
 /// Unit tests for the <see cref="NewCommand"/> class, covering journal creation functionality,
 /// validation, error handling, and template integration.
 /// </summary>
-public class NewCommandTests
+public class NewCommandTests : CommandTestBase
 {
-    private readonly TestConsole _console;
     private readonly TestFileSystem _fileSystem;
-    private readonly CommandAppTester _app;
     private readonly TestJournalInitializer _journalInitializer;
-    private readonly IOptions<JournalSettings> _journalSettings;
 
     public NewCommandTests()
     {
-        _console = new TestConsole();
         _fileSystem = new TestFileSystem();
-
-        // Create test settings with explicit values for testing
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                AppName = "md-journal",
-                JournalConfigFileName = ".journalrc",
-                DefaultJournalName = "MyJournal",
-                TableOfContentsFileName = "1a-TableOfContents",
-                TableOfContentsTitle = "Table of Contents",
-                IntroductionFileName = "1b-Intro",
-                IntroductionTitle = "Introduction",
-                JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
-                JournalEntryTemplateTitle = "Journal Entry Template",
-                AllJournalsFileName = "1h-All_My_Journals",
-                AllJournalsTitle = "All My Journals",
-            }
-        );
-
         _journalInitializer = new TestJournalInitializer(_fileSystem);
+    }
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
-        services.AddSingleton<IFileSystem>(_fileSystem);
-        services.AddSingleton<INewJournalService>(_journalInitializer);
-        services.AddSingleton(_journalSettings);
-        services.AddSingleton<NewCommand>();
-
-        var registrar = new TypeRegistrar();
-
-        foreach (var service in services)
+    private CommandAppTester BuildNewApp()
+    {
+        var settings = Options.Create(new JournalSettings
         {
-            if (service.ImplementationInstance != null)
-            {
-                registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
-            }
-            else if (service.ImplementationType != null)
-            {
-                registrar.Register(service.ServiceType, service.ImplementationType);
-            }
-        }
-
-        _app = new CommandAppTester(registrar);
-        _app.Configure(config =>
-        {
-            config.SetApplicationName(_journalSettings.Value.AppName);
-            config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
+            AppName = "md-journal",
+            JournalConfigFileName = ".journalrc",
+            DefaultJournalName = "MyJournal",
+            TableOfContentsFileName = "1a-TableOfContents",
+            TableOfContentsTitle = "Table of Contents",
+            IntroductionFileName = "1b-Intro",
+            IntroductionTitle = "Introduction",
+            JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
+            JournalEntryTemplateTitle = "Journal Entry Template",
+            AllJournalsFileName = "1h-All_My_Journals",
+            AllJournalsTitle = "All My Journals",
         });
+        return BuildApp(
+            config =>
+            {
+                config.SetApplicationName("md-journal");
+                config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
+            },
+            services =>
+            {
+                services.AddSingleton<IFileSystem>(_fileSystem);
+                services.AddSingleton<INewJournalService>(_journalInitializer);
+                services.AddSingleton<NewCommand>();
+                services.AddSingleton(settings);
+            });
     }
 
     [Fact]
     public void Should_Create_New_Journal_With_Default_Name()
     {
         // When
-        var result = _app.Run(["new", "MyJournal"]);
+        var result = BuildNewApp().Run(["new", "MyJournal"]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -106,7 +87,7 @@ public class NewCommandTests
     public void Should_Create_New_Journal_With_Custom_Name()
     {
         // When
-        var result = _app.Run(["new", "CustomJournal"]);
+        var result = BuildNewApp().Run(["new", "CustomJournal"]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -126,7 +107,7 @@ public class NewCommandTests
         _fileSystem.CreateDirectory(path);
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(1);
@@ -145,7 +126,7 @@ public class NewCommandTests
         var expectedPath = Path.Combine(customPath, journalName);
 
         // When
-        var result = _app.Run(["new", journalName, $"{pathOption}", customPath]);
+        var result = BuildNewApp().Run(["new", journalName, $"{pathOption}", customPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -161,7 +142,7 @@ public class NewCommandTests
         var invalidName = "Invalid/Name";
 
         // When
-        var result = _app.Run(["new", invalidName]);
+        var result = BuildNewApp().Run(["new", invalidName]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -172,7 +153,7 @@ public class NewCommandTests
     public void Should_Validate_Empty_Journal_Name()
     {
         // When
-        var result = _app.Run(["new", ""]);
+        var result = BuildNewApp().Run(["new", ""]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -186,7 +167,7 @@ public class NewCommandTests
         var journalName = "TestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -210,7 +191,7 @@ public class NewCommandTests
         var journalName = "ContentTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -245,7 +226,7 @@ public class NewCommandTests
         var journalName = "SuccessTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -263,7 +244,7 @@ public class NewCommandTests
         var expectedPath = Path.Combine(customPath, journalName);
 
         // When
-        var result = _app.Run(["new", journalName, "--path", customPath]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", customPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -279,7 +260,7 @@ public class NewCommandTests
     public void Should_Accept_Valid_Journal_Names(string validName)
     {
         // When
-        var result = _app.Run(["new", validName]);
+        var result = BuildNewApp().Run(["new", validName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -293,7 +274,7 @@ public class NewCommandTests
     public void Should_Reject_Invalid_Journal_Names(string invalidName)
     {
         // When
-        var result = _app.Run(["new", invalidName]);
+        var result = BuildNewApp().Run(["new", invalidName]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -304,7 +285,7 @@ public class NewCommandTests
     public void Should_Reject_Whitespace_Only_Journal_Name()
     {
         // When
-        var result = _app.Run(["new", "   "]);
+        var result = BuildNewApp().Run(["new", "   "]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -319,7 +300,7 @@ public class NewCommandTests
     public void Should_Reject_Journal_Names_With_Spaces(string nameWithSpaces)
     {
         // When
-        var result = _app.Run(["new", nameWithSpaces]);
+        var result = BuildNewApp().Run(["new", nameWithSpaces]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -334,11 +315,11 @@ public class NewCommandTests
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(_fileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(faultyTemplateManager);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking
             .Setup(x => x.LoadIndex(It.IsAny<string>()))
@@ -376,7 +357,7 @@ public class NewCommandTests
         var journalName = "DefaultPathJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -391,7 +372,7 @@ public class NewCommandTests
         var journalName = "DirectoryTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -411,7 +392,7 @@ public class NewCommandTests
         var journalName = "TOCTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -428,7 +409,7 @@ public class NewCommandTests
         var journalName = "JournalEntryTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -456,7 +437,7 @@ public class NewCommandTests
         var journalName = "FileCountTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -478,7 +459,7 @@ public class NewCommandTests
         var journalName = "NullPathJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -494,7 +475,7 @@ public class NewCommandTests
         var rootPath = "/";
 
         // When
-        var result = _app.Run(["new", journalName, "--path", rootPath]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", rootPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -510,7 +491,7 @@ public class NewCommandTests
         var relativePath = "../parent/child";
 
         // When
-        var result = _app.Run(["new", journalName, "--path", relativePath]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", relativePath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -526,7 +507,7 @@ public class NewCommandTests
         var customPath = "custom/path";
 
         // When
-        var result = _app.Run(["new", journalName, "--path", customPath]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", customPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -542,7 +523,7 @@ public class NewCommandTests
     public void Should_Accept_Single_Character_And_Long_Names(string journalName)
     {
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -557,7 +538,7 @@ public class NewCommandTests
         var journalName = " SpacedJournal ";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -572,7 +553,7 @@ public class NewCommandTests
         var deepPath = Path.Combine("non", "existent", "deep", "path");
 
         // When
-        var result = _app.Run(["new", journalName, "--path", deepPath]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", deepPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -587,7 +568,7 @@ public class NewCommandTests
         var journalName = "OrderTestJournal";
 
         // When
-        var result = _app.Run(["new", journalName]);
+        var result = BuildNewApp().Run(["new", journalName]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -607,15 +588,15 @@ public class NewCommandTests
     {
         // Given
         var faultyFileSystem = new FaultyTestFileSystem();
-        var testTemplateManager = new TemplateManager(_journalSettings);
+        var testTemplateManager = new TemplateManager(JournalSettings);
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(faultyFileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking
             .Setup(x => x.LoadIndex(It.IsAny<string>()))
@@ -650,13 +631,13 @@ public class NewCommandTests
     {
         // When & Then
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(null!, _fileSystem, _journalInitializer, _journalSettings)
+            new NewCommand(null!, _fileSystem, _journalInitializer, JournalSettings)
         );
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(_console, null!, _journalInitializer, _journalSettings)
+            new NewCommand(new TestConsole(), null!, _journalInitializer, JournalSettings)
         );
         Should.Throw<ArgumentNullException>(() =>
-            new NewCommand(_console, _fileSystem, null!, _journalSettings)
+            new NewCommand(new TestConsole(), _fileSystem, null!, JournalSettings)
         );
     }
 
@@ -664,7 +645,7 @@ public class NewCommandTests
     public void Should_Use_Default_Values_From_Settings()
     {
         // Given - Use no arguments to test default behavior
-        var result = _app.Run(["new"]);
+        var result = BuildNewApp().Run(["new"]);
 
         // Then - Should use default name from settings ("MyJournal") and current directory
         result.ExitCode.ShouldBe(0);
@@ -696,7 +677,7 @@ public class NewCommandTests
         var testFileSystem = new TestFileSystem();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(testFileSystem);
         var testInitializer = new TestJournalInitializer(testFileSystem);
         services.AddSingleton<INewJournalService>(testInitializer);
@@ -746,7 +727,7 @@ public class NewCommandTests
         );
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(_fileSystem);
         var testInitializer = new TestJournalInitializer(_fileSystem);
         services.AddSingleton<INewJournalService>(testInitializer);
@@ -815,7 +796,7 @@ public class NewCommandTests
         );
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(testFileSystem);
         services.AddSingleton<INewJournalService>(realInitializer);
         services.AddSingleton(customSettings);
@@ -852,7 +833,7 @@ public class NewCommandTests
         var journalName = "EmptyPathJournal";
 
         // When
-        var result = _app.Run(["new", journalName, "--path", ""]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", ""]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -868,7 +849,7 @@ public class NewCommandTests
         var customPath = "custom";
 
         // When
-        var result = _app.Run(["new", journalName, "--path", customPath]);
+        var result = BuildNewApp().Run(["new", journalName, "--path", customPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -899,7 +880,7 @@ public class NewCommandTests
     {
         // CommandAppTester returns the raw Spectre value (-1); Program.Main normalises it to 1.
         // We assert ShouldNotBe(0) here to keep the test independent of the wrapper layer.
-        var result = _app.Run(["new", invalidName]);
+        var result = BuildNewApp().Run(["new", invalidName]);
 
         result.ExitCode.ShouldNotBe(0);
         result.Output.ShouldContain(expectedMessage);
@@ -911,7 +892,7 @@ public class NewCommandTests
         // Brackets are valid filesystem chars on macOS/Linux but are rejected because:
         // 1. They break markdown link syntax — "[my[journal]]" is malformed.
         // 2. They are interpreted as shell globs — my[journal] expands in bash.
-        var result = _app.Run(["new", "my[journal]"]);
+        var result = BuildNewApp().Run(["new", "my[journal]"]);
 
         result.ExitCode.ShouldNotBe(0);
         result.Output.ShouldContain("markdown link characters");
@@ -993,11 +974,11 @@ public class NewCommandTests
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(_fileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking
             .Setup(x => x.LoadIndex(It.IsAny<string>()))
@@ -1045,11 +1026,11 @@ public class NewCommandTests
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(_fileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking
             .Setup(x => x.LoadIndex(It.IsAny<string>()))
@@ -1098,11 +1079,11 @@ public class NewCommandTests
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(_fileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
@@ -1145,11 +1126,11 @@ public class NewCommandTests
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(_fileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
@@ -1187,17 +1168,17 @@ public class NewCommandTests
     {
         // Given
         var faultyFileSystem = new FileCreationFailureFileSystem();
-        var testTemplateManager = new TemplateManager(_journalSettings);
+        var testTemplateManager = new TemplateManager(JournalSettings);
         var testJournalConfiguration = new TestJournalConfiguration();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
+        services.AddSingleton<IAnsiConsole>(new TestConsole());
         services.AddSingleton<IFileSystem>(faultyFileSystem);
         services.AddSingleton<IJournalConfiguration>(testJournalConfiguration);
         services.AddSingleton<ITemplateManager>(testTemplateManager);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
-        services.AddSingleton(_journalSettings);
+        services.AddSingleton(JournalSettings);
         var mockFileTracking = new Mock<IFileTracking>();
         mockFileTracking
             .Setup(x => x.LoadIndex(It.IsAny<string>()))
@@ -1239,7 +1220,7 @@ public class NewCommandTests
                 : new[] { "new", journalName, "--path", pathValue };
 
         // When
-        var result = _app.Run(args);
+        var result = BuildNewApp().Run(args);
 
         // Then
         result.ExitCode.ShouldBe(0);

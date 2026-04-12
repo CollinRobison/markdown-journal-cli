@@ -7,6 +7,7 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.Tracking;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,7 +19,7 @@ using Spectre.Console.Testing;
 
 namespace markdown_journal_cli.Tests.Commands.Update;
 
-public class UpdateCommandTests
+public class UpdateCommandTests : CommandTestBase
 {
     private readonly TestConsole _console;
     private readonly TestFileSystem _fileSystem;

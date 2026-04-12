@@ -3,6 +3,7 @@ using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -14,57 +15,35 @@ using Spectre.Console.Testing;
 
 namespace markdown_journal_cli.Tests.Commands.Init;
 
-public class InitCommandTests
+public class InitCommandTests : CommandTestBase
 {
-    private readonly TestConsole _console;
     private readonly TestFileSystem _fileSystem;
     private readonly TestInitJournalService _initService;
-    private readonly IOptions<JournalSettings> _journalSettings;
-    private readonly CommandAppTester _app;
 
     public InitCommandTests()
     {
-        _console = new TestConsole();
         _fileSystem = new TestFileSystem();
         _initService = new TestInitJournalService();
+    }
 
-        _journalSettings = Options.Create(
-            new JournalSettings
+    private CommandAppTester BuildInitApp() =>
+        BuildApp(
+            config =>
             {
-                AppName = "md-journal",
-                JournalConfigFileName = ".journalrc",
-                DefaultJournalName = "MyJournal",
-                TableOfContentsFileName = "1a-TableOfContents",
+                config.SetApplicationName(JournalSettings.Value.AppName);
+                config
+                    .AddCommand<InitCommand>("init")
+                    .WithDescription(
+                        "Initialises an existing directory as an mdjournal-managed journal."
+                    );
+            },
+            services =>
+            {
+                services.AddSingleton<IFileSystem>(_fileSystem);
+                services.AddSingleton<IInitJournalService>(_initService);
+                services.AddSingleton<InitCommand>();
             }
         );
-
-        var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
-        services.AddSingleton<IFileSystem>(_fileSystem);
-        services.AddSingleton<IInitJournalService>(_initService);
-        services.AddSingleton(_journalSettings);
-        services.AddSingleton<InitCommand>();
-
-        var registrar = new TypeRegistrar();
-        foreach (var service in services)
-        {
-            if (service.ImplementationInstance != null)
-                registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
-            else if (service.ImplementationType != null)
-                registrar.Register(service.ServiceType, service.ImplementationType);
-        }
-
-        _app = new CommandAppTester(registrar);
-        _app.Configure(config =>
-        {
-            config.SetApplicationName(_journalSettings.Value.AppName);
-            config
-                .AddCommand<InitCommand>("init")
-                .WithDescription(
-                    "Initialises an existing directory as an mdjournal-managed journal."
-                );
-        });
-    }
 
     [Fact]
     public void Should_Initialize_Journal_With_Explicit_Name()
@@ -74,7 +53,7 @@ public class InitCommandTests
         _fileSystem.CreateDirectory(dir);
 
         // When
-        var result = _app.Run(["init", "MyNotes", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "MyNotes", "--path", dir]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -90,7 +69,7 @@ public class InitCommandTests
         _fileSystem.CreateDirectory(dir);
 
         // When — no [name] argument supplied
-        var result = _app.Run(["init", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "--path", dir]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -102,7 +81,7 @@ public class InitCommandTests
     public void Should_Return_Error_When_Directory_Does_Not_Exist()
     {
         // When
-        var result = _app.Run(["init", "--path", "/nonexistent"]);
+        var result = BuildInitApp().Run(["init", "--path", "/nonexistent"]);
 
         // Then
         result.ExitCode.ShouldBe(1);
@@ -119,7 +98,7 @@ public class InitCommandTests
         _fileSystem.CreateFile(dir, ".journalrc", "{}");
 
         // When
-        var result = _app.Run(["init", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "--path", dir]);
 
         // Then
         result.ExitCode.ShouldBe(1);
@@ -140,7 +119,7 @@ public class InitCommandTests
         );
 
         // When
-        var result = _app.Run(["init", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "--path", dir]);
 
         // Then
         result.ExitCode.ShouldBe(1);
@@ -155,7 +134,7 @@ public class InitCommandTests
         _fileSystem.CreateDirectory(dir);
 
         // When
-        var result = _app.Run(["init", "--path", dir, "--toc", "my-toc"]);
+        var result = BuildInitApp().Run(["init", "--path", dir, "--toc", "my-toc"]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -171,7 +150,7 @@ public class InitCommandTests
         _fileSystem.CreateDirectory(dir);
 
         // When
-        var result = _app.Run(["init", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "--path", dir]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -183,7 +162,7 @@ public class InitCommandTests
     public void Should_Validate_Journal_Name_For_Invalid_Characters()
     {
         // When
-        var result = _app.Run(["init", "Invalid/Name"]);
+        var result = BuildInitApp().Run(["init", "Invalid/Name"]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -194,7 +173,7 @@ public class InitCommandTests
     public void Should_Validate_Empty_Journal_Name()
     {
         // When
-        var result = _app.Run(["init", ""]);
+        var result = BuildInitApp().Run(["init", ""]);
 
         // Then
         result.ExitCode.ShouldNotBe(0);
@@ -209,7 +188,7 @@ public class InitCommandTests
         _fileSystem.CreateDirectory(customPath);
 
         // When
-        var result = _app.Run(["init", "MyJournal", "-p", customPath]);
+        var result = BuildInitApp().Run(["init", "MyJournal", "-p", customPath]);
 
         // Then
         result.ExitCode.ShouldBe(0);
@@ -226,7 +205,7 @@ public class InitCommandTests
         _initService.ExceptionToThrow = new InvalidOperationException("Disk full");
 
         // When
-        var result = _app.Run(["init", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "--path", dir]);
 
         // Then
         result.ExitCode.ShouldBe(1);
@@ -239,7 +218,7 @@ public class InitCommandTests
     {
         // Paths like "/repos/my[project]/journal" would cause Spectre MarkupException before fix.
         // The command should emit a plain error message, not crash.
-        var result = _app.Run(["init", "--path", "/nonexistent/my[project]/journal"]);
+        var result = BuildInitApp().Run(["init", "--path", "/nonexistent/my[project]/journal"]);
 
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error");
@@ -255,7 +234,7 @@ public class InitCommandTests
         _fileSystem.CreateDirectory(dir);
         _fileSystem.CreateFile(dir, ".journalrc", "{}");
 
-        var result = _app.Run(["init", "--path", dir]);
+        var result = BuildInitApp().Run(["init", "--path", dir]);
 
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error");

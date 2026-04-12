@@ -2,6 +2,7 @@ using markdown_journal_cli.Commands.Remove;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Services.RemoveEntry;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -17,7 +18,7 @@ namespace markdown_journal_cli.Tests.Commands.Remove;
 /// Unit tests for <see cref="RemoveEntryCommand"/> covering confirmation flow,
 /// --force flag, --clean-refs flag, and all error paths.
 /// </summary>
-public class RemoveEntryCommandTests
+public class RemoveEntryCommandTests : CommandTestBase
 {
     private const string TestPath = "/test/journal";
     private const string TestFileName = "old_notes";

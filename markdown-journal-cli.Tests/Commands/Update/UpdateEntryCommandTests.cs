@@ -1,6 +1,7 @@
 using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Moq;
 using Shouldly;
 using Spectre.Console.Cli;
@@ -13,7 +14,7 @@ namespace markdown_journal_cli.Tests.Commands.Update;
 /// Unit tests for <see cref="UpdateEntryCommand"/> covering file rename, display-name update,
 /// heading changes, ignore/unignore, and TOC regeneration.
 /// </summary>
-public class UpdateEntryCommandTests
+public class UpdateEntryCommandTests : CommandTestBase
 {
     private const string TestPath = "/test/journal";
     private const string TestFileName = "My_Entry.md";

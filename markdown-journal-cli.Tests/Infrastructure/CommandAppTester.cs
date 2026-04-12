@@ -14,6 +14,9 @@ public sealed class CommandAppTester
     private readonly CommandApp _app;
     private readonly TestConsole _testConsole;
 
+    /// <summary>The internal TestConsole used by this tester. Use Console.Input to push text before Run().</summary>
+    public TestConsole Console => _testConsole;
+
     public CommandAppTester(ITypeRegistrar registrar)
     {
         _testConsole = new TestConsole();
