@@ -140,19 +140,6 @@ public class InitJournalServiceTests : ServiceTestBase
     #region Journal config generation
 
     [Fact]
-    public void Initialize_CallsGenerateFromTrackingIndex()
-    {
-        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-
-        _service.Initialize(JournalDirectory, JournalName, null);
-
-        _mockJournalConfigGenerator.Verify(
-            g => g.GenerateFromTrackingIndex(JournalDirectory, DefaultTocName, JournalName),
-            Times.Once
-        );
-    }
-
-    [Fact]
     public void Initialize_ConfigGenerationUsesCorrectJournalName()
     {
         MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);

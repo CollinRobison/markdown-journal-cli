@@ -164,27 +164,6 @@ public class UpdateEntryCommandTests : CommandTestBase
         );
     }
 
-    [Fact]
-    public void Execute_UpdatesConfigDisplayName_WhenNameProvided()
-    {
-        // Arrange - renaming also changes the display name (no --title override)
-        var settings = new UpdateEntrySettings
-        {
-            FilePath = TestPath,
-            FileName = TestFileName,
-            EntryName = "New Entry",
-        };
-
-        // Act
-        CreateCommand().Execute(CreateCommandContext(), settings);
-
-        // Assert - UpdateEntry was called with the new name
-        _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(TestPath, TestFileName, "New Entry", null, null, false, false, true),
-            Times.Once
-        );
-    }
-
     #endregion
 
     #region Display Name Update

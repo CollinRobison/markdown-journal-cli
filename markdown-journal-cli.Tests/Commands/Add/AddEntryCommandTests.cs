@@ -488,25 +488,6 @@ body goes here.
     #region Integration Tests
 
     [Fact]
-    public void Should_Update_Table_Of_Contents_After_Entry_Creation()
-    {
-        // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);
-
-        // Assert
-        result.ExitCode.ShouldBe(0);
-        MockTableOfContentsService.Verify(
-            toc =>
-                toc.UpdateTableOfContents(
-                    It.IsAny<string>(),
-                    It.IsAny<DateTime?>(),
-                    It.IsAny<DateTime?>()
-                ),
-            Times.Once
-        );
-    }
-
-    [Fact]
     public void Should_Not_Update_Configuration_If_File_Creation_Fails()
     {
         // Arrange

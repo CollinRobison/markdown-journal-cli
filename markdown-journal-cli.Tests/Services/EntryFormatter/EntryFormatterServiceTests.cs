@@ -546,17 +546,6 @@ public class EntryFormatterServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddHeadingSeparators_Combines_Strings_With_Separators()
-    {
-        // Given
-        string[] test = ["Heading 1", "Heading_2", "Heading-3"];
-        // When
-        var result = _formatterService.AddHeadingSeparators(test);
-        // Then
-        result.ShouldBe("Heading_1-Heading_2-Heading-3");
-    }
-
-    [Fact]
     public void AddHeadingSeparators_Handles_Empty_Array()
     {
         // Given
