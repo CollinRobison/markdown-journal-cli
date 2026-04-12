@@ -46,7 +46,7 @@ public class InitCommandTests : CommandTestBase
         );
 
     [Fact]
-    public void Should_Initialize_Journal_With_Explicit_Name()
+    public void Execute_Should_InitializeJournal_When_ExplicitNameProvided()
     {
         // Given
         var dir = "/existing/notes";
@@ -62,7 +62,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Initialize_Journal_Using_Directory_Name_As_Default()
+    public void Execute_Should_InitializeJournal_When_UsingDirectoryNameAsDefault()
     {
         // Given — use a path whose last segment is the expected name
         var dir = "notes-dir";
@@ -78,7 +78,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Return_Error_When_Directory_Does_Not_Exist()
+    public void Execute_Should_ReturnError_When_DirectoryDoesNotExist()
     {
         // When
         var result = BuildInitApp().Run(["init", "--path", "/nonexistent"]);
@@ -90,7 +90,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Return_Error_When_Journal_Already_Initialized()
+    public void Execute_Should_ReturnError_When_JournalAlreadyInitialized()
     {
         // Given
         var dir = "/existing/journal";
@@ -108,7 +108,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Return_Error_When_Toc_File_Already_Exists()
+    public void Execute_Should_ReturnError_When_TocFileAlreadyExists()
     {
         // Given
         var dir = "/existing/notes";
@@ -127,7 +127,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Pass_Custom_TOC_Name_To_Service()
+    public void Execute_Should_PassCustomTocNameToService_When_TocNameProvided()
     {
         // Given
         var dir = "/existing/notes";
@@ -143,7 +143,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Pass_Null_TOC_Name_When_Not_Specified()
+    public void Execute_Should_PassNullTocName_When_TocNameNotSpecified()
     {
         // Given
         var dir = "/existing/notes";
@@ -159,7 +159,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Validate_Journal_Name_For_Invalid_Characters()
+    public void Execute_Should_ReturnError_When_JournalNameHasInvalidCharacters()
     {
         // When
         var result = BuildInitApp().Run(["init", "Invalid/Name"]);
@@ -170,7 +170,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Validate_Empty_Journal_Name()
+    public void Execute_Should_ReturnError_When_JournalNameIsEmpty()
     {
         // When
         var result = BuildInitApp().Run(["init", ""]);
@@ -181,7 +181,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Initialize_With_Custom_Path()
+    public void Execute_Should_InitializeJournal_When_CustomPathProvided()
     {
         // Given
         var customPath = "/my/notes/folder";
@@ -197,7 +197,7 @@ public class InitCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Should_Return_Error_On_Unexpected_Exception()
+    public void Execute_Should_ReturnError_When_UnexpectedException()
     {
         // Given
         var dir = "/existing/notes";
