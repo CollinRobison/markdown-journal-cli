@@ -51,7 +51,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     #region Positive Cases
 
     [Fact]
-    public void Execute_ShouldCreateTrackingFile_WhenJournalrcExistsAndTrackingFileDoesNotExist()
+    public void Execute_Should_CreateTrackingFile_When_JournalrcExistsAndTrackingFileDoesNotExist()
     {
         // Arrange
         var testPath = "/test/journal";
@@ -66,7 +66,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ShouldCreateTrackingFile_WhenIgnoreJournalConfigFlagIsSet()
+    public void Execute_Should_CreateTrackingFile_When_IgnoreJournalConfigFlagIsSet()
     {
         // Arrange
         var testPath = "/test/journal";
@@ -88,7 +88,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     #region Negative Cases
 
     [Fact]
-    public void Execute_ShouldReturnError_WhenJournalrcDoesNotExist()
+    public void Execute_Should_ReturnError_When_JournalrcDoesNotExist()
     {
         // Arrange
         var testPath = "/test/journal";
@@ -106,7 +106,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ShouldReturnWarning_WhenTrackingFileAlreadyExists()
+    public void Execute_Should_ReturnWarning_When_TrackingFileAlreadyExists()
     {
         // Arrange
         var testPath = "/test/journal";
@@ -124,7 +124,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ShouldHandleUnexpectedErrors_Gracefully()
+    public void Execute_Should_HandleUnexpectedErrorsGracefully()
     {
         // Arrange
         var testPath = "/test/journal";
@@ -144,7 +144,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     #region Edge Cases
 
     [Fact]
-    public void Execute_ShouldUseDefaultPath_WhenPathNotSpecified()
+    public void Execute_Should_UseDefaultPath_When_PathNotSpecified()
     {
         // Arrange
         var expectedPath = ".";
@@ -159,7 +159,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ShouldCallFileTrackingInCorrectOrder()
+    public void Execute_Should_CallFileTrackingInCorrectOrder()
     {
         // Arrange
         var testPath = "/test/journal";
@@ -181,7 +181,7 @@ public class AddFileTrackingCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ShouldCheckJournalrcBeforeTrackingFile()
+    public void Execute_Should_CheckJournalrcBeforeTrackingFile()
     {
         // Arrange
         var testPath = "/test/journal";

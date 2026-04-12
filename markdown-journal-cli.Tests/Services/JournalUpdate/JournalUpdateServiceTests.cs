@@ -7,104 +7,67 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
-using markdown_journal_cli.Tests.Infrastructure.FileSystem;
-using markdown_journal_cli.Tests.Infrastructure.Tracking;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Spectre.Console.Testing;
+using System.Text.RegularExpressions;
 
 namespace markdown_journal_cli.Tests.Services;
 
 /// <summary>
 /// Unit tests for <see cref="JournalUpdateService"/> covering journal configuration updates,
 /// last-edited date tracking, and table of contents management.
-/// Uses concrete infrastructure implementations with in-memory test doubles.
+/// Uses Moq mocks via <see cref="ServiceTestBase"/> for all infrastructure dependencies.
 /// </summary>
 public class JournalUpdateServiceTests : ServiceTestBase
 {
     private readonly TestConsole _console;
-    private readonly TestFileSystem _fileSystem;
-    private readonly TestHashService _hashService;
-    private readonly FileTracking _fileTracking;
-    private readonly JournalConfiguration _journalConfiguration;
-    private readonly TableOfContentsService _tableOfContentsService;
-    private readonly IOptions<JournalSettings> _journalSettings;
-    private readonly JournalUpdateService _service;
-    private readonly string _testPath;
+    private readonly Mock<IMarkdownLinkRewriter> _mockMarkdownLinkRewriter;
+    private const string _testPath = "/test/journal";
 
     public JournalUpdateServiceTests()
     {
         _console = new TestConsole();
-        _fileSystem = new TestFileSystem();
-        _hashService = new TestHashService();
-        _testPath = "/test/journal";
+        _mockMarkdownLinkRewriter = new Mock<IMarkdownLinkRewriter>();
+    }
 
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                AppName = "testapp",
-                JournalConfigFileName = ".journalrc",
-                TableOfContentsFileName = "1a-TableOfContents",
-                TableOfContentsTitle = "Table of Contents",
-                DateFormat = "MM/dd/yyyy",
-            }
-        );
-
-        _fileTracking = new FileTracking(_fileSystem, _journalSettings, _hashService);
-
-        _journalConfiguration = new JournalConfiguration(
-            _fileSystem,
-            _journalSettings,
-            NullLogger<JournalConfiguration>(),
-            _fileTracking
-        );
-
-        _tableOfContentsService = new TableOfContentsService(
-            _fileSystem,
-            _journalConfiguration,
-            _journalSettings,
-            NullLogger<TableOfContentsService>()
-        );
-
-        _service = new JournalUpdateService(
+    private JournalUpdateService CreateSut() =>
+        new JournalUpdateService(
             _console,
-            _fileSystem,
-            _journalConfiguration,
-            _fileTracking,
-            _tableOfContentsService,
-            _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>()),
+            MockFileSystem.Object,
+            MockJournalConfiguration.Object,
+            MockFileTracking.Object,
+            MockTableOfContentsService.Object,
+            JournalSettings,
+            _mockMarkdownLinkRewriter.Object,
             NoOpCoordinator,
             NoOpReporter,
             NullLogger<JournalUpdateService>()
         );
 
-        _fileSystem.CreateDirectory(_testPath);
-        SetupJournalConfig();
-    }
-
-    private void SetupJournalConfig()
-    {
-        var config = new JournalConfig
+    /// <summary>
+    /// Creates a minimal <see cref="JournalConfig"/> with the given TOC file name and
+    /// optional root entries for use in mock setups.
+    /// </summary>
+    private static JournalConfig CreateTestConfig(string tocFile, string[]? rootEntries = null) =>
+        new JournalConfig
         {
             JournalName = "Test Journal",
             TableOfContents = new TableOfContents
             {
-                File = "1a-TableOfContents.md",
+                File = tocFile,
                 Extensions = [".md"],
                 Structure = new Structure { Topics = [] },
-                RootEntries = [],
+                RootEntries = (rootEntries ?? [])
+                    .Select(f => new Entries { Name = Path.GetFileNameWithoutExtension(f), File = f })
+                    .ToArray(),
             },
         };
-        _journalConfiguration.Create(_testPath, config);
-    }
 
     #region Constructor Guards
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenConsoleIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_ConsoleIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -113,7 +76,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
@@ -123,7 +86,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenFileSystemIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_FileSystemIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -132,7 +95,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
@@ -142,7 +105,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenJournalConfigurationIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_JournalConfigurationIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -151,7 +114,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 null!,
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
@@ -161,7 +124,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenFileTrackingIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_FileTrackingIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -170,7 +133,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IJournalConfiguration>(),
                 null!,
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
@@ -180,7 +143,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenTableOfContentsServiceIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_TableOfContentsServiceIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -189,7 +152,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 null!,
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
@@ -199,7 +162,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenTxCoordinatorIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_TxCoordinatorIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -208,7 +171,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 null!,
                 NoOpReporter,
@@ -218,7 +181,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_ThrowsArgumentNullException_WhenRollbackReporterIsNull()
+    public void Constructor_Should_ThrowArgumentNullException_When_RollbackReporterIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new JournalUpdateService(
@@ -227,7 +190,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IJournalConfiguration>(),
                 Mock.Of<IFileTracking>(),
                 Mock.Of<ITableOfContentsService>(),
-                _journalSettings,
+                JournalSettings,
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 null!,
@@ -241,113 +204,137 @@ public class JournalUpdateServiceTests : ServiceTestBase
     #region UpdateJournalConfig
 
     [Fact]
-    public void UpdateJournalConfig_AddsNewFileToConfig_WhenFileIsAdded()
+    public void UpdateJournalConfig_Should_AddNewFileToConfig_When_FileIsAdded()
     {
         // Arrange
         var syncResult = new JournalConfigSyncResult { FilesToAdd = ["2a-SomeNote.md"] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
-        var config = _journalConfiguration.Read(_testPath);
-        config.ShouldNotBeNull();
-        config.TableOfContents.RootEntries.ShouldContain(e => e.File == "2a-SomeNote.md");
+        MockJournalConfiguration.Verify(
+            jc => jc.AddEntry(_testPath, string.Empty, "2a-SomeNote.md"),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateJournalConfig_AddsMultipleFilesToConfig_WhenMultipleFilesAdded()
+    public void UpdateJournalConfig_Should_AddMultipleFilesToConfig_When_MultipleFilesAdded()
     {
         // Arrange
         var syncResult = new JournalConfigSyncResult
         {
             FilesToAdd = ["2a-NoteOne.md", "3b-NoteTwo.md"],
         };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
-        var config = _journalConfiguration.Read(_testPath);
-        config.ShouldNotBeNull();
-        config.TableOfContents.RootEntries.ShouldContain(e => e.File == "2a-NoteOne.md");
-        config.TableOfContents.RootEntries.ShouldContain(e => e.File == "3b-NoteTwo.md");
+        MockJournalConfiguration.Verify(
+            jc => jc.AddEntry(_testPath, string.Empty, "2a-NoteOne.md"),
+            Times.Once
+        );
+        MockJournalConfiguration.Verify(
+            jc => jc.AddEntry(_testPath, string.Empty, "3b-NoteTwo.md"),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateJournalConfig_RemovesDeletedFileFromConfig_WhenFileIsDeleted()
+    public void UpdateJournalConfig_Should_RemoveDeletedFileFromConfig_When_FileIsDeleted()
     {
         // Arrange
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "2a-SomeNote.md");
+        MockJournalConfiguration
+            .Setup(jc => jc.RemoveEntry(_testPath, "2a-SomeNote.md"))
+            .Returns(true);
         var syncResult = new JournalConfigSyncResult { FilesToRemove = ["2a-SomeNote.md"] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
-        var config = _journalConfiguration.Read(_testPath);
-        config.ShouldNotBeNull();
-        config.TableOfContents.RootEntries.ShouldNotContain(e => e.File == "2a-SomeNote.md");
+        MockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(_testPath, "2a-SomeNote.md"),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateJournalConfig_PrintsConfigEntryNotFound_WhenDeletedFileNotInConfig()
+    public void UpdateJournalConfig_Should_PrintConfigEntryNotFound_When_DeletedFileNotInConfig()
     {
-        // Arrange
+        // Arrange — RemoveEntry returns false to simulate the entry not being found
+        MockJournalConfiguration
+            .Setup(jc => jc.RemoveEntry(_testPath, "nonexistent-file.md"))
+            .Returns(false);
         var syncResult = new JournalConfigSyncResult { FilesToRemove = ["nonexistent-file.md"] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
-        _console.Output.ShouldContain("Config entry not found for deleted file");
+        _console.Output.ShouldContain("config entry not found for deleted file");
     }
 
     [Fact]
-    public void UpdateJournalConfig_PrintsNoChangesNeeded_WhenNeitherAddedNorRemoved()
+    public void UpdateJournalConfig_Should_PrintNoChangesNeeded_When_NeitherAddedNorRemoved()
     {
         // Arrange
         var syncResult = new JournalConfigSyncResult();
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         _console.Output.ShouldContain("No configuration changes needed");
     }
 
     [Fact]
-    public void UpdateJournalConfig_PrintsConfigUpdated_WhenChangesExist()
+    public void UpdateJournalConfig_Should_PrintConfigUpdated_When_ChangesExist()
     {
         // Arrange
         var syncResult = new JournalConfigSyncResult { FilesToAdd = ["2a-SomeNote.md"] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
         _console.Output.ShouldContain("Journal configuration updated");
     }
 
     [Fact]
-    public void UpdateJournalConfig_HandlesAddedAndDeletedTogether()
+    public void UpdateJournalConfig_Should_HandleAddedAndDeletedTogether()
     {
-        // Arrange — pre-populate config with the file that will be removed
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "2a-OldNote.md");
+        // Arrange
+        MockJournalConfiguration
+            .Setup(jc => jc.RemoveEntry(_testPath, "2a-OldNote.md"))
+            .Returns(true);
         var syncResult = new JournalConfigSyncResult
         {
             FilesToAdd = ["3b-NewNote.md"],
             FilesToRemove = ["2a-OldNote.md"],
         };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateJournalConfig(_testPath, syncResult);
+        sut.UpdateJournalConfig(_testPath, syncResult);
 
         // Assert
-        var config = _journalConfiguration.Read(_testPath);
-        config.ShouldNotBeNull();
-        config.TableOfContents.RootEntries.ShouldContain(e => e.File == "3b-NewNote.md");
-        config.TableOfContents.RootEntries.ShouldNotContain(e => e.File == "2a-OldNote.md");
+        MockJournalConfiguration.Verify(
+            jc => jc.AddEntry(_testPath, string.Empty, "3b-NewNote.md"),
+            Times.Once
+        );
+        MockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(_testPath, "2a-OldNote.md"),
+            Times.Once
+        );
     }
 
     #endregion
@@ -355,278 +342,287 @@ public class JournalUpdateServiceTests : ServiceTestBase
     #region UpdateLastEditedDatesAndTracking
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_UpdatesLastEditedDate_ForModifiedFile()
+    public void UpdateLastEditedDatesAndTracking_Should_UpdateLastEditedDate_When_FileIsModified()
     {
         // Arrange
         const string relativePath = "note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(
-            _testPath,
-            relativePath,
-            "Created: 01/01/2025\n# My Note\n\nContent here."
-        );
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(absolutePath))
+            .Returns("Created: 01/01/2025\n# My Note\n\nContent here.");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath)).Returns(relativePath);
 
         var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
-        var updatedContent = _fileSystem.GetFileContent(absolutePath);
-        updatedContent.ShouldNotBeNull();
-        updatedContent.ShouldContain("Last Edited:");
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(
+                _testPath,
+                relativePath,
+                It.Is<string>(s => s.Contains("Last Edited:"))
+            ),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_DoesNotUpdateLastEditedDate_WhenTrackingOnly()
+    public void UpdateLastEditedDatesAndTracking_Should_NotUpdateLastEditedDate_When_TrackingOnly()
+    {
+        // Arrange
+        const string relativePath = "note.md";
+        var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
+
+        // Act
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
+
+        // Assert — content must not be written when trackingOnly is true
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void UpdateLastEditedDatesAndTracking_Should_UpdateTrackingIndex_When_FileIsModified()
     {
         // Arrange
         const string relativePath = "note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        const string originalContent = "Created: 01/01/2025\n# My Note\n\nContent here.";
-        _fileSystem.CreateFile(_testPath, relativePath, originalContent);
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
+        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath)).Returns("# My Note\n\nContent here.");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath)).Returns(relativePath);
 
         var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
-        // Assert — content must be unchanged when trackingOnly is true
-        var content = _fileSystem.GetFileContent(absolutePath);
-        content.ShouldBe(originalContent);
+        // Assert — index must be updated for the modified file
+        MockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(_testPath, relativePath),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_UpdatesTrackingIndex_ForModifiedFile()
+    public void UpdateLastEditedDatesAndTracking_Should_UpdateTrackingIndex_When_FileIsModifiedAndTrackingOnly()
     {
         // Arrange
         const string relativePath = "note.md";
-        var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "# My Note\n\nContent here.");
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
-
         var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
-
-        // Assert — file must no longer appear as modified after the index is updated
-        var changes = _fileTracking.DetectChangesWithoutUpdate(_testPath);
-        changes.ModifiedFiles.ShouldNotContain(relativePath);
-    }
-
-    [Fact]
-    public void UpdateLastEditedDatesAndTracking_UpdatesTrackingIndex_ForModifiedFile_EvenWhenTrackingOnly()
-    {
-        // Arrange
-        const string relativePath = "note.md";
-        var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "# My Note\n\nContent here.");
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
-
-        var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
-
-        // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
 
         // Assert — the index must be updated even when trackingOnly skips content updates
-        var changes = _fileTracking.DetectChangesWithoutUpdate(_testPath);
-        changes.ModifiedFiles.ShouldNotContain(relativePath);
+        MockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(_testPath, relativePath),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_AddsNewFileToTrackingIndex_WhenFileIsAdded()
+    public void UpdateLastEditedDatesAndTracking_Should_AddNewFileToTrackingIndex_When_FileIsAdded()
     {
         // Arrange
         const string relativePath = "new-note.md";
-        _fileSystem.CreateFile(_testPath, relativePath, "# New Note\n\nContent here.");
         var fileResults = new ChangeDetectionResult { AddedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
-        var index = _fileTracking.LoadIndex(_testPath);
-        index.Files.ContainsKey(relativePath).ShouldBeTrue();
+        MockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(_testPath, relativePath),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_DoesNotUpdateContent_ForAddedFile()
+    public void UpdateLastEditedDatesAndTracking_Should_NotUpdateContent_When_FileIsAdded()
     {
         // Arrange
         const string relativePath = "new-note.md";
-        var absolutePath = Path.Combine(_testPath, relativePath);
-        const string originalContent = "# New Note\n\nContent here.";
-        _fileSystem.CreateFile(_testPath, relativePath, originalContent);
         var fileResults = new ChangeDetectionResult { AddedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert — added files must not have their content modified, only tracked
-        var content = _fileSystem.GetFileContent(absolutePath);
-        content.ShouldBe(originalContent);
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_RemovesDeletedFileFromTrackingIndex()
+    public void UpdateLastEditedDatesAndTracking_Should_RemoveDeletedFileFromTrackingIndex()
     {
         // Arrange
         const string relativePath = "deleted-note.md";
-        var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "# Deleted Note");
-        _fileTracking.UpdateIndex(_testPath);
-        _fileSystem.DeleteFile(absolutePath);
-
         var fileResults = new ChangeDetectionResult { DeletedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
-        var index = _fileTracking.LoadIndex(_testPath);
-        index.Files.ContainsKey(relativePath).ShouldBeFalse();
+        MockFileTracking.Verify(
+            ft => ft.RemoveFileFromIndex(_testPath, relativePath),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_UpdatesMultipleModifiedFiles()
+    public void UpdateLastEditedDatesAndTracking_Should_UpdateMultipleModifiedFiles()
     {
         // Arrange
         const string relativePath1 = "note-one.md";
         const string relativePath2 = "note-two.md";
         var absolutePath1 = Path.Combine(_testPath, relativePath1);
         var absolutePath2 = Path.Combine(_testPath, relativePath2);
-        _fileSystem.CreateFile(_testPath, relativePath1, "Created: 01/01/2025\n# Note One");
-        _fileSystem.CreateFile(_testPath, relativePath2, "Created: 01/01/2025\n# Note Two");
-        _hashService.SetHash(absolutePath1, "hash-a");
-        _hashService.SetHash(absolutePath2, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath1, "hash-b");
-        _hashService.SetHash(absolutePath2, "hash-b");
+
+        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath1)).Returns("Created: 01/01/2025\n# Note One");
+        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath2)).Returns("Created: 01/01/2025\n# Note Two");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath1)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath2)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath1)).Returns(relativePath1);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath2)).Returns(relativePath2);
 
         var fileResults = new ChangeDetectionResult
         {
             ModifiedFiles = [relativePath1, relativePath2],
         };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
-        _fileSystem.GetFileContent(absolutePath1).ShouldContain("Last Edited:");
-        _fileSystem.GetFileContent(absolutePath2).ShouldContain("Last Edited:");
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(_testPath, relativePath1, It.Is<string>(s => s.Contains("Last Edited:"))),
+            Times.Once
+        );
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(_testPath, relativePath2, It.Is<string>(s => s.Contains("Last Edited:"))),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_InsertsLastEditedDate_WhenFileHasNoMetadata()
+    public void UpdateLastEditedDatesAndTracking_Should_InsertLastEditedDate_When_FileHasNoMetadata()
     {
         // Arrange
         const string relativePath = "bare-note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(
-            _testPath,
-            relativePath,
-            "# Bare Note\n\nJust content, no metadata."
-        );
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(absolutePath))
+            .Returns("# Bare Note\n\nJust content, no metadata.");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath)).Returns(relativePath);
 
         var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert — MarkdownMetadataParser must insert the date even when no existing metadata exists
-        var updatedContent = _fileSystem.GetFileContent(absolutePath);
-        updatedContent.ShouldNotBeNull();
-        updatedContent.ShouldContain("Last Edited:");
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(
+                _testPath,
+                relativePath,
+                It.Is<string>(s => s.Contains("Last Edited:"))
+            ),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_PrintsUpdatedSummary_ForModifiedFiles()
+    public void UpdateLastEditedDatesAndTracking_Should_PrintUpdatedSummary_When_FilesAreModified()
     {
         // Arrange
         const string relativePath = "note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "# My Note");
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
+        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath)).Returns("# My Note");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath)).Returns(relativePath);
 
         var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
         _console.Output.ShouldContain("Updated dates for 1 file(s)");
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_PrintsTrackedSummary_ForAddedFiles()
+    public void UpdateLastEditedDatesAndTracking_Should_PrintTrackedSummary_When_FilesAreAdded()
     {
         // Arrange
-        const string relativePath = "new-note.md";
-        _fileSystem.CreateFile(_testPath, relativePath, "# New Note");
-        var fileResults = new ChangeDetectionResult { AddedFiles = [relativePath] };
+        var fileResults = new ChangeDetectionResult { AddedFiles = ["new-note.md"] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
         _console.Output.ShouldContain("Tracked 1 new file(s)");
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_PrintsRemovedSummary_ForDeletedFiles()
+    public void UpdateLastEditedDatesAndTracking_Should_PrintRemovedSummary_When_FilesAreDeleted()
     {
         // Arrange
-        const string relativePath = "gone-note.md";
-        var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "# Gone Note");
-        _fileTracking.UpdateIndex(_testPath);
-        _fileSystem.DeleteFile(absolutePath);
-
-        var fileResults = new ChangeDetectionResult { DeletedFiles = [relativePath] };
+        var fileResults = new ChangeDetectionResult { DeletedFiles = ["gone-note.md"] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
         _console.Output.ShouldContain("Removed 1 deleted file(s) from tracking");
     }
 
     [Fact]
-    public void UpdateLastEditedDatesAndTracking_UsesConfiguredDateFormat()
+    public void UpdateLastEditedDatesAndTracking_Should_UseConfiguredDateFormat()
     {
         // Arrange
         const string relativePath = "note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        _fileSystem.CreateFile(_testPath, relativePath, "Created: 01/01/2025\n# My Note");
-        _hashService.SetHash(absolutePath, "hash-a");
-        _fileTracking.UpdateIndex(_testPath);
-        _hashService.SetHash(absolutePath, "hash-b");
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(absolutePath))
+            .Returns("Created: 01/01/2025\n# My Note");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(absolutePath)).Returns(relativePath);
 
         var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert — date must match the MM/dd/yyyy format configured in JournalSettings
-        var content = _fileSystem.GetFileContent(absolutePath);
-        content.ShouldNotBeNull();
-        content.ShouldMatch(@"Last Edited: \d{2}/\d{2}/\d{4}");
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(
+                _testPath,
+                relativePath,
+                It.Is<string>(s => Regex.IsMatch(s, @"Last Edited: \d{2}/\d{2}/\d{4}"))
+            ),
+            Times.Once
+        );
     }
 
     #endregion
@@ -634,51 +630,61 @@ public class JournalUpdateServiceTests : ServiceTestBase
     #region UpdateTableOfContents
 
     [Fact]
-    public void UpdateTableOfContents_WritesTocFile_WhenConfigHasEntries()
+    public void UpdateTableOfContents_Should_WriteTocFile_When_ConfigHasEntries()
     {
         // Arrange
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "2a-SomeNote.md");
-        _fileSystem.CreateFile(_testPath, "2a-SomeNote.md", "# Some Note");
+        var config = CreateTestConfig("1a-TableOfContents.md", ["2a-SomeNote.md"]);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateTableOfContents(_testPath);
+        sut.UpdateTableOfContents(_testPath);
 
-        // Assert
-        var tocPath = Path.Combine(_testPath, "1a-TableOfContents.md");
-        _fileSystem.FileExists(tocPath).ShouldBeTrue();
+        // Assert — the TOC service must be invoked to write the file
+        MockTableOfContentsService.Verify(
+            toc => toc.UpdateTableOfContents(_testPath, null, It.IsAny<DateTime?>()),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateTableOfContents_TracksTocFile_SoItDoesNotAppearAsAddedOnNextRun()
+    public void UpdateTableOfContents_Should_TrackTocFileSoItDoesNotAppearAsAdded()
     {
-        // Arrange — build an initial empty index before the TOC file exists
-        _fileTracking.UpdateIndex(_testPath);
+        // Arrange
+        var config = CreateTestConfig("1a-TableOfContents.md");
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        var sut = CreateSut();
 
         // Act
-        _service.UpdateTableOfContents(_testPath);
+        sut.UpdateTableOfContents(_testPath);
 
-        // Assert — TOC file is now tracked; a subsequent change detection must not list it as added
-        var changes = _fileTracking.DetectChangesWithoutUpdate(_testPath);
-        changes.AddedFiles.ShouldNotContain("1a-TableOfContents.md");
+        // Assert — TOC file must be recorded in the tracking index
+        MockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(_testPath, "1a-TableOfContents.md"),
+            Times.Once
+        );
     }
 
     [Fact]
-    public void UpdateTableOfContents_PrintsSuccessMessage()
+    public void UpdateTableOfContents_Should_PrintSuccessMessage()
     {
+        // Arrange
+        var config = CreateTestConfig("1a-TableOfContents.md");
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        var sut = CreateSut();
+
         // Act
-        _service.UpdateTableOfContents(_testPath);
+        sut.UpdateTableOfContents(_testPath);
 
         // Assert
         _console.Output.ShouldContain("Table of contents updated");
     }
 
     [Fact]
-    public void UpdateTableOfContents_UsesFallbackTocFileName_WhenConfigFileIsNull()
+    public void UpdateTableOfContents_Should_UseFallbackTocFileName_When_ConfigFileIsNull()
     {
-        // Arrange — use a mock IJournalConfiguration that returns a config with a null File value,
-        // and a no-op ITableOfContentsService so the TOC write itself does not interfere.
-        var mockJournalConfiguration = new Mock<IJournalConfiguration>();
-        mockJournalConfiguration
+        // Arrange — config with a null File value forces the fallback name to be used
+        MockJournalConfiguration
             .Setup(jc => jc.Read(_testPath))
             .Returns(
                 new JournalConfig
@@ -693,32 +699,16 @@ public class JournalUpdateServiceTests : ServiceTestBase
                     },
                 }
             );
-
-        var mockTocService = new Mock<ITableOfContentsService>();
-
-        var service = new JournalUpdateService(
-            _console,
-            _fileSystem,
-            mockJournalConfiguration.Object,
-            _fileTracking,
-            mockTocService.Object,
-            _journalSettings,
-            new MarkdownLinkRewriter(_fileSystem, NullLogger<MarkdownLinkRewriter>()),
-            NoOpCoordinator,
-            NoOpReporter,
-            NullLogger<JournalUpdateService>()
-        );
-
-        // Arrange — create the TOC file so it can be tracked (UpdateFileInIndex only tracks existing files)
-        var expectedTocFile = $"1a-TableOfContents{FileConstants.MarkdownExtension}";
-        _fileSystem.CreateFile(_testPath, expectedTocFile, "# Table of Contents");
+        var sut = CreateSut();
 
         // Act
-        service.UpdateTableOfContents(_testPath);
+        sut.UpdateTableOfContents(_testPath);
 
         // Assert — the fallback filename (TableOfContentsFileName + ".md") must be tracked
-        var index = _fileTracking.LoadIndex(_testPath);
-        index.Files.ContainsKey(expectedTocFile).ShouldBeTrue();
+        MockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(_testPath, "1a-TableOfContents.md"),
+            Times.Once
+        );
     }
 
     #endregion
@@ -726,47 +716,64 @@ public class JournalUpdateServiceTests : ServiceTestBase
     #region RenameToc
 
     [Fact]
-    public void RenameToc_HappyPath_RenamesFile_UpdatesConfig_RewritesLinks_UpdatesTracking()
+    public void RenameToc_Should_RenameFileAndUpdateConfigAndRewriteLinksAndUpdateTracking()
     {
         // Arrange
         const string oldTocFile = "1a-TableOfContents.md";
         const string newTocName = "MyContents";
         const string newTocFile = "MyContents.md";
-
-        _fileSystem.CreateFile(_testPath, oldTocFile, "# Table of Contents");
-        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
-
-        // A note that links to the old TOC
         const string noteRelPath = "notes/intro.md";
-        _fileSystem.CreateDirectory(Path.Combine(_testPath, "notes"));
-        _fileSystem.CreateFile(
-            _testPath,
-            noteRelPath,
-            $"Created: 01/01/2025\n# Intro\nSee [TOC]({oldTocFile})."
-        );
-        _fileTracking.UpdateFileInIndex(_testPath, noteRelPath);
+
+        var config = CreateTestConfig(oldTocFile);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+
+        // No conflict — new TOC path does not exist
+        var newTocAbsPath = Path.Combine(_testPath, newTocFile);
+        MockFileSystem.Setup(fs => fs.FileExists(newTocAbsPath)).Returns(false);
+
+        // Link rewriter finds one file and rewrites it
+        _mockMarkdownLinkRewriter
+            .Setup(r => r.FindFilesWithLinkTo(_testPath, oldTocFile))
+            .Returns([noteRelPath]);
+        _mockMarkdownLinkRewriter
+            .Setup(r => r.ReplaceLinksInDirectory(
+                _testPath, oldTocFile, newTocFile, It.IsAny<IReadOnlyList<string>>()))
+            .Returns([noteRelPath]);
+
+        var noteAbsPath = Path.Combine(_testPath, noteRelPath);
+        var noteDir = Path.GetDirectoryName(noteAbsPath)!;
+        MockFileSystem.Setup(fs => fs.GetFileContent(noteAbsPath))
+            .Returns($"Created: 01/01/2025\n# Intro\nSee [TOC]({newTocFile}).");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(noteAbsPath)).Returns(noteDir);
+        MockFileSystem.Setup(fs => fs.GetFileName(noteAbsPath)).Returns("intro.md");
+
+        var sut = CreateSut();
 
         // Act
-        _service.RenameToc(_testPath, newTocName);
+        sut.RenameToc(_testPath, newTocName);
 
-        // Assert — old TOC file gone, new one exists
-        _fileSystem.FileExists(Path.Combine(_testPath, oldTocFile)).ShouldBeFalse();
-        _fileSystem.FileExists(Path.Combine(_testPath, newTocFile)).ShouldBeTrue();
+        // Assert — file renamed
+        var oldTocAbsPath = Path.Combine(_testPath, oldTocFile);
+        MockFileSystem.Verify(fs => fs.RenameFile(oldTocAbsPath, newTocAbsPath), Times.Once);
 
         // Config updated
-        var config = _journalConfiguration.Read(_testPath);
-        config!.TableOfContents.File.ShouldBe(newTocFile);
+        MockJournalConfiguration.Verify(
+            jc => jc.Update(_testPath, It.IsAny<Action<JournalConfig>>()),
+            Times.Once
+        );
 
-        // Links rewritten in the note
-        var noteContent = _fileSystem.GetFileContent(Path.Combine(_testPath, noteRelPath));
-        noteContent.ShouldContain($"[TOC]({newTocFile})");
-        noteContent.ShouldNotContain(oldTocFile);
+        // Tracking renamed
+        MockFileTracking.Verify(
+            ft => ft.RenameFileInIndex(_testPath, oldTocFile, newTocFile),
+            Times.Once
+        );
 
-        // Tracking updated
-        var index = _fileTracking.LoadIndex(_testPath);
-        index.Files.ContainsKey(newTocFile).ShouldBeTrue();
-        index.Files.ContainsKey(oldTocFile).ShouldBeFalse();
-        index.Files.ContainsKey(noteRelPath).ShouldBeTrue();
+        // Backlink file stamped with Last Edited and re-tracked
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(noteDir, "intro.md", It.Is<string>(s => s.Contains("Last Edited:"))),
+            Times.Once
+        );
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(_testPath, noteRelPath), Times.Once);
 
         // Console output contains expected messages
         _console.Output.ShouldContain($"Renamed TOC: {oldTocFile} → {newTocFile}");
@@ -774,149 +781,166 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RenameToc_WhenAlreadyNamedCorrectly_SkipsRenameButRewritesStaleLinks()
+    public void RenameToc_Should_SkipRenameButRewriteStaleLinks_When_AlreadyNamedCorrectly()
     {
-        // Arrange
+        // Arrange — config already uses the requested name
         const string tocFile = "1a-TableOfContents.md";
-        _fileSystem.CreateFile(_testPath, tocFile, "# TOC");
-        _fileTracking.UpdateFileInIndex(_testPath, tocFile);
-
-        _fileSystem.CreateFile(_testPath, "note.md", $"[TOC]({tocFile})");
-        _fileTracking.UpdateFileInIndex(_testPath, "note.md");
+        var config = CreateTestConfig(tocFile);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        var sut = CreateSut();
 
         // Act — pass same stem (no change in name)
-        _service.RenameToc(_testPath, "1a-TableOfContents");
+        sut.RenameToc(_testPath, "1a-TableOfContents");
 
-        // Assert — file still exists under same name
-        _fileSystem.FileExists(Path.Combine(_testPath, tocFile)).ShouldBeTrue();
-
-        // Config filename unchanged
-        var config = _journalConfiguration.Read(_testPath);
-        config!.TableOfContents.File.ShouldBe(tocFile);
-
-        // Links in note.md were still checked (the link stays the same since name didn't change)
+        // Assert — no rename or config update should occur
+        MockFileSystem.Verify(
+            fs => fs.RenameFile(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        MockJournalConfiguration.Verify(
+            jc => jc.Update(It.IsAny<string>(), It.IsAny<Action<JournalConfig>>()),
+            Times.Never
+        );
         _console.Output.ShouldNotContain("Renamed TOC:");
     }
 
     [Fact]
-    public void RenameToc_ThrowsTocRenameConflictException_WhenTargetFileAlreadyExists()
+    public void RenameToc_Should_ThrowTocRenameConflictException_When_TargetFileAlreadyExists()
     {
         // Arrange
-        const string oldTocFile = "1a-TableOfContents.md";
-        const string conflictingFile = "MyContents.md";
-        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
-        _fileSystem.CreateFile(_testPath, conflictingFile, "# Other file");
+        var config = CreateTestConfig("1a-TableOfContents.md");
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem
+            .Setup(fs => fs.FileExists(Path.Combine(_testPath, "MyContents.md")))
+            .Returns(true);
+        var sut = CreateSut();
 
         // Act & Assert
-        Should.Throw<TocRenameConflictException>(() => _service.RenameToc(_testPath, "MyContents"));
+        Should.Throw<TocRenameConflictException>(() => sut.RenameToc(_testPath, "MyContents"));
     }
 
     [Fact]
-    public void RenameToc_WhenNoFilesReferenceTheToc_PrintsNoLinkMessage()
-    {
-        // Arrange
-        const string oldTocFile = "1a-TableOfContents.md";
-        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
-        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
-
-        // A file with no link to the TOC
-        _fileSystem.CreateFile(_testPath, "note.md", "No links here.");
-        _fileTracking.UpdateFileInIndex(_testPath, "note.md");
-
-        // Act
-        _service.RenameToc(_testPath, "MyContents");
-
-        // Assert
-        _console.Output.ShouldContain("No link references needed updating.");
-    }
-
-    [Fact]
-    public void RenameToc_WhenMultipleFilesReferToc_AllLinksRewrittenAndTrackingUpdated()
+    public void RenameToc_Should_PrintNoLinkMessage_When_NoFilesReferenceTheToc()
     {
         // Arrange
         const string oldTocFile = "1a-TableOfContents.md";
         const string newTocName = "MyContents";
         const string newTocFile = "MyContents.md";
 
-        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
-        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+        var config = CreateTestConfig(oldTocFile);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem
+            .Setup(fs => fs.FileExists(Path.Combine(_testPath, newTocFile)))
+            .Returns(false);
 
-        _fileSystem.CreateFile(
-            _testPath,
-            "intro.md",
-            $"Created: 01/01/2025\n# Intro\n[TOC]({oldTocFile})"
-        );
-        _fileSystem.CreateFile(
-            _testPath,
-            "chapter-1.md",
-            $"Created: 01/01/2025\n# Chapter 1\n[TOC]({oldTocFile})"
-        );
-        _fileSystem.CreateFile(_testPath, "other.md", "No link.");
-        _fileTracking.UpdateFileInIndex(_testPath, "intro.md");
-        _fileTracking.UpdateFileInIndex(_testPath, "chapter-1.md");
-        _fileTracking.UpdateFileInIndex(_testPath, "other.md");
+        _mockMarkdownLinkRewriter
+            .Setup(r => r.FindFilesWithLinkTo(_testPath, oldTocFile))
+            .Returns([]);
+        _mockMarkdownLinkRewriter
+            .Setup(r => r.ReplaceLinksInDirectory(
+                _testPath, oldTocFile, newTocFile, It.IsAny<IReadOnlyList<string>>()))
+            .Returns([]);
+
+        var sut = CreateSut();
 
         // Act
-        _service.RenameToc(_testPath, newTocName);
+        sut.RenameToc(_testPath, newTocName);
 
-        // Assert — both files updated
-        var introContent = _fileSystem.GetFileContent(Path.Combine(_testPath, "intro.md"));
-        introContent.ShouldContain($"[TOC]({newTocFile})");
-        introContent.ShouldContain("Last Edited:");
+        // Assert
+        _console.Output.ShouldContain("No link references needed updating.");
+    }
 
-        var ch1Content = _fileSystem.GetFileContent(Path.Combine(_testPath, "chapter-1.md"));
-        ch1Content.ShouldContain($"[TOC]({newTocFile})");
-        ch1Content.ShouldContain("Last Edited:");
+    [Fact]
+    public void RenameToc_Should_RewriteAllLinksAndUpdateTracking_When_MultipleFilesReferToc()
+    {
+        // Arrange
+        const string oldTocFile = "1a-TableOfContents.md";
+        const string newTocName = "MyContents";
+        const string newTocFile = "MyContents.md";
 
-        // "other.md" was not modified
-        var otherContent = _fileSystem.GetFileContent(Path.Combine(_testPath, "other.md"));
-        otherContent.ShouldBe("No link.");
+        var config = CreateTestConfig(oldTocFile);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem
+            .Setup(fs => fs.FileExists(Path.Combine(_testPath, newTocFile)))
+            .Returns(false);
 
-        // Console output mentions the count of updated files
+        _mockMarkdownLinkRewriter
+            .Setup(r => r.FindFilesWithLinkTo(_testPath, oldTocFile))
+            .Returns([]);
+        _mockMarkdownLinkRewriter
+            .Setup(r => r.ReplaceLinksInDirectory(
+                _testPath, oldTocFile, newTocFile, It.IsAny<IReadOnlyList<string>>()))
+            .Returns(["intro.md", "chapter-1.md"]);
+
+        var introAbsPath = Path.Combine(_testPath, "intro.md");
+        var ch1AbsPath = Path.Combine(_testPath, "chapter-1.md");
+        MockFileSystem.Setup(fs => fs.GetFileContent(introAbsPath))
+            .Returns($"Created: 01/01/2025\n# Intro\n[TOC]({newTocFile})");
+        MockFileSystem.Setup(fs => fs.GetFileContent(ch1AbsPath))
+            .Returns($"Created: 01/01/2025\n# Chapter 1\n[TOC]({newTocFile})");
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(introAbsPath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetDirectoryName(ch1AbsPath)).Returns(_testPath);
+        MockFileSystem.Setup(fs => fs.GetFileName(introAbsPath)).Returns("intro.md");
+        MockFileSystem.Setup(fs => fs.GetFileName(ch1AbsPath)).Returns("chapter-1.md");
+
+        var sut = CreateSut();
+
+        // Act
+        sut.RenameToc(_testPath, newTocName);
+
+        // Assert — both files stamped with Last Edited
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(_testPath, "intro.md", It.Is<string>(s => s.Contains("Last Edited:"))),
+            Times.Once
+        );
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(_testPath, "chapter-1.md", It.Is<string>(s => s.Contains("Last Edited:"))),
+            Times.Once
+        );
         _console.Output.ShouldContain("Last Edited updated for 2 file(s).");
     }
 
     [Fact]
-    public void RenameToc_ConflictIsPreflightGuard_NoFilesModified()
+    public void RenameToc_Should_NotModifyFiles_When_ConflictIsPreflightGuard()
     {
         // When the rename target already exists, the conflict must be detected
         // BEFORE any file writes so the journal is left completely untouched (exit 1 / guard).
         // Before this fix, a full rollback (exit 2) was triggered after rewriting backlinks.
-        const string oldTocFile = "1a-TableOfContents.md";
-        const string conflictingFile = "NewName.md";
-        const string entryWithLink = "entry.md";
-
-        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
-        _fileSystem.CreateFile(_testPath, conflictingFile, "# Conflict");
-        _fileSystem.CreateFile(_testPath, entryWithLink, $"[TOC]({oldTocFile})");
-        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
-        _fileTracking.UpdateFileInIndex(_testPath, conflictingFile);
-        _fileTracking.UpdateFileInIndex(_testPath, entryWithLink);
-
-        var entryContentBefore = _fileSystem.GetFileContent(Path.Combine(_testPath, entryWithLink));
+        var config = CreateTestConfig("1a-TableOfContents.md");
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem
+            .Setup(fs => fs.FileExists(Path.Combine(_testPath, "NewName.md")))
+            .Returns(true);
+        var sut = CreateSut();
 
         // Act & Assert — throws TocRenameConflictException (not a rollback exception)
-        Should.Throw<TocRenameConflictException>(() => _service.RenameToc(_testPath, "NewName"));
+        Should.Throw<TocRenameConflictException>(() => sut.RenameToc(_testPath, "NewName"));
 
-        // Verify: the entry was NOT modified — no link rewrites occurred
-        var entryContentAfter = _fileSystem.GetFileContent(Path.Combine(_testPath, entryWithLink));
-        entryContentAfter.ShouldBe(entryContentBefore);
+        // Verify: no file writes occurred — no link rewrites happened before the guard
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        MockJournalConfiguration.Verify(
+            jc => jc.Update(It.IsAny<string>(), It.IsAny<Action<JournalConfig>>()),
+            Times.Never
+        );
     }
 
     [Fact]
-    public void RenameToc_ConflictException_IsNotWrappedInRollbackCompletedException()
+    public void RenameToc_Should_NotWrapConflictExceptionInRollbackCompletedException()
     {
         // TocRenameConflictException must propagate as-is (not wrapped in
         // RollbackCompletedException) so UpdateCommand can catch it and return exit 1.
-        const string oldTocFile = "1a-TableOfContents.md";
-        const string conflictingFile = "AnotherFile.md";
-
-        _fileSystem.CreateFile(_testPath, oldTocFile, "# TOC");
-        _fileSystem.CreateFile(_testPath, conflictingFile, "# Other");
-        _fileTracking.UpdateFileInIndex(_testPath, oldTocFile);
+        var config = CreateTestConfig("1a-TableOfContents.md");
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem
+            .Setup(fs => fs.FileExists(Path.Combine(_testPath, "AnotherFile.md")))
+            .Returns(true);
+        var sut = CreateSut();
 
         var exception = Should.Throw<TocRenameConflictException>(() =>
-            _service.RenameToc(_testPath, "AnotherFile")
+            sut.RenameToc(_testPath, "AnotherFile")
         );
         exception.ShouldNotBeNull();
     }
@@ -925,55 +949,43 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
     #region BuildDryRunReport
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Creates a minimal .testapp tracking index and .journalrc for a fresh journal,
-    /// then optionally adds extra files to each.
-    /// Returns the relative path of the TOC file.
-    /// </summary>
-    private string SetupDryRunJournal(string[]? trackedFiles = null, string[]? configFiles = null)
-    {
-        const string tocFile = "1a-TableOfContents.md";
-
-        // Create and track the TOC file
-        _fileSystem.CreateFile(_testPath, tocFile, "# Table of Contents\n");
-        _fileTracking.UpdateFileInIndex(_testPath, tocFile);
-
-        // Add extra tracked files
-        foreach (var f in trackedFiles ?? [])
-        {
-            _fileSystem.CreateFile(_testPath, f, $"# {f}\n");
-            _fileTracking.UpdateFileInIndex(_testPath, f);
-        }
-
-        // Ensure .journalrc always exists (required for BuildDryRunReport paths that read config)
-        if (!_fileSystem.FileExists(Path.Combine(_testPath, ".journalrc")))
-            SetupJournalConfig();
-
-        // Add extra config entries beyond the defaults
-        foreach (var f in configFiles ?? [])
-            _journalConfiguration.AddEntry(_testPath, string.Empty, f);
-
-        return tocFile;
-    }
-
     // ── todo 22: tracking + config + toc (implicit --dry-run all) ─────────────
 
     [Fact]
-    public void BuildDryRunReport_AllSections_ConfigReflectsPendingTrackingAddition()
+    public void BuildDryRunReport_Should_ReflectPendingTrackingAdditionInConfig_When_AllSectionsPresent()
     {
-        // Arrange — journal with one existing entry; a new file exists on disk but is not yet tracked
-        SetupDryRunJournal(trackedFiles: ["existing.md"]);
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "existing.md");
+        // Arrange — journal has "existing.md" tracked and in config;
+        // a new "new-entry.md" is pending in tracking but not yet in config.
+        var config = CreateTestConfig("1a-TableOfContents.md", ["existing.md"]);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
 
-        // Simulate a new file on disk that tracking will detect as "added"
-        _fileSystem.CreateFile(_testPath, "new-entry.md", "# New Entry\n");
+        MockFileTracking
+            .Setup(ft => ft.LoadIndex(_testPath))
+            .Returns(new JournalIndex
+            {
+                Files = new Dictionary<string, FileState>
+                {
+                    { "1a-TableOfContents.md", new FileState { FilePath = "1a-TableOfContents.md", Hash = "h1" } },
+                    { "existing.md", new FileState { FilePath = "existing.md", Hash = "h2" } },
+                },
+            });
+
+        // TOC file does not exist yet on disk
+        MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+
+        // Preview returns the root entry file names of the projected config
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>()))
+            .Returns((string _, JournalConfig c) =>
+                string.Join("\n", c.TableOfContents.RootEntries.Select(e => e.File)));
+
         var trackingChanges = new ChangeDetectionResult { AddedFiles = ["new-entry.md"] };
-        var naiveConfigChanges = _journalConfiguration.DetectConfigChanges(_testPath);
+        // configChanges is non-null so projection is triggered
+        var naiveConfigChanges = new JournalConfigSyncResult();
+        var sut = CreateSut();
 
         // Act
-        var report = _service.BuildDryRunReport(
+        var report = sut.BuildDryRunReport(
             _testPath,
             trackingChanges,
             naiveConfigChanges,
@@ -991,17 +1003,37 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void BuildDryRunReport_AllSections_ConfigReflectsPendingTrackingDeletion()
+    public void BuildDryRunReport_Should_ReflectPendingTrackingDeletionInConfig_When_AllSectionsPresent()
     {
-        // Arrange — journal with a file tracked and in config; file is deleted from disk
-        SetupDryRunJournal(trackedFiles: ["going-away.md"]);
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "going-away.md");
+        // Arrange — journal has "going-away.md" tracked and in config; it is being deleted.
+        var config = CreateTestConfig("1a-TableOfContents.md", ["going-away.md"]);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+
+        MockFileTracking
+            .Setup(ft => ft.LoadIndex(_testPath))
+            .Returns(new JournalIndex
+            {
+                Files = new Dictionary<string, FileState>
+                {
+                    { "1a-TableOfContents.md", new FileState { FilePath = "1a-TableOfContents.md", Hash = "h1" } },
+                    { "going-away.md", new FileState { FilePath = "going-away.md", Hash = "h2" } },
+                },
+            });
+
+        MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+
+        // Preview returns root entry file names of the projected config
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>()))
+            .Returns((string _, JournalConfig c) =>
+                string.Join("\n", c.TableOfContents.RootEntries.Select(e => e.File)));
 
         var trackingChanges = new ChangeDetectionResult { DeletedFiles = ["going-away.md"] };
-        var naiveConfigChanges = _journalConfiguration.DetectConfigChanges(_testPath);
+        var naiveConfigChanges = new JournalConfigSyncResult();
+        var sut = CreateSut();
 
         // Act
-        var report = _service.BuildDryRunReport(
+        var report = sut.BuildDryRunReport(
             _testPath,
             trackingChanges,
             naiveConfigChanges,
@@ -1021,17 +1053,24 @@ public class JournalUpdateServiceTests : ServiceTestBase
     // ── todo 23: config + toc (no tracking) ──────────────────────────────────
 
     [Fact]
-    public void BuildDryRunReport_ConfigAndTocNoTracking_TocReflectsCurrentConfigDrift()
+    public void BuildDryRunReport_Should_ReflectCurrentConfigDriftInToc_When_ConfigAndTocPresentButNoTracking()
     {
-        // Arrange — file is tracked but not yet in .journalrc (config drift exists)
-        SetupDryRunJournal(trackedFiles: ["unregistered.md"]);
-        // deliberately do NOT add "unregistered.md" to journalrc
+        // Arrange — "unregistered.md" is in configChanges.FilesToAdd but not yet in config;
+        // trackingChanges is null so no projection occurs — effectiveConfigChanges = configChanges.
+        var config = CreateTestConfig("1a-TableOfContents.md");
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
-        var configChanges = _journalConfiguration.DetectConfigChanges(_testPath);
-        configChanges.FilesToAdd.ShouldContain("unregistered.md");
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>()))
+            .Returns((string _, JournalConfig c) =>
+                string.Join("\n", c.TableOfContents.RootEntries.Select(e => e.File)));
+
+        var configChanges = new JournalConfigSyncResult { FilesToAdd = ["unregistered.md"] };
+        var sut = CreateSut();
 
         // Act — no tracking changes passed (null)
-        var report = _service.BuildDryRunReport(
+        var report = sut.BuildDryRunReport(
             _testPath,
             trackingChanges: null,
             configChanges: configChanges,
@@ -1047,17 +1086,23 @@ public class JournalUpdateServiceTests : ServiceTestBase
     // ── todo 24a: tracking + toc (no config) — TOC unchanged ─────────────────
 
     [Fact]
-    public void BuildDryRunReport_TrackingAndTocNoConfig_TocUsesCurrentConfig()
+    public void BuildDryRunReport_Should_UseCurrentConfigInToc_When_TrackingAndTocPresentButNoConfig()
     {
-        // Arrange — a new file would be added to tracking but config is NOT in scope
-        SetupDryRunJournal(trackedFiles: ["existing.md"]);
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "existing.md");
+        // Arrange — configChanges is null so no projection occurs and TOC uses current config.
+        var config = CreateTestConfig("1a-TableOfContents.md", ["existing.md"]);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
-        _fileSystem.CreateFile(_testPath, "pending.md", "# Pending\n");
+        // Current (non-projected) preview contains only "existing.md"
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath))
+            .Returns("existing.md");
+
         var trackingChanges = new ChangeDetectionResult { AddedFiles = ["pending.md"] };
+        var sut = CreateSut();
 
         // Act — configChanges is null (--tracking --toc, no --config)
-        var report = _service.BuildDryRunReport(
+        var report = sut.BuildDryRunReport(
             _testPath,
             trackingChanges,
             configChanges: null,
@@ -1074,14 +1119,21 @@ public class JournalUpdateServiceTests : ServiceTestBase
     // ── todo 24b: toc only — TOC uses current config ─────────────────────────
 
     [Fact]
-    public void BuildDryRunReport_TocOnly_TocUsesCurrentConfig()
+    public void BuildDryRunReport_Should_UseCurrentConfigInToc_When_TocOnly()
     {
         // Arrange
-        SetupDryRunJournal(trackedFiles: ["note.md"]);
-        _journalConfiguration.AddEntry(_testPath, string.Empty, "note.md");
+        var config = CreateTestConfig("1a-TableOfContents.md", ["note.md"]);
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath))
+            .Returns("note.md");
+
+        var sut = CreateSut();
 
         // Act — no tracking changes, no config changes (--toc only)
-        var report = _service.BuildDryRunReport(
+        var report = sut.BuildDryRunReport(
             _testPath,
             trackingChanges: null,
             configChanges: null,

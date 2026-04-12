@@ -15,7 +15,6 @@ namespace markdown_journal_cli.Tests.Services;
 /// </summary>
 public class TableOfContentsServiceTests : ServiceTestBase
 {
-    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly TableOfContentsService _service;
 
     private const string JournalDirectory = "/test/journal";
@@ -24,15 +23,6 @@ public class TableOfContentsServiceTests : ServiceTestBase
 
     public TableOfContentsServiceTests()
     {
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                TableOfContentsFileName = "1a-TableOfContents",
-                TableOfContentsTitle = "Table of Contents",
-                CapitalizeTopicHeadings = true,
-            }
-        );
-
         // Default: TOC file does not exist
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
@@ -42,7 +32,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
         _service = new TableOfContentsService(
             MockFileSystem.Object,
             MockJournalConfiguration.Object,
-            _journalSettings,
+            JournalSettings,
             NullLogger<TableOfContentsService>()
         );
     }
@@ -69,39 +59,39 @@ public class TableOfContentsServiceTests : ServiceTestBase
     #region Constructor Validation
 
     [Fact]
-    public void Constructor_NullFileSystem_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_FileSystemIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new TableOfContentsService(
                 null!,
                 MockJournalConfiguration.Object,
-                _journalSettings,
+                JournalSettings,
                 NullLogger<TableOfContentsService>()
             )
         );
     }
 
     [Fact]
-    public void Constructor_NullJournalConfiguration_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_JournalConfigurationIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new TableOfContentsService(
                 MockFileSystem.Object,
                 null!,
-                _journalSettings,
+                JournalSettings,
                 NullLogger<TableOfContentsService>()
             )
         );
     }
 
     [Fact]
-    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_LoggerIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new TableOfContentsService(
                 MockFileSystem.Object,
                 MockJournalConfiguration.Object,
-                _journalSettings,
+                JournalSettings,
                 null!
             )
         );
@@ -115,13 +105,13 @@ public class TableOfContentsServiceTests : ServiceTestBase
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void UpdateTableOfContents_InvalidDirectory_ThrowsArgumentException(string? directory)
+    public void UpdateTableOfContents_Should_ThrowArgumentException_When_DirectoryIsInvalid(string? directory)
     {
         Should.Throw<ArgumentException>(() => _service.UpdateTableOfContents(directory!));
     }
 
     [Fact]
-    public void UpdateTableOfContents_ConfigReadReturnsNull_ThrowsInvalidOperationException()
+    public void UpdateTableOfContents_Should_ThrowInvalidOperationException_When_ConfigReadReturnsNull()
     {
         MockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
@@ -137,7 +127,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     #region File Operations
 
     [Fact]
-    public void UpdateTableOfContents_CallsUpdateFileWithCorrectPaths()
+    public void UpdateTableOfContents_Should_CallUpdateFileWithCorrectPaths()
     {
         MockFileSystem
             .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
@@ -152,7 +142,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_WhenTocFileExists_ReadsExistingContent()
+    public void UpdateTableOfContents_Should_ReadExistingContent_When_TocFileExists()
     {
         MockFileSystem
             .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
@@ -168,7 +158,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_WhenTocFileDoesNotExist_DoesNotReadContent()
+    public void UpdateTableOfContents_Should_NotReadContent_When_TocFileDoesNotExist()
     {
         MockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(false);
 
@@ -182,7 +172,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     #region Date Handling
 
     [Fact]
-    public void UpdateTableOfContents_NoDatesProvided_OutputDoesNotContainDateLines()
+    public void UpdateTableOfContents_Should_NotOutputDateLines_When_NoDatesProvided()
     {
         string? captured = null;
         MockFileSystem
@@ -197,7 +187,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_ExistingTocHasCreatedDate_PreservesCreatedDateWhenNotProvided()
+    public void UpdateTableOfContents_Should_PreserveCreatedDate_When_ExistingTocHasCreatedDateAndNoNewDateGiven()
     {
         MockFileSystem
             .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
@@ -219,7 +209,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_ExistingTocHasCreatedDate_OverridesWhenCreatedDateProvided()
+    public void UpdateTableOfContents_Should_OverrideCreatedDate_When_ExistingTocHasCreatedDateAndNewDateGiven()
     {
         MockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         MockFileSystem
@@ -239,7 +229,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_LastEditedDateProvided_OutputContainsLastEditedDate()
+    public void UpdateTableOfContents_Should_OutputLastEditedDate_When_LastEditedDateProvided()
     {
         string? captured = null;
         MockFileSystem
@@ -253,7 +243,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_BothDatesProvided_OutputContainsBothDateLines()
+    public void UpdateTableOfContents_Should_OutputBothDateLines_When_BothDatesProvided()
     {
         string? captured = null;
         MockFileSystem
@@ -272,7 +262,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_DatesPresent_BlankLineAppearsBeforeTocTitle()
+    public void UpdateTableOfContents_Should_PlaceBlankLineBeforeTocTitle_When_DatesPresent()
     {
         string? captured = null;
         MockFileSystem
@@ -291,7 +281,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     #region Content Structure
 
     [Fact]
-    public void UpdateTableOfContents_AlwaysIncludesTocTitle()
+    public void UpdateTableOfContents_Should_AlwaysIncludeTocTitle()
     {
         string? captured = null;
         MockFileSystem
@@ -305,7 +295,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_RootEntriesRenderedAsListItems()
+    public void UpdateTableOfContents_Should_RenderRootEntriesAsListItems()
     {
         var entries = new[]
         {
@@ -329,7 +319,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_TocFileExcludedFromRootEntries()
+    public void UpdateTableOfContents_Should_ExcludeTocFileFromRootEntries()
     {
         var entries = new[]
         {
@@ -353,7 +343,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_IgnoreFilesExcludedFromRootEntries()
+    public void UpdateTableOfContents_Should_ExcludeIgnoreFilesFromRootEntries()
     {
         var entries = new[]
         {
@@ -377,7 +367,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_IgnoreFilesMatchingIsCaseInsensitive()
+    public void UpdateTableOfContents_Should_MatchIgnoreFilesCaseInsensitively()
     {
         var entries = new[]
         {
@@ -403,7 +393,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     #region Topic Generation
 
     [Fact]
-    public void UpdateTableOfContents_TopicWithEntries_RendersHeadingAndEntries()
+    public void UpdateTableOfContents_Should_RenderHeadingAndEntries_When_TopicHasEntries()
     {
         var topic = new Topic
         {
@@ -427,7 +417,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_CapitalizeTopicHeadingsFalse_TopicHeadingNotCapitalized()
+    public void UpdateTableOfContents_Should_NotCapitalizeTopicHeading_When_CapitalizeTopicHeadingsFalse()
     {
         var settings = Options.Create(
             new JournalSettings
@@ -464,7 +454,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_TopicWithAllEntriesIgnored_TopicOmittedFromOutput()
+    public void UpdateTableOfContents_Should_OmitTopicFromOutput_When_AllTopicEntriesIgnored()
     {
         var topic = new Topic
         {
@@ -487,7 +477,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_SingleEntryTopicWhereEntryNameMatchesTopicName_RendersLinkedHeading()
+    public void UpdateTableOfContents_Should_RenderLinkedHeading_When_SingleEntryTopicNameMatchesTopicName()
     {
         var topic = new Topic
         {
@@ -510,7 +500,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_SingleEntryTopicWhereEntryNameDoesNotMatchTopicName_RendersPlainHeadingAndEntry()
+    public void UpdateTableOfContents_Should_RenderPlainHeadingAndEntry_When_SingleEntryTopicNameDoesNotMatchTopicName()
     {
         var topic = new Topic
         {
@@ -534,7 +524,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_MultipleEntriesInTopic_RendersPlainHeadingAndAllEntries()
+    public void UpdateTableOfContents_Should_RenderPlainHeadingAndAllEntries_When_TopicHasMultipleEntries()
     {
         var topic = new Topic
         {
@@ -567,7 +557,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     #region Subtopic Generation
 
     [Fact]
-    public void UpdateTableOfContents_SubtopicRenderedAsIndentedListItem()
+    public void UpdateTableOfContents_Should_RenderSubtopicAsIndentedListItem()
     {
         var subtopic = new Topic
         {
@@ -596,7 +586,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateTableOfContents_SubtopicEntriesRenderedAtFourSpaceIndent()
+    public void UpdateTableOfContents_Should_RenderSubtopicEntriesAtFourSpaceIndent()
     {
         var subtopic = new Topic
         {
@@ -684,7 +674,7 @@ public class TableOfContentsServicePreviewTests
         };
 
     [Fact]
-    public void PreviewTableOfContents_ReturnsGeneratedContent_WithoutWritingToDisk()
+    public void PreviewTableOfContents_Should_ReturnGeneratedContentWithoutWritingToDisk()
     {
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
@@ -704,7 +694,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_PreservesExistingDatesFromTocFile()
+    public void PreviewTableOfContents_Should_PreserveExistingDatesFromTocFile()
     {
         var existingTocContent =
             "Created: 01/15/2024\nLast Edited: 03/01/2024\n\n# Table of Contents\n";
@@ -721,7 +711,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_ReturnsValidContent_WhenNoEntries()
+    public void PreviewTableOfContents_Should_ReturnValidContent_When_NoEntries()
     {
         var result = _service.PreviewTableOfContents(JournalDirectory);
 
@@ -730,7 +720,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_OutputMatchesUpdateTableOfContents_OnIdenticalState()
+    public void PreviewTableOfContents_Should_MatchUpdateTableOfContentsOutput_When_StateIsIdentical()
     {
         var entries = new[]
         {
@@ -757,7 +747,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_ThrowsArgumentException_ForNullOrWhitespaceDirectory()
+    public void PreviewTableOfContents_Should_ThrowArgumentException_When_DirectoryIsNullOrWhitespace()
     {
         Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents(string.Empty));
         Should.Throw<ArgumentException>(() => _service.PreviewTableOfContents("   "));
@@ -766,7 +756,7 @@ public class TableOfContentsServicePreviewTests
     // ── todo 25: PreviewTableOfContents(string, JournalConfig) overload ──────
 
     [Fact]
-    public void PreviewTableOfContents_WithProjectedConfig_GeneratesOutputWithoutReadingJournalrc()
+    public void PreviewTableOfContents_Should_GenerateOutputWithoutReadingJournalrc_When_ProjectedConfigProvided()
     {
         // Arrange — projected config has different entries than what's on disk in .journalrc
         var projectedConfig = BuildConfig(
@@ -789,7 +779,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_WithProjectedConfig_PreservesExistingTocDates()
+    public void PreviewTableOfContents_Should_PreserveExistingTocDates_When_ProjectedConfigProvided()
     {
         // Arrange — existing TOC file with known dates
         _mockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
@@ -811,7 +801,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_WithProjectedConfig_DoesNotCallUpdateFile()
+    public void PreviewTableOfContents_Should_NotCallUpdateFile_When_ProjectedConfigProvided()
     {
         var projectedConfig = BuildConfig(
             rootEntries: [new Entries { Name = "Note", File = "note.md" }]
@@ -826,7 +816,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_WithProjectedConfig_ThrowsForNullOrWhitespaceDirectory()
+    public void PreviewTableOfContents_Should_ThrowArgumentException_When_ProjectedConfigAndDirectoryIsNullOrWhitespace()
     {
         var config = BuildConfig();
         Should.Throw<ArgumentException>(() =>
@@ -836,7 +826,7 @@ public class TableOfContentsServicePreviewTests
     }
 
     [Fact]
-    public void PreviewTableOfContents_WithProjectedConfig_ThrowsForNullConfig()
+    public void PreviewTableOfContents_Should_ThrowArgumentNullException_When_ProjectedConfigIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             _service.PreviewTableOfContents(JournalDirectory, null!)

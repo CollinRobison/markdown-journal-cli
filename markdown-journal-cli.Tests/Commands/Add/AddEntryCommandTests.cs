@@ -166,7 +166,7 @@ body goes here.
     #region Positive Cases
 
     [Fact]
-    public void Should_Create_Entry_With_Simple_Name()
+    public void Execute_Should_CreateEntryWithSimpleName()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);
@@ -181,7 +181,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Create_Entry_With_Heading()
+    public void Execute_Should_CreateEntryWithHeading()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--he", "Tech", "-p", "."]);
@@ -195,7 +195,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Create_Entry_With_Subheading()
+    public void Execute_Should_CreateEntryWithSubheading()
     {
         // Arrange
         MockEntryFormatterService
@@ -210,7 +210,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Create_Entry_With_Heading_And_Subheading()
+    public void Execute_Should_CreateEntryWithHeadingAndSubheading()
     {
         // Arrange
         MockEntryFormatterService
@@ -231,7 +231,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Use_Custom_Title_When_Provided()
+    public void Execute_Should_UseCustomTitle_When_TitleProvided()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "-p", "."]);
@@ -257,7 +257,7 @@ body goes here.
     #region Negative Cases
 
     [Fact]
-    public void Should_Return_Error_When_Journalrc_Not_Found()
+    public void Execute_Should_ReturnError_When_JournalrcNotFound()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists("./.journalrc")).Returns(false);
@@ -275,7 +275,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Return_Error_When_Tracking_Index_Not_Found()
+    public void Execute_Should_ReturnError_When_TrackingIndexNotFound()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists("./.md-journal")).Returns(false);
@@ -293,7 +293,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Return_Error_When_Entry_Already_Exists()
+    public void Execute_Should_ReturnError_When_EntryAlreadyExists()
     {
         // Arrange
         MockFileSystem
@@ -314,7 +314,7 @@ body goes here.
     [InlineData("Invalid>Name")]
     [InlineData("Invalid|Name")]
     [InlineData("Invalid:Name")]
-    public void Should_Reject_Entry_Names_With_Invalid_Characters(string invalidName)
+    public void Execute_Should_ReturnError_When_EntryNameHasInvalidCharacters(string invalidName)
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", invalidName, "-p", "."]);
@@ -327,7 +327,7 @@ body goes here.
     [Theory]
     [InlineData("Invalid/Heading")]
     [InlineData("Invalid<Heading")]
-    public void Should_Reject_Headings_With_Invalid_Characters(string invalidHeading)
+    public void Execute_Should_ReturnError_When_HeadingHasInvalidCharacters(string invalidHeading)
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--he", invalidHeading, "-p", "."]);
@@ -341,7 +341,7 @@ body goes here.
     [InlineData("Invalid/Sub")]
     [InlineData("Invalid Sub")]
     [InlineData("Invalid<Sub")]
-    public void Should_Reject_Subheadings_With_Invalid_Characters(string invalidSubheading)
+    public void Execute_Should_ReturnError_When_SubheadingHasInvalidCharacters(string invalidSubheading)
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--sh", invalidSubheading, "-p", "."]);
@@ -352,7 +352,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Exception_From_JournalConfiguration()
+    public void Execute_Should_HandleException_When_JournalConfigurationThrows()
     {
         // Arrange
         MockJournalConfiguration
@@ -383,7 +383,7 @@ body goes here.
     #region Edge Cases
 
     [Fact]
-    public void Should_Handle_Entry_Name_With_Underscores()
+    public void Execute_Should_HandleEntryNameWithUnderscores()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "my_entry_name", "-p", "."]);
@@ -397,7 +397,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Entry_Name_With_Numbers()
+    public void Execute_Should_HandleEntryNameWithNumbers()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "Entry123", "-p", "."]);
@@ -407,7 +407,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Heading_With_Spaces()
+    public void Execute_Should_HandleHeadingWithSpaces()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--he", "Tech News", "-p", "."]);
@@ -421,7 +421,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Multiple_Subheadings_In_Chain()
+    public void Execute_Should_HandleMultipleSubheadingsInChain()
     {
         // Arrange
         MockEntryFormatterService
@@ -438,7 +438,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Subheading_Only_Without_Heading()
+    public void Execute_Should_HandleSubheadingOnlyWithoutHeading()
     {
         // Arrange
         MockEntryFormatterService
@@ -453,7 +453,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Very_Long_Entry_Name()
+    public void Execute_Should_HandleVeryLongEntryName()
     {
         // Arrange
         var longName = new string('A', 200);
@@ -470,7 +470,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_Custom_Path()
+    public void Execute_Should_HandleCustomPath()
     {
         // Act - The path parameter is passed through command settings
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);
@@ -488,7 +488,7 @@ body goes here.
     #region Integration Tests
 
     [Fact]
-    public void Should_Not_Update_Configuration_If_File_Creation_Fails()
+    public void Execute_Should_NotUpdateConfiguration_When_FileCreationFails()
     {
         // Arrange
         MockFileSystem
@@ -513,7 +513,7 @@ body goes here.
     #region Ignore File Tests
 
     [Fact]
-    public void Should_Not_Update_TableOfContents_When_IgnoreFile_Is_True()
+    public void Execute_Should_NotUpdateTableOfContents_When_IgnoreFileIsTrue()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--ignore", "-p", "."]);
@@ -543,7 +543,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Add_Entry_To_Configuration_With_IgnoreFile_Flag()
+    public void Execute_Should_AddEntryToConfiguration_When_IgnoreFileFlagSet()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--ignore", "-p", "."]);
@@ -567,7 +567,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Add_Entry_To_Configuration_Without_IgnoreFile_Flag()
+    public void Execute_Should_AddEntryToConfiguration_When_IgnoreFileFlagNotSet()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);
@@ -591,7 +591,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Update_TableOfContents_When_IgnoreFile_Is_False()
+    public void Execute_Should_UpdateTableOfContents_When_IgnoreFileIsFalse()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);
@@ -611,7 +611,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_IgnoreFile_With_Heading_And_Subheading()
+    public void Execute_Should_HandleIgnoreFileWithHeadingAndSubheading()
     {
         // Arrange
         MockEntryFormatterService
@@ -657,7 +657,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Handle_IgnoreFile_With_Custom_Title()
+    public void Execute_Should_HandleIgnoreFileWithCustomTitle()
     {
         // Act
         var result = BuildAddEntryApp().Run(
@@ -690,7 +690,7 @@ body goes here.
     }
 
     [Fact]
-    public void Should_Still_Track_File_When_IgnoreFile_Is_True()
+    public void Execute_Should_StillTrackFile_When_IgnoreFileIsTrue()
     {
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--ignore", "-p", "."]);

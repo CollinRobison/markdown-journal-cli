@@ -47,7 +47,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     #region RenameEntry Tests
 
     [Fact]
-    public void RenameEntry_FileExists_RenamesFileAndUpdatesConfig()
+    public void RenameEntry_Should_RenameFileAndUpdateConfig_When_FileExists()
     {
         // Arrange
         var oldPath = $"{Directory}/{OldFile}";
@@ -73,7 +73,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RenameEntry_FileExists_DoesNotUpdateTrackingIndex_WhenFileNotFound()
+    public void RenameEntry_Should_NotUpdateTrackingIndex_When_FileNotFound()
     {
         // Arrange
         var oldPath = $"{Directory}/{OldFile}";
@@ -93,7 +93,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RenameEntry_FileDoesNotExist_ThrowsFileNotFoundException()
+    public void RenameEntry_Should_ThrowFileNotFoundException_When_FileDoesNotExist()
     {
         // Arrange
         var oldPath = $"{Directory}/{OldFile}";
@@ -125,7 +125,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     #region UpdateEntryLocation Tests
 
     [Fact]
-    public void UpdateEntryLocation_WithTopicPath_RemovesAndAddsEntry()
+    public void UpdateEntryLocation_Should_RemoveAndAddEntry_When_TopicPathProvided()
     {
         // Arrange
         var newTopicPath = new[] { "Projects", "2024" };
@@ -143,7 +143,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntryLocation_WithEmptyTopicPath_AddsToRoot()
+    public void UpdateEntryLocation_Should_AddEntryToRoot_When_TopicPathIsEmpty()
     {
         // Arrange
         var emptyTopicPath = Array.Empty<string>();
@@ -165,7 +165,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     #region UpdateEntryDisplayName Tests
 
     [Fact]
-    public void UpdateEntryDisplayName_EntryExists_UpdatesSuccessfully()
+    public void UpdateEntryDisplayName_Should_UpdateSuccessfully_When_EntryExists()
     {
         // Arrange
         var newDisplayName = "New Display Name";
@@ -184,7 +184,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntryDisplayName_EntryDoesNotExist_LogsWarning()
+    public void UpdateEntryDisplayName_Should_LogWarning_When_EntryDoesNotExist()
     {
         // Arrange
         var newDisplayName = "New Display Name";
@@ -207,7 +207,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     #region SetIgnoreStatus Tests
 
     [Fact]
-    public void SetIgnoreStatus_True_AddsToIgnoreList()
+    public void SetIgnoreStatus_Should_AddToIgnoreList_When_StatusIsTrue()
     {
         // Arrange
 
@@ -220,7 +220,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void SetIgnoreStatus_False_RemovesFromIgnoreList()
+    public void SetIgnoreStatus_Should_RemoveFromIgnoreList_When_StatusIsFalse()
     {
         // Arrange
         MockJournalConfiguration
@@ -266,7 +266,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void SetIgnoreStatus_False_WithNullIgnoreFiles_HandlesGracefully()
+    public void SetIgnoreStatus_Should_HandleGracefully_When_IgnoreFilesIsNull()
     {
         // Arrange
         MockJournalConfiguration
@@ -312,7 +312,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     #region UpdateEntry Tests
 
     [Fact]
-    public void UpdateEntry_WithName_WhenDisplayNameMatchesFilename_UpdatesBoth()
+    public void UpdateEntry_Should_UpdateBothNameAndFile_When_DisplayNameMatchesFilename()
     {
         // Arrange
         const string currentFile = "abc-test_2-test_file_10.md";
@@ -389,7 +389,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithHeadings_RenamesFileAndMovesEntryInConfig()
+    public void UpdateEntry_Should_RenameFileAndMoveEntryInConfig_When_HeadingsChanged()
     {
         // Arrange - "collin-test.md" display="test"; --headings robison should rename the file
         // to "robison-test.md" (new heading prefix + existing entry name) and move entry in config.
@@ -470,7 +470,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithName_WhenDisplayNameDiffersFromFilename_PreservesDisplayName()
+    public void UpdateEntry_Should_PreserveDisplayName_When_DisplayNameDiffersFromFilename()
     {
         // Arrange
         const string currentFile = "abc-test_2-test_file_10.md";
@@ -544,7 +544,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithTitle_AlwaysUpdatesDisplayName()
+    public void UpdateEntry_Should_AlwaysUpdateDisplayName_When_TitleProvided()
     {
         // Arrange
         const string currentFile = "test_file.md";
@@ -590,7 +590,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithBothNameAndTitle_TitleTakesPrecedence()
+    public void UpdateEntry_Should_GivePrecedenceToTitle_When_BothNameAndTitleProvided()
     {
         // Arrange
         const string currentFile = "test_file.md";
@@ -656,7 +656,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithHeadings_RenamesFileAndUpdatesLocation()
+    public void UpdateEntry_Should_RenameFileAndUpdateLocation_When_HeadingsProvided()
     {
         // Arrange - test_file.md with --headings Projects-2024_Goals:
         // renames file to Projects-2024_Goals-test_file.md and moves entry in config.
@@ -730,7 +730,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithIgnoreFlag_AddsToIgnoreList()
+    public void UpdateEntry_Should_AddToIgnoreList_When_IgnoreFlagSet()
     {
         // Arrange
         const string currentFile = "test_file.md";
@@ -768,7 +768,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithUnignoreFlag_RemovesFromIgnoreList()
+    public void UpdateEntry_Should_RemoveFromIgnoreList_When_UnignoreFlagSet()
     {
         // Arrange
         const string currentFile = "test_file.md";
@@ -835,7 +835,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_FileNotFound_ThrowsFileNotFoundException()
+    public void UpdateEntry_Should_ThrowFileNotFoundException_When_FileNotFound()
     {
         // Arrange
         const string currentFile = "nonexistent.md";
@@ -855,7 +855,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_JournalrcNotFound_ThrowsJournalrcNotFoundException()
+    public void UpdateEntry_Should_ThrowJournalrcNotFoundException_When_JournalrcNotFound()
     {
         // Arrange
         const string currentFile = "test_file.md";
@@ -879,7 +879,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithName_PreservesHeadingPrefixAndRenamesLastSegment()
+    public void UpdateEntry_Should_PreserveHeadingPrefixAndRenameLastSegment_When_NameProvided()
     {
         // Arrange - "collin-entry.md"; -n "robison" should rename to "collin-robison.md",
         // keeping the "collin-" heading prefix and only replacing the last segment.
@@ -953,7 +953,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithName_OnRootLevelFile_RenamesFile()
+    public void UpdateEntry_Should_RenameFile_When_NameProvidedForRootLevelFile()
     {
         // Arrange - "collin.md" at root; -n "robison" → "robison.md" (no heading prefix to preserve)
         const string currentFile = "collin.md";
@@ -1020,7 +1020,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_WithNameAndHeadings_HeadingsPrefixTakesPrecedence()
+    public void UpdateEntry_Should_GivePrecedenceToHeadingsPrefix_When_BothNameAndHeadingsProvided()
     {
         // Arrange - "birdie_bird.md" already tracked under Nat heading in config.
         // Running: -n birdie_bird -h nat
@@ -1160,7 +1160,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_CallsReplaceLinksInDirectory_WhenRenameOccurs()
+    public void UpdateEntry_Should_CallReplaceLinksInDirectory_When_RenameOccurs()
     {
         // Arrange
         const string currentFile = "old_entry.md";
@@ -1189,7 +1189,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_DoesNotCallReplaceLinksInDirectory_WhenNoRenameOccurs()
+    public void UpdateEntry_Should_NotCallReplaceLinksInDirectory_When_NoRenameOccurs()
     {
         // Arrange — only a title change, file stays the same
         const string currentFile = "my_entry.md";
@@ -1229,7 +1229,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_DoesNotCallReplaceLinksInDirectory_WhenUpdateBacklinksFalse()
+    public void UpdateEntry_Should_NotCallReplaceLinksInDirectory_When_UpdateBacklinksFalse()
     {
         // Arrange
         const string currentFile = "old_entry.md";
@@ -1255,7 +1255,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_ExcludesTocFile_FromReplaceLinks()
+    public void UpdateEntry_Should_ExcludeTocFileFromReplaceLinks()
     {
         // Arrange
         const string currentFile = "old_entry.md";
@@ -1283,7 +1283,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void UpdateEntry_ExcludesRenamedFile_FromReplaceLinks()
+    public void UpdateEntry_Should_ExcludeRenamedFileFromReplaceLinks()
     {
         // Arrange
         const string currentFile = "old_entry.md";

@@ -84,7 +84,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     #region Positive Cases
 
     [Fact]
-    public void AddEntry_WithEntryNameOnly_CreatesFileAndUpdatesAllIndexes()
+    public void AddEntry_Should_CreateFileAndUpdateAllIndexes_When_EntryNameProvided()
     {
         // Act
         _service.AddEntry(
@@ -130,7 +130,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithHeading_PassesHeadingToConfig()
+    public void AddEntry_Should_PassHeadingToConfig_When_HeadingProvided()
     {
         // Arrange
         MockEntryFormatterService
@@ -164,7 +164,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithSubheading_PassesSubheadingArrayToConfig()
+    public void AddEntry_Should_PassSubheadingArrayToConfig_When_SubheadingProvided()
     {
         // Arrange
         MockEntryFormatterService
@@ -200,7 +200,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithHeadingAndSubheading_IncludesAllInTopicPath()
+    public void AddEntry_Should_IncludeAllInTopicPath_When_HeadingAndSubheadingProvided()
     {
         // Arrange
         MockEntryFormatterService
@@ -234,7 +234,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithCustomTitle_UsesCustomTitleInTemplate()
+    public void AddEntry_Should_UseCustomTitleInTemplate_When_CustomTitleProvided()
     {
         // Act
         _service.AddEntry(
@@ -260,7 +260,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithNullTitle_FallsBackToEntryName()
+    public void AddEntry_Should_FallBackToEntryName_When_TitleIsNull()
     {
         // Act
         _service.AddEntry(
@@ -277,7 +277,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithEmptyHeadingArray_PassesNullTopicPathToConfig()
+    public void AddEntry_Should_PassNullTopicPathToConfig_When_HeadingArrayIsEmpty()
     {
         // Arrange: no heading/subheading → BuildHeadingArray returns empty
         MockEntryFormatterService
@@ -315,7 +315,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     #region IgnoreFile Behavior
 
     [Fact]
-    public void AddEntry_WithIgnoreFileTrue_SkipsTableOfContentsUpdate()
+    public void AddEntry_Should_SkipTableOfContentsUpdate_When_IgnoreFileIsTrue()
     {
         // Act
         _service.AddEntry(
@@ -340,7 +340,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithIgnoreFileFalse_UpdatesTableOfContents()
+    public void AddEntry_Should_UpdateTableOfContents_When_IgnoreFileIsFalse()
     {
         // Act
         _service.AddEntry(
@@ -360,7 +360,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithIgnoreFileTrue_StillUpdatesTrackingIndex()
+    public void AddEntry_Should_StillUpdateTrackingIndex_When_IgnoreFileIsTrue()
     {
         // Act
         _service.AddEntry(
@@ -384,7 +384,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     #region Error Cases
 
     [Fact]
-    public void AddEntry_WhenJournalrcMissing_ThrowsJournalrcNotFoundException()
+    public void AddEntry_Should_ThrowJournalrcNotFoundException_When_JournalrcIsMissing()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
@@ -396,7 +396,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WhenJournalrcMissing_DoesNotCreateFile()
+    public void AddEntry_Should_NotCreateFile_When_JournalrcIsMissing()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
@@ -416,7 +416,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WhenTrackingFileMissing_ThrowsTrackingIndexNotFoundException()
+    public void AddEntry_Should_ThrowTrackingIndexNotFoundException_When_TrackingFileIsMissing()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(false);
@@ -428,7 +428,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WhenEntryAlreadyExists_ThrowsJournalEntryAlreadyExistsException()
+    public void AddEntry_Should_ThrowJournalEntryAlreadyExistsException_When_EntryAlreadyExists()
     {
         // Arrange: entry file already exists
         MockFileSystem
@@ -442,7 +442,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WhenEntryAlreadyExists_DoesNotUpdateIndexes()
+    public void AddEntry_Should_NotUpdateIndexes_When_EntryAlreadyExists()
     {
         // Arrange
         MockFileSystem
@@ -481,7 +481,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     #region File Naming
 
     [Fact]
-    public void AddEntry_WithNoHeadingOrSubheading_FileNameContainsOnlyEntryName()
+    public void AddEntry_Should_CreateFileNameWithEntryNameOnly_When_NoHeadingOrSubheadingProvided()
     {
         // Arrange: AddSpaceSeparators turns spaces into underscores
         MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators("MyEntry")).Returns("MyEntry");
@@ -513,7 +513,7 @@ public class JournalEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void AddEntry_WithHeading_FileNameContainsHeadingPrefix()
+    public void AddEntry_Should_CreateFileNameWithHeadingPrefix_When_HeadingProvided()
     {
         // Arrange
         MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators("Tech")).Returns("Tech");

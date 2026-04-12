@@ -72,6 +72,51 @@ public class QuickstartValidationTests
     }
 
     /// <summary>
+    /// Guard (FR-003): Dispose() deletes the temp root created during construction.
+    /// </summary>
+    [Fact]
+    public void JournalIntegrationTestBase_Should_DeleteTempRoot_When_Disposed()
+    {
+        string journalRoot;
+        using (var sut = new ConcreteIntegrationTestBase())
+        {
+            journalRoot = sut.JournalRoot;
+            System.IO.Directory.Exists(journalRoot).ShouldBeTrue();
+        }
+        System.IO.Directory.Exists(journalRoot).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Guard (FR-013): Dispose() is a safe no-op when JournalRoot was already removed.
+    /// </summary>
+    [Fact]
+    public void JournalIntegrationTestBase_Should_NotThrow_When_DisposeCalledAndRootDoesNotExist()
+    {
+        var sut = new ConcreteIntegrationTestBase();
+        var journalRoot = sut.JournalRoot;
+
+        if (System.IO.Directory.Exists(journalRoot))
+            System.IO.Directory.Delete(journalRoot, recursive: true);
+
+        Should.NotThrow(() => sut.Dispose());
+        System.IO.Directory.Exists(journalRoot).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Guard (NFR-002): Each test class instance receives a unique temp directory.
+    /// </summary>
+    [Fact]
+    public void JournalIntegrationTestBase_Should_CreateUniqueDirectories_When_MultipleInstancesCreated()
+    {
+        using var sut1 = new ConcreteIntegrationTestBase();
+        using var sut2 = new ConcreteIntegrationTestBase();
+
+        sut1.JournalRoot.ShouldNotBe(sut2.JournalRoot);
+        System.IO.Directory.Exists(sut1.JournalRoot).ShouldBeTrue();
+        System.IO.Directory.Exists(sut2.JournalRoot).ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Pattern 4 (quickstart section 4): Rollback test using ServiceRollbackTestBase.
     /// Verifies the rollback base provides a TestFileSystem and wired Coordinator.
     /// </summary>

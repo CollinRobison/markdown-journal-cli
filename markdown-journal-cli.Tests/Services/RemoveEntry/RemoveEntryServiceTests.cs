@@ -88,7 +88,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     // ------------------------------------------------------------------
 
     [Fact]
-    public void RemoveEntry_DeletesFile_UpdatesConfig_UpdatesTracking_UpdatesToc()
+    public void RemoveEntry_Should_DeleteFileAndUpdateConfigAndTrackingAndToc()
     {
         // Act
         var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
@@ -111,7 +111,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_WithCleanRefs_CallsStripLinksInDirectory()
+    public void RemoveEntry_Should_CallStripLinksInDirectory_When_CleanRefsIsTrue()
     {
         // Act
         _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
@@ -124,7 +124,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_WithCleanRefs_UpdatesTrackingForEachModifiedFile()
+    public void RemoveEntry_Should_UpdateTrackingForEachModifiedFile_When_CleanRefsIsTrue()
     {
         // Arrange
         var modifiedFiles = new[] { "other.md", "another.md" };
@@ -142,7 +142,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_WithoutCleanRefs_DoesNotCallStripLinksInDirectory()
+    public void RemoveEntry_Should_NotCallStripLinksInDirectory_When_CleanRefsIsFalse()
     {
         // Act
         _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
@@ -164,7 +164,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     // ------------------------------------------------------------------
 
     [Fact]
-    public void RemoveEntry_JournalrcNotFound_ThrowsJournalrcNotFoundException()
+    public void RemoveEntry_Should_ThrowJournalrcNotFoundException_When_JournalrcNotFound()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists(JournalrcPath)).Returns(false);
@@ -176,7 +176,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_TrackingIndexNotFound_ThrowsTrackingIndexNotFoundException()
+    public void RemoveEntry_Should_ThrowTrackingIndexNotFoundException_When_TrackingIndexNotFound()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists(TrackingPath)).Returns(false);
@@ -188,7 +188,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_TargetsJournalConfig_ThrowsProtectedJournalFileException()
+    public void RemoveEntry_Should_ThrowProtectedJournalFileException_When_TargetingJournalConfig()
     {
         // Act & Assert
         Should.Throw<ProtectedJournalFileException>(() =>
@@ -198,7 +198,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_TargetsTrackingIndex_ThrowsProtectedJournalFileException()
+    public void RemoveEntry_Should_ThrowProtectedJournalFileException_When_TargetingTrackingIndex()
     {
         // Act & Assert
         Should.Throw<ProtectedJournalFileException>(() =>
@@ -208,7 +208,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_TargetsTocFile_ThrowsProtectedJournalFileException()
+    public void RemoveEntry_Should_ThrowProtectedJournalFileException_When_TargetingTocFile()
     {
         // Act & Assert
         Should.Throw<ProtectedJournalFileException>(() =>
@@ -218,7 +218,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_TargetsTocFile_CaseInsensitive_ThrowsProtectedJournalFileException()
+    public void RemoveEntry_Should_ThrowProtectedJournalFileException_When_TargetingTocFileCaseInsensitively()
     {
         // Arrange
         MockFileSystem
@@ -232,7 +232,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_TargetsRenamedTocFile_ThrowsProtectedJournalFileException()
+    public void RemoveEntry_Should_ThrowProtectedJournalFileException_When_TargetingRenamedTocFile()
     {
         // Arrange — user renamed the TOC to my-toc.md via update journal --rename-toc
         MockJournalConfiguration
@@ -256,7 +256,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_FileNotFound_ThrowsFileNotFoundException()
+    public void RemoveEntry_Should_ThrowFileNotFoundException_When_FileNotFound()
     {
         // Arrange
         MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
@@ -273,7 +273,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     // ------------------------------------------------------------------
 
     [Fact]
-    public void RemoveEntry_FileNameWithoutExtension_NormalisesAndResolvesCorrectly()
+    public void RemoveEntry_Should_NormaliseAndResolveFileNameCorrectly_When_FileNameLacksExtension()
     {
         // Arrange — pass "my_entry" (no .md), expect service to append .md
         MockFileSystem
@@ -292,7 +292,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void RemoveEntry_FileNameWithExtension_ResolvesCorrectly()
+    public void RemoveEntry_Should_ResolveFileNameCorrectly_When_FileNameHasExtension()
     {
         // Arrange — pass "my_entry.md" (already has .md)
         MockFileSystem
@@ -315,7 +315,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     // ------------------------------------------------------------------
 
     [Fact]
-    public void RemoveEntry_CallOrder_ProtectedFileCheckBeforeDelete()
+    public void RemoveEntry_Should_CheckProtectedFileBeforeDelete()
     {
         // Arrange — verify that targeting a protected file never reaches DeleteFile,
         // even though the entry file "exists" in the mock.

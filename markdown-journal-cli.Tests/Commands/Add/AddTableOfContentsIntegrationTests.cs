@@ -69,7 +69,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     #region Integration Tests
 
     [Fact]
-    public void Execute_CreatesRealTocFile_WhenJournalIsInitialized()
+    public void Execute_Should_CreateRealTocFile_When_JournalIsInitialized()
     {
         // Arrange
         InitializeTestJournal();
@@ -94,7 +94,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
-    public void Execute_UpdatesJournalrcConfig_WhenTocNameDiffers()
+    public void Execute_Should_UpdateJournalrcConfig_When_TocNameDiffers()
     {
         // Arrange
         InitializeTestJournalWithDifferentTocName("OldTOC");
@@ -122,7 +122,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
-    public void Execute_WarnsAndDoesNotOverwrite_WhenTocAlreadyExists()
+    public void Execute_Should_WarnAndNotOverwrite_When_TocAlreadyExists()
     {
         // Arrange
         InitializeTestJournal();
@@ -147,7 +147,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
-    public void Execute_CreatesCustomNamedToc_WhenNameSpecified()
+    public void Execute_Should_CreateCustomNamedToc_When_NameSpecified()
     {
         // Arrange
         InitializeTestJournal();
@@ -181,7 +181,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
-    public void Execute_CreatesValidTocStructure_WithExistingEntries()
+    public void Execute_Should_CreateValidTocStructure_When_EntriesExist()
     {
         // Arrange
         InitializeTestJournalWithEntries();
@@ -207,7 +207,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
-    public void Execute_FailsGracefully_WhenDirectoryDoesNotExist()
+    public void Execute_Should_FailGracefully_When_DirectoryDoesNotExist()
     {
         // Arrange
         var nonExistentDirectory = Path.Combine(JournalPath, "nonexistent");
@@ -222,7 +222,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
-    public void Execute_FailsGracefully_WhenJournalrcMissing()
+    public void Execute_Should_FailGracefully_When_JournalrcMissing()
     {
         // Arrange - Create directory but no journalrc
         var settings = new AddTableOfContentsSettings { FilePath = JournalPath };

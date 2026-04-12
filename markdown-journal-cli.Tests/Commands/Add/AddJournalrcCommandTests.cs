@@ -68,7 +68,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_JournalrcAlreadyExists_ReturnsErrorCode()
+    public void Execute_Should_ReturnErrorCode_When_JournalrcAlreadyExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -87,7 +87,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithValidTocFile_GeneratesFromToc()
+    public void Execute_Should_GenerateFromToc_When_ValidTocFileExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -120,7 +120,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithCustomTocFileName_UsesCustomName()
+    public void Execute_Should_UseCustomTocName_When_CustomTocFileNameProvided()
     {
         // Arrange
         var directory = "/test/journal";
@@ -155,7 +155,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_NoTocButHasTrackingFile_GeneratesFromTracking()
+    public void Execute_Should_GenerateFromTracking_When_NoTocButTrackingFileExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -199,7 +199,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_NoTocNoTracking_GeneratesFromDirectory()
+    public void Execute_Should_GenerateFromDirectory_When_NoTocAndNoTracking()
     {
         // Arrange
         var directory = "/test/journal";
@@ -225,7 +225,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_EmptyDirectory_GeneratesConfigWithNoEntries()
+    public void Execute_Should_GenerateConfigWithNoEntries_When_DirectoryIsEmpty()
     {
         // Arrange
         var directory = "/test/journal";
@@ -246,7 +246,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_TocWithComplexStructure_GeneratesCorrectConfig()
+    public void Execute_Should_GenerateCorrectConfig_When_TocHasComplexStructure()
     {
         // Arrange
         var directory = "/test/journal";
@@ -287,7 +287,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_DirectoryScanIgnoresSystemFiles_Correctly()
+    public void Execute_Should_IgnoreSystemFiles_When_ScanningDirectory()
     {
         // Arrange
         var directory = "/test/journal";
@@ -342,7 +342,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_SetsJournalNameFromDirectory_Correctly()
+    public void Execute_Should_SetJournalNameFromDirectory()
     {
         // Arrange
         var directory = "/test/MyAwesomeJournal";
@@ -364,7 +364,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_PreservesTocFileExtensions_Correctly()
+    public void Execute_Should_PreserveTocFileExtensions()
     {
         // Arrange
         var directory = "/test/journal";

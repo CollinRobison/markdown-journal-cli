@@ -22,6 +22,16 @@ public static class MockFactory
         var mock = new Mock<IFileSystem>();
         mock.Setup(fs => fs.CombinePaths(It.IsAny<string[]>()))
             .Returns((string[] parts) => Path.Combine(parts));
+        // Path utility methods delegate to System.IO.Path so tests relying on
+        // directory-name extraction and full-path resolution work without per-test setup.
+        mock.Setup(fs => fs.GetFullPath(It.IsAny<string>()))
+            .Returns((string p) => Path.GetFullPath(p));
+        mock.Setup(fs => fs.GetFileName(It.IsAny<string?>()))
+            .Returns((string? p) => Path.GetFileName(p));
+        mock.Setup(fs => fs.GetFileNameWithoutExtension(It.IsAny<string?>()))
+            .Returns((string? p) => Path.GetFileNameWithoutExtension(p));
+        mock.Setup(fs => fs.GetDirectoryName(It.IsAny<string?>()))
+            .Returns((string? p) => Path.GetDirectoryName(p));
         return mock;
     }
 

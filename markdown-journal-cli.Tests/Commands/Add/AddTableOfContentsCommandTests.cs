@@ -51,7 +51,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     #region Positive Cases
 
     [Fact]
-    public void Execute_SuccessfullyCreatesToc_WhenJournalrcExistsAndTocDoesNotExist()
+    public void Execute_Should_CreateToc_When_JournalrcExistsAndTocDoesNotExist()
     {
         // Arrange
         var directory = "/test/journal";
@@ -88,7 +88,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_UpdatesConfigAndCreatesToc_WhenConfigHasDifferentTocName()
+    public void Execute_Should_UpdateConfigAndCreateToc_When_ConfigHasDifferentTocName()
     {
         // Arrange
         var directory = "/test/journal";
@@ -131,7 +131,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_UsesCustomTocName_WhenProvidedInSettings()
+    public void Execute_Should_UseCustomTocName_When_NameProvidedInSettings()
     {
         // Arrange
         var directory = "/test/journal";
@@ -178,7 +178,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_DoesNotUpdateConfig_WhenTocNameMatchesConfig()
+    public void Execute_Should_NotUpdateConfig_When_TocNameMatchesConfig()
     {
         // Arrange
         var directory = "/test/journal";
@@ -223,7 +223,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     #region Negative Cases
 
     [Fact]
-    public void Execute_ReturnsWarning_WhenTocFileAlreadyExists()
+    public void Execute_Should_ReturnWarning_When_TocFileAlreadyExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -273,7 +273,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ThrowsJournalrcNotFoundException_WhenJournalrcDoesNotExist()
+    public void Execute_Should_ThrowJournalrcNotFoundException_When_JournalrcDoesNotExist()
     {
         // Arrange
         var directory = "/test/journal";
@@ -301,7 +301,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ReturnsError_WhenJournalConfigReadReturnsNull()
+    public void Execute_Should_ReturnError_When_JournalConfigReadReturnsNull()
     {
         // Arrange
         var directory = "/test/journal";
@@ -333,7 +333,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ReturnsError_WhenTocGeneratorThrowsException()
+    public void Execute_Should_ReturnError_When_TocGeneratorThrowsException()
     {
         // Arrange
         var directory = "/test/journal";
@@ -374,7 +374,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     #region Edge Cases
 
     [Fact]
-    public void Execute_HandlesDirectoryWithTrailingSlash()
+    public void Execute_Should_HandleDirectoryWithTrailingSlash()
     {
         // Arrange
         var directory = "/test/journal/";
@@ -405,7 +405,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WarnsForExistingCustomNamedToc()
+    public void Execute_Should_WarnForExistingCustomNamedToc()
     {
         // Arrange
         var directory = "/test/journal";
@@ -454,7 +454,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_TocAlreadyExists_ReturnsOne_NotZero()
+    public void Execute_Should_ReturnOne_When_TocAlreadyExists()
     {
         // "add toc" must return a non-zero exit code when the TOC already exists
         // so scripts can detect the "nothing done" case.
@@ -486,7 +486,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_TocNameContainingBrackets_DoesNotThrowMarkupException_WhenAlreadyExists()
+    public void Execute_Should_NotThrowMarkupException_When_TocNameContainsBracketsAndAlreadyExists()
     {
         // TOC filenames containing bracket characters (e.g. "toc[2026]") must be
         // escaped before being passed to Spectre.Console markup rendering.

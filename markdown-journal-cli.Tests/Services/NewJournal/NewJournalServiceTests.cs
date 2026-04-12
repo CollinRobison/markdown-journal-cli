@@ -60,7 +60,7 @@ public class NewJournalServiceTests : ServiceTestBase
     #region Constructor Validation
 
     [Fact]
-    public void Constructor_NullFileSystem_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_FileSystemIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -77,7 +77,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_NullTemplateManager_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_TemplateManagerIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -94,7 +94,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_NullJournalConfiguration_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_JournalConfigurationIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -111,7 +111,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_NullFileTracking_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_FileTrackingIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -128,7 +128,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_LoggerIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -145,7 +145,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_NullTxCoordinator_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_TxCoordinatorIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -162,7 +162,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Constructor_NullRollbackReporter_ThrowsArgumentNullException()
+    public void Constructor_Should_ThrowArgumentNullException_When_RollbackReporterIsNull()
     {
         Should.Throw<ArgumentNullException>(() =>
             new NewJournalService(
@@ -186,7 +186,7 @@ public class NewJournalServiceTests : ServiceTestBase
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Initialize_InvalidJournalDirectory_ThrowsArgumentException(string? journalDirectory)
+    public void Initialize_Should_ThrowArgumentException_When_JournalDirectoryIsInvalid(string? journalDirectory)
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(journalDirectory!, JournalName));
     }
@@ -195,7 +195,7 @@ public class NewJournalServiceTests : ServiceTestBase
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Initialize_InvalidJournalName_ThrowsArgumentException(string? journalName)
+    public void Initialize_Should_ThrowArgumentException_When_JournalNameIsInvalid(string? journalName)
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(JournalDirectory, journalName!));
     }
@@ -205,7 +205,7 @@ public class NewJournalServiceTests : ServiceTestBase
     #region Directory Creation
 
     [Fact]
-    public void Initialize_CreatesJournalDirectory()
+    public void Initialize_Should_CreateJournalDirectory()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -217,7 +217,7 @@ public class NewJournalServiceTests : ServiceTestBase
     #region File Creation
 
     [Fact]
-    public void Initialize_CreatesExactlyFourMarkdownFiles()
+    public void Initialize_Should_CreateExactlyFourMarkdownFiles()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -228,7 +228,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_CreatesTableOfContentsFile()
+    public void Initialize_Should_CreateTableOfContentsFile()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -239,7 +239,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_CreatesIntroductionFile()
+    public void Initialize_Should_CreateIntroductionFile()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -250,7 +250,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_CreatesJournalEntryTemplateFile()
+    public void Initialize_Should_CreateJournalEntryTemplateFile()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -266,7 +266,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_CreatesAllMyJournalsFile()
+    public void Initialize_Should_CreateAllMyJournalsFile()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -281,7 +281,7 @@ public class NewJournalServiceTests : ServiceTestBase
     #region Template Usage
 
     [Fact]
-    public void Initialize_GeneratesTableOfContentsTemplateWithNullParams()
+    public void Initialize_Should_GenerateTableOfContentsTemplateWithNullParams()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -292,7 +292,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_GeneratesJournalEntryTemplateForIntroductionWithTitleParam()
+    public void Initialize_Should_GenerateJournalEntryTemplateForIntroduction_When_TitleParamProvided()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -311,7 +311,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_GeneratesJournalEntryTemplateForIntroductionWithAddSourceBlockFalse()
+    public void Initialize_Should_GenerateJournalEntryTemplateForIntroduction_When_AddSourceBlockIsFalse()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -332,7 +332,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_GeneratesJournalEntryTemplateForAllMyJournalsWithTitleParam()
+    public void Initialize_Should_GenerateJournalEntryTemplateForAllMyJournals_When_TitleParamProvided()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -351,7 +351,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_GeneratesJournalEntryTemplateForAllMyJournalsWithAddSourceBlockFalse()
+    public void Initialize_Should_GenerateJournalEntryTemplateForAllMyJournals_When_AddSourceBlockIsFalse()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -372,7 +372,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_GeneratesJournalEntryTemplateWithNullParamsForEntryTemplateFile()
+    public void Initialize_Should_GenerateJournalEntryTemplateWithNullParams_When_EntryTemplateFileIsTarget()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -388,7 +388,7 @@ public class NewJournalServiceTests : ServiceTestBase
     #region Configuration Creation
 
     [Fact]
-    public void Initialize_CallsJournalConfigurationCreateOnce()
+    public void Initialize_Should_CallJournalConfigurationCreateOnce()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -399,7 +399,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_ConfigurationHasCorrectJournalName()
+    public void Initialize_Should_SetCorrectJournalNameInConfiguration()
     {
         JournalConfig? capturedConfig = null;
         MockJournalConfiguration
@@ -413,7 +413,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_ConfigurationHasExactlyThreeRootEntries()
+    public void Initialize_Should_SetExactlyThreeRootEntriesInConfiguration()
     {
         JournalConfig? capturedConfig = null;
         MockJournalConfiguration
@@ -427,7 +427,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_AllRootEntriesHaveMdExtension()
+    public void Initialize_Should_EnsureAllRootEntriesHaveMdExtension()
     {
         JournalConfig? capturedConfig = null;
         MockJournalConfiguration
@@ -448,7 +448,7 @@ public class NewJournalServiceTests : ServiceTestBase
     #region File Tracking
 
     [Fact]
-    public void Initialize_CallsFileTrackingLoadIndexWithJournalDirectory()
+    public void Initialize_Should_CallFileTrackingLoadIndexWithJournalDirectory()
     {
         _service.Initialize(JournalDirectory, JournalName);
 
@@ -456,7 +456,7 @@ public class NewJournalServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public void Initialize_CallsFileTrackingUpdateIndexWithJournalDirectory()
+    public void Initialize_Should_CallFileTrackingUpdateIndexWithJournalDirectory()
     {
         _service.Initialize(JournalDirectory, JournalName);
 

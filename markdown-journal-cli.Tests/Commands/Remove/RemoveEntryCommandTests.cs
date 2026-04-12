@@ -56,7 +56,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     // ------------------------------------------------------------------
 
     [Fact]
-    public void Execute_WithForce_RemovesEntryWithoutPrompt()
+    public void Execute_Should_RemoveEntryWithoutPrompt_When_ForceIsSet()
     {
         // Arrange
         var settings = new RemoveEntrySettings
@@ -80,7 +80,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithoutForce_UserConfirms_RemovesEntry()
+    public void Execute_Should_RemoveEntry_When_UserConfirms()
     {
         // Arrange
         _console.Input.PushTextWithEnter("y");
@@ -104,7 +104,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithoutForce_UserDenies_CancelsAndReturnsZero()
+    public void Execute_Should_CancelAndReturnZero_When_UserDenies()
     {
         // Arrange
         _console.Input.PushTextWithEnter("n");
@@ -128,7 +128,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithCleanRefs_CallsCleanRefs_OnService()
+    public void Execute_Should_CallCleanRefsOnService_When_CleanRefsSet()
     {
         // Arrange
         var modifiedFiles = new[] { "other_entry.md", "another.md" };
@@ -163,7 +163,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     // ------------------------------------------------------------------
 
     [Fact]
-    public void Execute_JournalrcNotFound_ReturnsOneWithErrorMessage()
+    public void Execute_Should_ReturnOneWithErrorMessage_When_JournalrcNotFound()
     {
         // Arrange
         _mockRemoveEntryService
@@ -186,7 +186,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_TrackingIndexNotFound_ReturnsOneWithErrorMessage()
+    public void Execute_Should_ReturnOneWithErrorMessage_When_TrackingIndexNotFound()
     {
         // Arrange
         _mockRemoveEntryService
@@ -209,7 +209,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_ProtectedFile_ReturnsOneWithErrorMessage()
+    public void Execute_Should_ReturnOneWithErrorMessage_When_FileIsProtected()
     {
         // Arrange
         _mockRemoveEntryService
@@ -233,7 +233,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_FileNotFound_ReturnsOneWithErrorMessage()
+    public void Execute_Should_ReturnOneWithErrorMessage_When_FileNotFound()
     {
         // Arrange
         _mockRemoveEntryService
@@ -260,7 +260,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_UnexpectedException_ReturnsOneWithErrorMessage()
+    public void Execute_Should_ReturnOneWithErrorMessage_When_UnexpectedExceptionThrown()
     {
         // Arrange
         _mockRemoveEntryService
@@ -283,7 +283,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_FileNameContainsMarkup_EscapesCorrectly()
+    public void Execute_Should_EscapeMarkupCorrectly_When_FileNameContainsMarkup()
     {
         // Arrange — a filename with characters that could be misread as Spectre markup
         _mockRemoveEntryService
@@ -306,7 +306,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithoutForce_FileNotFound_ReturnsError_BeforeShowingPrompt()
+    public void Execute_Should_ReturnError_When_FileNotFoundAndForceNotSet()
     {
         // The guard checks must be evaluated before the confirmation prompt so
         // the user is never asked to confirm an action that was never possible.
@@ -338,7 +338,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithoutForce_JournalrcMissing_ReturnsError_BeforeShowingPrompt()
+    public void Execute_Should_ReturnError_When_JournalrcMissingAndForceNotSet()
     {
         _mockRemoveEntryService
             .Setup(s => s.ValidatePreconditions(TestPath, TestFileName))
@@ -359,7 +359,7 @@ public class RemoveEntryCommandTests : CommandTestBase
     }
 
     [Fact]
-    public void Execute_WithForce_DoesNotCallValidatePreconditions()
+    public void Execute_Should_NotCallValidatePreconditions_When_ForceIsSet()
     {
         // With --force, the confirmation path (and its preflight validation) is skipped entirely.
         var settings = new RemoveEntrySettings
