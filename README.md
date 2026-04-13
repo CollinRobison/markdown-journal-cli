@@ -463,7 +463,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **Rollback system** — all write commands are wrapped in a file transaction; if any step fails mid-operation, all changes are automatically reversed and exit code `2` (fully rolled back) or `3` (partial rollback) is returned
 
 **Planned Features:**
-- ⏳ look through and clean up all tests **(finish before moving on)**
 - ⏳ `--version` flag **(finish before moving on)**
 - ⏳ Global tool installation **(finish before moving on)**
 - ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
