@@ -1,17 +1,69 @@
 # Markdown Journal CLI Tests
 
-This project contains the unit tests for the Markdown Journal CLI tool. The tests are written using xUnit and Spectre.Console.Testing.
+This project contains the unit, integration, and rollback tests for the Markdown Journal CLI tool.
 
 ## Project Structure
 
 ```
 markdown-journal-cli.Tests/
 ├── Commands/
-│   └── NewCommandTests.cs      # Tests for the New command
+│   ├── Add/
+│   │   ├── AddEntryCommandTests.cs           # Unit tests
+│   │   ├── AddEntryIntegrationTests.cs        # Integration tests (real disk I/O)
+│   │   ├── AddFileTrackingCommandTests.cs
+│   │   ├── AddFileTrackingRollbackTests.cs    # Rollback / fault-injection tests
+│   │   ├── AddJournalrcCommandTests.cs
+│   │   ├── AddJournalrcRollbackTests.cs
+│   │   ├── AddTableOfContentsCommandTests.cs
+│   │   ├── AddTableOfContentsIntegrationTests.cs
+│   │   └── AddTableOfContentsRollbackTests.cs
+│   ├── Init/
+│   │   ├── InitCommandTests.cs
+│   │   └── InitCommandIntegrationTests.cs
+│   ├── New/
+│   │   ├── NewCommandTests.cs
+│   │   └── NewCommandIntegrationTests.cs
+│   ├── Remove/
+│   │   ├── RemoveEntryCommandTests.cs
+│   │   └── RemoveEntryCommandIntegrationTests.cs
+│   └── Update/
+│       ├── UpdateCommandTests.cs
+│       ├── UpdateCommandIntegrationTests.cs
+│       └── UpdateEntryCommandTests.cs
 ├── Infrastructure/
-│   └── TestFileSystem.cs       # Mock file system for testing
-├── bin/                        # Build output
-├── obj/                        # Build artifacts
+│   ├── CommandAppTester.cs           # Spectre.Console test harness helper
+│   ├── CommandTestBase.cs            # Abstract base for command unit tests
+│   ├── JournalIntegrationTestBase.cs # Abstract base for command integration tests
+│   ├── MockFactory.cs                # Pre-configured Mock<T> factory methods
+│   ├── QuickstartValidationTests.cs  # Tests validating the test infrastructure itself
+│   ├── ServiceTestBase.cs            # Abstract base for service unit tests
+│   ├── Configuration/
+│   ├── DependencyInjection/
+│   ├── FileSystem/
+│   │   ├── FaultInjectingFileSystem.cs  # Fault-injection helper for rollback tests
+│   │   └── TestFileSystem.cs            # In-memory IFileSystem for unit tests
+│   ├── JournalTemplates/
+│   ├── Tracking/
+│   └── Transactions/
+├── Services/
+│   ├── EntryFormatter/
+│   ├── InitJournal/
+│   ├── JournalEntry/
+│   ├── JournalFileUpdate/
+│   ├── JournalUpdate/
+│   ├── NewJournal/
+│   ├── RemoveEntry/
+│   ├── Rollback/                     # Rollback tests (preserved; not modified by cleanup)
+│   │   ├── ServiceRollbackTestBase.cs
+│   │   ├── InitJournalServiceRollbackTests.cs
+│   │   ├── JournalEntryServiceRollbackTests.cs
+│   │   ├── JournalFileUpdateServiceRollbackTests.cs
+│   │   ├── JournalUpdateServiceRollbackTests.cs
+│   │   ├── NewJournalServiceRollbackTests.cs
+│   │   └── RemoveEntryServiceRollbackTests.cs
+│   └── TableOfContents/
+├── Exceptions/
+├── JournalTemplates/
 ├── markdown-journal-cli.Tests.csproj
 └── README.md
 ```
@@ -19,6 +71,7 @@ markdown-journal-cli.Tests/
 ## Technologies Used
 
 - [xUnit](https://xunit.net/) - Testing framework
+- [Moq](https://github.com/moq/moq4) - Mocking framework (project-standard; all unit test mocks use Moq)
 - [Spectre.Console.Testing](https://spectreconsole.net/cli/unit-testing) - Testing utilities for Spectre.Console
 - [Shouldly](https://github.com/shouldly/shouldly) - Assertion framework for better test readability
 - [Microsoft.Extensions.DependencyInjection](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection) - For dependency injection in tests
@@ -38,134 +91,131 @@ To run tests with coverage:
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-To run specific tests:
+To run specific test groups:
 
 ```bash
-# Run specific test class
-dotnet test --filter "FullyQualifiedName~NewCommandTests"
+# All integration tests (real disk I/O)
+dotnet test --filter "FullyQualifiedName~IntegrationTests"
 
-# Run specific test method
-dotnet test --filter "FullyQualifiedName~Should_Create_New_Journal_With_Default_Name"
+# All rollback / fault-injection tests
+dotnet test --filter "FullyQualifiedName~Rollback"
+
+# A specific command's tests
+dotnet test --filter "FullyQualifiedName~NewCommandTests"
 ```
 
-## Test Coverage
+## Test Infrastructure Layers
 
-### NewCommand Tests
+There are four shared base classes that drive the test suite:
 
-The `NewCommandTests` class provides comprehensive testing for the journal creation functionality:
+| Base class | Use for | Key properties |
+|---|---|---|
+| `CommandTestBase` | Command-layer unit tests | `Mock<IFileSystem>`, `Mock<IJournalConfiguration>`, etc.; `BuildApp(configure)` helper |
+| `ServiceTestBase` | Service-layer unit tests | Same mocks plus `NoOpCoordinator`, `NoOpReporter`, `NullLogger<T>()` |
+| `JournalIntegrationTestBase` | Command integration tests | Real `FileSystem`, `JournalRoot`/`JournalPath` temp dirs, `InitializeJournal()`, auto-cleanup |
+| `ServiceRollbackTestBase` | Service rollback / fault-injection | `FaultInjectingFileSystem`, real `FileTransactionCoordinator` |
 
-- **Should_Create_New_Journal_With_Default_Name** - Tests basic journal creation with a simple name
-- **Should_Create_New_Journal_With_Custom_Name** - Tests journal creation with custom naming
-- **Should_Return_Error_When_Journal_Already_Exists** - Tests duplicate journal handling (returns exit code 1)
-- **Should_Create_Journal_In_Custom_Path** - Tests journal creation with custom path using `--path` option
-- **Should_Validate_Journal_Name_For_Invalid_Characters** - Tests input validation for invalid file name characters
-- **Should_Validate_Empty_Journal_Name** - Tests input validation for empty journal names
+`MockFactory` provides pre-configured `Mock<T>` instances used internally by `CommandTestBase` and `ServiceTestBase`. Use it directly if you need a one-off mock outside a base class.
 
-### Infrastructure Tests
-
-The test infrastructure includes:
-
-- **TestFileSystem** - Mock implementation of `IFileSystem` for isolated file system testing
-- **TypeRegistrar** - Uses the main project's dependency injection container for test setup
-- **TestConsole** - Spectre.Console test console for verifying output
+`TestFileSystem` is an in-memory `IFileSystem` substitute retained for infrastructure-layer tests that pre-date the Moq migration or that specifically need to verify in-memory state.
 
 ## Architecture
 
-The test project follows these architectural patterns:
+The test project follows four distinct patterns depending on the test type:
 
-1. **Dependency Injection**: Uses the main project's `TypeRegistrar` to inject mock dependencies
-2. **Mock File System**: `TestFileSystem` provides in-memory file system simulation
-3. **Command Testing**: Uses `CommandAppTester` to test the full command pipeline
-4. **Arrange-Act-Assert**: All tests follow the AAA pattern for clarity
+### 1. Command Unit Tests (`CommandTestBase`)
 
-## Current Implementation Status
-
-✅ **Implemented Features:**
-- File system abstraction (`IFileSystem`) with test mock
-- Dependency injection for testability
-- Input validation with proper error handling
-- Console output testing
-- Custom path support
-- Comprehensive error scenarios
-
-✅ **Best Practices Applied:**
-- Dependency injection for console and file system operations
-- Custom exceptions for domain-specific errors
-- Settings validation
-- Isolated, independent tests
-- Meaningful test names following convention
-
-## Best Practices and Recommendations
-
-### Current Implementation Status
-
-The main project has already implemented most recommended best practices:
-
-✅ **Already Implemented:**
-- **File System Abstraction**: `IFileSystem` interface with real implementation
-- **Dependency Injection**: Console operations use injected `IAnsiConsole`
-- **Custom Exceptions**: Domain-specific exception handling
-- **Input Validation**: Settings validation with proper error messages
-- **Testable Architecture**: All dependencies are mockable
-
-### Future Enhancements
-
-While the current implementation is well-architected, consider these enhancements:
-
-1. **Additional Command Testing**
-   - Add tests for any new commands as they're implemented
-   - Consider integration tests for end-to-end scenarios
-
-2. **Performance Testing**
-   - Add benchmarks for large journal operations
-   - Test memory usage with many files
-
-3. **Error Scenario Coverage**
-   - Test file system permission errors
-   - Test disk space limitations
-   - Test network path scenarios
-
-### Testing Best Practices Applied
-
-1. **Arrange-Act-Assert**: All tests follow the AAA pattern for clarity
-2. **Meaningful Names**: Test names describe the scenario using Should_ExpectedBehavior_When_Condition pattern
-3. **Independent Tests**: Each test is self-contained with proper setup and teardown
-4. **Mock Dependencies**: File system and console operations are mocked for isolation
-5. **Comprehensive Coverage**: Tests cover happy path, error conditions, and edge cases
-6. **Domain-Specific Testing**: Tests verify business logic, not just technical implementation
-
-### Test Structure Example
+Extend `CommandTestBase` and call `BuildApp(configure)` per test to get a fresh `CommandAppTester`. Override `SetupDefaultBehaviors()` to configure Moq defaults for the whole class; add per-test `Setup()` calls for scenario-specific responses.
 
 ```csharp
-[Fact]
-public void Should_Create_New_Journal_With_Default_Name()
+public sealed class NewCommandTests : CommandTestBase
 {
-    // Arrange - Set up test data and expectations
-    
-    // Act - Execute the operation being tested
-    var result = _app.Run(new[] { "new", "MyJournal" });
+    protected override void SetupDefaultBehaviors()
+    {
+        MockFileSystem.Setup(fs => fs.DirectoryExists(It.IsAny<string>())).Returns(false);
+    }
 
-    // Assert - Verify the expected outcomes
-    result.ExitCode.ShouldBe(0);
-    result.Output.ShouldContain("MyJournal");
-    _fileSystem.DirectoryExists("./MyJournal").ShouldBeTrue();
+    [Fact]
+    public void Execute_Should_CreateJournal_When_NameIsValid()
+    {
+        var app = BuildApp(cfg =>
+        {
+            cfg.AddCommand<NewCommand>("new");
+            cfg.PropagateExceptions();
+        });
+
+        var result = app.Run(["new", "MyJournal"]);
+
+        result.ExitCode.ShouldBe(0);
+        MockFileSystem.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
+    }
 }
 ```
+
+### 2. Service Unit Tests (`ServiceTestBase`)
+
+Extend `ServiceTestBase`, create the SUT in a `CreateSut()` factory method using base-class mocks, and inject `NoOpCoordinator` / `NoOpReporter` when transaction behavior is intentionally out of scope.
+
+```csharp
+public sealed class NewJournalServiceTests : ServiceTestBase
+{
+    private NewJournalService CreateSut() =>
+        new(MockFileSystem.Object, MockTemplateManager.Object,
+            MockJournalConfiguration.Object, NoOpCoordinator, NoOpReporter);
+
+    [Fact]
+    public void Initialize_Should_CallCreateDirectory_When_JournalPathIsNew()
+    {
+        MockFileSystem.Setup(fs => fs.DirectoryExists(It.IsAny<string>())).Returns(false);
+        var sut = CreateSut();
+
+        sut.Initialize("/journals/MyJournal", "MyJournal");
+
+        MockFileSystem.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.AtLeastOnce);
+    }
+}
+```
+
+### 3. Command Integration Tests (`JournalIntegrationTestBase`)
+
+Extend `JournalIntegrationTestBase`. The base class sets up a unique temp directory under `Path.GetTempPath()` and deletes it automatically on `Dispose()`. Use no mocks unless a real implementation is unavailable.
+
+```csharp
+public sealed class NewCommandIntegrationTests : JournalIntegrationTestBase
+{
+    [Fact]
+    public void Execute_Should_CreateJournalFiles_When_NameIsValid()
+    {
+        // Use real services wired against JournalRoot / JournalPath
+        var result = BuildRealApp().Run(["new", "TestJournal", "--path", JournalRoot]);
+
+        result.ExitCode.ShouldBe(0);
+        File.Exists(Path.Combine(JournalPath, ".journalrc")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, ".mdjournal")).ShouldBeTrue();
+    }
+}
+```
+
+### 4. Rollback / Fault-Injection Tests (`ServiceRollbackTestBase`)
+
+Use `FaultInjectingFileSystem` to simulate write failures at specific steps, then assert that the real `FileTransactionCoordinator` successfully rolls back all applied changes.
+
+## Test Naming Convention
+
+All test methods follow the pattern:
+
+```
+{MethodOrScenario}_Should_{ExpectedBehavior}_When_{Condition}
+```
+
+Examples:
+- `Execute_Should_ReturnExitCode0_When_JournalCreatedSuccessfully`
+- `Initialize_Should_ThrowJournalAlreadyExistsException_When_DirectoryAlreadyManaged`
+- `RemoveEntry_Should_DeleteFileAndUpdateToc_When_EntryExists`
 
 ## Useful Links
 
 - [Spectre.Console Unit Testing Documentation](https://spectreconsole.net/cli/unit-testing)
-- [Spectre.Console Best Practices](https://spectreconsole.net/best-practices)
 - [xUnit Documentation](https://xunit.net/#documentation)
 - [Shouldly Documentation](https://shouldly.readthedocs.io/en/latest/)
-
-## Notes
-
-- The test project targets .NET 10.0, matching the main project
-- Tests are organized by command in the `Commands/` directory
-- Infrastructure helpers are in the `Infrastructure/` directory
-- Each test class focuses on a single command with comprehensive scenario coverage
-- Test names follow the pattern `Should_ExpectedBehavior_When_Condition`
-- All file system operations are mocked using `TestFileSystem` for fast, isolated tests
-- Console output is captured and verified using Spectre.Console.Testing
-- Dependency injection is used throughout for better testability and maintainability
+- [Moq Documentation](https://github.com/moq/moq4/wiki/Quickstart)

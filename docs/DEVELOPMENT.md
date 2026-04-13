@@ -131,39 +131,55 @@ markdown-journal-cli/
 │   ├── appsettings.json          # Application configuration
 │   ├── JournalSettings.cs        # Settings model
 │   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Unit tests
+├── markdown-journal-cli.Tests/    # Test project
 │   ├── Commands/                 # Command tests
-│   │   ├── NewCommandTests.cs
-│   │   ├── Init/
-│   │   │   └── InitCommandTests.cs
 │   │   ├── Add/
 │   │   │   ├── AddEntryCommandTests.cs
+│   │   │   ├── AddEntryIntegrationTests.cs
 │   │   │   ├── AddFileTrackingCommandTests.cs
+│   │   │   ├── AddFileTrackingRollbackTests.cs    # rollback: fault-inject each write step
 │   │   │   ├── AddJournalrcCommandTests.cs
+│   │   │   ├── AddJournalrcRollbackTests.cs
 │   │   │   ├── AddTableOfContentsCommandTests.cs
 │   │   │   ├── AddTableOfContentsIntegrationTests.cs
-│   │   │   ├── AddFileTrackingRollbackTests.cs    # rollback: fault-inject each write step
-│   │   │   ├── AddJournalrcRollbackTests.cs
 │   │   │   └── AddTableOfContentsRollbackTests.cs
+│   │   ├── Init/
+│   │   │   ├── InitCommandTests.cs
+│   │   │   └── InitCommandIntegrationTests.cs
+│   │   ├── New/
+│   │   │   ├── NewCommandTests.cs
+│   │   │   └── NewCommandIntegrationTests.cs
 │   │   ├── Remove/
-│   │   │   └── RemoveEntryCommandTests.cs     # remove entry command tests
+│   │   │   ├── RemoveEntryCommandTests.cs         # remove entry command tests
+│   │   │   └── RemoveEntryCommandIntegrationTests.cs
 │   │   └── Update/
-│   │       ├── UpdateCommandTests.cs          # + --rename-toc and --dry-run dispatch tests
+│   │       ├── UpdateCommandTests.cs              # + --rename-toc and --dry-run dispatch tests
+│   │       ├── UpdateCommandIntegrationTests.cs
 │   │       └── UpdateEntryCommandTests.cs
-│   ├── Infrastructure/           # Infrastructure service tests
+│   ├── Infrastructure/           # Shared test infrastructure
+│   │   ├── CommandAppTester.cs                # Spectre.Console test harness helper
+│   │   ├── CommandTestBase.cs                 # Abstract base for command unit tests
+│   │   ├── JournalIntegrationTestBase.cs      # Abstract base for integration tests
+│   │   ├── MockFactory.cs                     # Pre-configured Mock<T> factory methods
+│   │   ├── QuickstartValidationTests.cs       # Tests validating the test infrastructure itself
+│   │   ├── ServiceTestBase.cs                 # Abstract base for service unit tests
 │   │   ├── FileSystem/
-│   │   │   ├── FileSystemTests.cs
 │   │   │   ├── FaultInjectingFileSystem.cs    # test helper: fault injection for IFileSystem
-│   │   │   ├── InMemoryFileBufferTests.cs     # new: Snapshot/Stage/Commit/Restore tests
-│   │   │   ├── MarkdownLinkRewriterTests.cs   # extended: StripLinksInDirectory tests added
+│   │   │   ├── FileSystemTests.cs
+│   │   │   ├── InMemoryFileBufferTests.cs     # Snapshot/Stage/Commit/Restore tests
+│   │   │   ├── MarkdownLinkRewriterTests.cs   # StripLinksInDirectory tests
 │   │   │   ├── MarkdownMetadataParserTests.cs
-│   │   │   └── TestFileSystem.cs
+│   │   │   └── TestFileSystem.cs              # In-memory IFileSystem for unit tests
 │   │   ├── Transactions/
 │   │   │   ├── FileTransactionScopeTests.cs       # Track*/Commit/Rollback + reverse-order tests
 │   │   │   ├── FileTransactionCoordinatorTests.cs  # Begin/BeginOrJoin ambient scope tests
 │   │   │   ├── JoinedTransactionScopeTests.cs      # joined scope delegation tests
 │   │   │   ├── RollbackReporterTests.cs            # console output tests
 │   │   │   └── TransactionEdgeCaseTests.cs         # idempotency, disposed scope, etc.
+│   │   ├── Configuration/
+│   │   ├── DependencyInjection/
+│   │   ├── JournalTemplates/
+│   │   ├── Tracking/
 │   │   ├── FileTrackingTests.cs
 │   │   ├── HashServiceTests.cs
 │   │   ├── JournalConfigurationTests.cs
@@ -198,7 +214,7 @@ markdown-journal-cli/
 │       │   ├── NewJournalServiceRollbackTests.cs
 │       │   └── RemoveEntryServiceRollbackTests.cs
 │       └── TableOfContents/
-│           └── TableOfContentsServiceTests.cs  # extended: PreviewTableOfContents tests added
+│           └── TableOfContentsServiceTests.cs  # + PreviewTableOfContents tests
 ├── docs/                         # Documentation
 └── README.md                     # Main documentation
 ```
@@ -330,9 +346,12 @@ public class YourSpecificException : JournalException
 ## 🧪 Testing Guidelines
 
 ### Test Naming Conventions
+
+All test methods follow the pattern `{MethodOrScenario}_Should_{ExpectedBehavior}_When_{Condition}`:
+
 ```csharp
 [Fact]
-public void Should_DoExpectedThing_When_ConditionMet()
+public void Execute_Should_CreateJournal_When_NameIsValid()
 {
     // Arrange - Set up test data
     // Act - Execute the code under test
@@ -340,32 +359,87 @@ public void Should_DoExpectedThing_When_ConditionMet()
 }
 ```
 
-### Mock Services in Tests
+### Test Infrastructure Layers
+
+There are four shared base classes. Choose the right one for each test type:
+
+| Base class | Use for | Key feature |
+|---|---|---|
+| `CommandTestBase` | Command-layer unit tests | Pre-wired `Mock<T>` fields + `BuildApp(configure)` helper |
+| `ServiceTestBase` | Service-layer unit tests | Same mocks + `NoOpCoordinator`, `NoOpReporter`, `NullLogger<T>()` |
+| `JournalIntegrationTestBase` | Command integration tests | Real `FileSystem`, Guid temp dir, `InitializeJournal()`, auto-cleanup |
+| `ServiceRollbackTestBase` | Service rollback / fault-injection | `FaultInjectingFileSystem` + real `FileTransactionCoordinator` |
+
+`MockFactory` static class provides pre-configured `Mock<T>` instances used internally by the base classes. Use it directly for one-off mocks outside a base class.
+
+### Writing a Command Unit Test
+
+Extend `CommandTestBase`. Override `SetupDefaultBehaviors()` for class-wide defaults; add per-test `Setup()` calls for scenario-specific responses. Call `BuildApp(configure)` inside each test to get a fresh `CommandAppTester`.
+
 ```csharp
-public class YourCommandTests
+public sealed class NewCommandTests : CommandTestBase
 {
-    private readonly TestConsole _console;
-    private readonly TestFileSystem _fileSystem;
-    private readonly TestJournalInitializer _journalInitializer;
-    private readonly CommandAppTester _app;
-
-    public YourCommandTests()
+    protected override void SetupDefaultBehaviors()
     {
-        _console = new TestConsole();
-        _fileSystem = new TestFileSystem(); 
-        _journalInitializer = new TestJournalInitializer();
-        
-        var registrar = new markdown_journal_cli.Tests.Infrastructure.TypeRegistrar()
-            .RegisterInstance(_console)
-            .RegisterInstance<IFileSystem>(_fileSystem)
-            .RegisterInstance<IJournalInitializer>(_journalInitializer);
+        MockFileSystem.Setup(fs => fs.DirectoryExists(It.IsAny<string>())).Returns(false);
+    }
 
-        _app = new CommandAppTester(registrar);
-        _app.Configure(config =>
+    [Fact]
+    public void Execute_Should_CreateJournal_When_NameIsValid()
+    {
+        var app = BuildApp(cfg =>
         {
-            config.AddCommand<YourCommand>("your-command");
-            config.PropagateExceptions();
+            cfg.AddCommand<NewCommand>("new");
+            cfg.PropagateExceptions();
         });
+
+        var result = app.Run(["new", "MyJournal"]);
+
+        result.ExitCode.ShouldBe(0);
+        MockFileSystem.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
+    }
+}
+```
+
+### Writing a Service Unit Test
+
+Extend `ServiceTestBase`. Create the SUT in a `CreateSut()` factory method using base-class mocks.
+
+```csharp
+public sealed class NewJournalServiceTests : ServiceTestBase
+{
+    private NewJournalService CreateSut() =>
+        new(MockFileSystem.Object, MockTemplateManager.Object,
+            MockJournalConfiguration.Object, NoOpCoordinator, NoOpReporter);
+
+    [Fact]
+    public void Initialize_Should_CallCreateDirectory_When_JournalPathIsNew()
+    {
+        MockFileSystem.Setup(fs => fs.DirectoryExists(It.IsAny<string>())).Returns(false);
+        var sut = CreateSut();
+
+        sut.Initialize("/journals/MyJournal", "MyJournal");
+
+        MockFileSystem.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.AtLeastOnce);
+    }
+}
+```
+
+### Writing a Command Integration Test
+
+Extend `JournalIntegrationTestBase`. Wire all real services. The base class creates a unique temp directory under `Path.GetTempPath()` and deletes it automatically on `Dispose()`. Use no mocks.
+
+```csharp
+public sealed class NewCommandIntegrationTests : JournalIntegrationTestBase
+{
+    [Fact]
+    public void Execute_Should_CreateJournalFiles_When_NameIsValid()
+    {
+        var result = BuildRealApp().Run(["new", "TestJournal", "--path", JournalRoot]);
+
+        result.ExitCode.ShouldBe(0);
+        File.Exists(Path.Combine(JournalPath, ".journalrc")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, ".mdjournal")).ShouldBeTrue();
     }
 }
 ```

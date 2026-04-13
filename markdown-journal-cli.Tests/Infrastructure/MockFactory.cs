@@ -37,23 +37,23 @@ public static class MockFactory
 
     /// <summary>Creates a pre-configured mock for IJournalConfiguration.</summary>
     public static Mock<IJournalConfiguration> CreateJournalConfiguration() =>
-        new Mock<IJournalConfiguration>();
+        new();
 
     /// <summary>Creates a pre-configured mock for IFileTracking.</summary>
     public static Mock<IFileTracking> CreateFileTracking() =>
-        new Mock<IFileTracking>();
+        new();
 
     /// <summary>Creates a pre-configured mock for ITemplateManager.</summary>
     public static Mock<ITemplateManager> CreateTemplateManager() =>
-        new Mock<ITemplateManager>();
+        new();
 
     /// <summary>Creates a pre-configured mock for ITableOfContentsService.</summary>
     public static Mock<ITableOfContentsService> CreateTableOfContentsService() =>
-        new Mock<ITableOfContentsService>();
+        new();
 
     /// <summary>Creates a pre-configured mock for IEntryFormatterService.</summary>
     public static Mock<IEntryFormatterService> CreateEntryFormatterService() =>
-        new Mock<IEntryFormatterService>();
+        new();
 
     /// <summary>
     /// Creates an IOptions&lt;JournalSettings&gt; with default test values.
