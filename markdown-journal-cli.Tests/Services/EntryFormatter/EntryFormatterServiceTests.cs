@@ -1,22 +1,17 @@
-using System;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Services;
-using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
 
 namespace markdown_journal_cli.Tests.Services;
 
-public class EntryFormatterServiceTests
+public class EntryFormatterServiceTests : ServiceTestBase
 {
-    private readonly IOptions<JournalSettings> _journalSettings;
     private IEntryFormatterService _formatterService;
 
     public EntryFormatterServiceTests()
     {
-        _journalSettings = Options.Create(
-            new JournalSettings { TitleSpaceSeparator = "_", HeadingSeparator = "-" }
-        );
-        _formatterService = new EntryFormatterService(_journalSettings);
+        _formatterService = new EntryFormatterService(JournalSettings);
     }
 
     // ==========================
@@ -24,7 +19,7 @@ public class EntryFormatterServiceTests
     // ==========================
 
     [Fact]
-    public void AddSpaceSeparators_formats_correctly()
+    public void AddSpaceSeparators_Should_FormatCorrectly_When_InputHasSpaces()
     {
         // Given
         string test = "does this actually work";
@@ -35,7 +30,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_formats_correctly_with_consecutive_spaces()
+    public void AddSpaceSeparators_Should_FormatCorrectly_When_InputHasConsecutiveSpaces()
     {
         // Given
         string test = "does this  actually        work";
@@ -46,7 +41,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_formats_correctly_with_whitespace_at_start_and_end()
+    public void AddSpaceSeparators_Should_FormatCorrectly_When_InputHasLeadingAndTrailingWhitespace()
     {
         // Given
         string test = " does this actually work   ";
@@ -57,7 +52,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_empty_string()
+    public void AddSpaceSeparators_Should_ReturnEmpty_When_InputIsEmpty()
     {
         // Given
         string test = "";
@@ -68,7 +63,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_null_input()
+    public void AddSpaceSeparators_Should_ReturnEmpty_When_InputIsNull()
     {
         // Given
         string? test = null;
@@ -77,7 +72,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_single_word()
+    public void AddSpaceSeparators_Should_ReturnWordUnchanged_When_InputIsSingleWord()
     {
         // Given
         string test = "word";
@@ -88,7 +83,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_only_whitespace()
+    public void AddSpaceSeparators_Should_ReturnEmpty_When_InputIsOnlyWhitespace()
     {
         // Given
         string test = "     ";
@@ -99,7 +94,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_preserves_existing_underscores()
+    public void AddSpaceSeparators_Should_PreserveExistingUnderscores_When_InputHasUnderscores()
     {
         // Given
         string test = "already_has underscores_here";
@@ -110,7 +105,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_tabs_and_newlines()
+    public void AddSpaceSeparators_Should_TreatTabsAndNewlinesAsSpaces_When_InputHasTabsAndNewlines()
     {
         // Given
         string test = "has\ttabs\nand\rnewlines";
@@ -121,7 +116,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_special_characters()
+    public void AddSpaceSeparators_Should_PreserveSpecialCharacters_When_InputHasSpecialCharacters()
     {
         // Given
         string test = "test with !@#$ special chars";
@@ -132,7 +127,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_numbers()
+    public void AddSpaceSeparators_Should_PreserveNumbers_When_InputHasNumbers()
     {
         // Given
         string test = "entry 123 test 456";
@@ -143,7 +138,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_handles_unicode_characters()
+    public void AddSpaceSeparators_Should_PreserveUnicodeCharacters_When_InputHasUnicode()
     {
         // Given
         string test = "café résumé naïve";
@@ -161,7 +156,7 @@ public class EntryFormatterServiceTests
     [InlineData("trailing  ", "trailing")]
     [InlineData("a", "a")]
     [InlineData("a b", "a_b")]
-    public void AddSpaceSeparators_theory_test(string input, string expected)
+    public void AddSpaceSeparators_Should_FormatCorrectly_When_GivenInputExpectedOutput(string input, string expected)
     {
         // When
         var result = _formatterService.AddSpaceSeparators(input);
@@ -170,7 +165,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddSpaceSeparators_Handles_Very_Long_String()
+    public void AddSpaceSeparators_Should_HandleVeryLongString()
     {
         // Given - Very long string (1000 words)
         var longString = string.Join(" ", Enumerable.Repeat("word", 1000));
@@ -189,7 +184,7 @@ public class EntryFormatterServiceTests
     // ==========================
 
     [Fact]
-    public void RemoveSpaceSeparators_removes_space_Separators()
+    public void RemoveSpaceSeparators_Should_RemoveSpaceSeparators_When_InputHasSeparators()
     {
         // Given
         string test = "does_this_work";
@@ -200,7 +195,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_removes_space_Separators_with_consecutive_Separators()
+    public void RemoveSpaceSeparators_Should_RemoveConsecutiveSeparators_When_InputHasConsecutiveSeparators()
     {
         // Given
         string test = "does__this___work_________now";
@@ -211,7 +206,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_removes_space_Separators_with_whitespace_at_start_and_end()
+    public void RemoveSpaceSeparators_Should_TrimResult_When_InputHasLeadingAndTrailingWhitespace()
     {
         // Given
         string test = " does_this_work      ";
@@ -222,7 +217,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_empty_string()
+    public void RemoveSpaceSeparators_Should_ReturnEmpty_When_InputIsEmpty()
     {
         // Given
         string test = "";
@@ -233,7 +228,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_null_input()
+    public void RemoveSpaceSeparators_Should_ReturnEmpty_When_InputIsNull()
     {
         // Given
         string? test = null;
@@ -242,7 +237,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_single_word()
+    public void RemoveSpaceSeparators_Should_ReturnWordUnchanged_When_InputIsSingleWord()
     {
         // Given
         string test = "word";
@@ -253,7 +248,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_only_whitespace()
+    public void RemoveSpaceSeparators_Should_ReturnEmpty_When_InputIsOnlyWhitespace()
     {
         // Given
         string test = "     ";
@@ -264,7 +259,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_preserves_existing_spaces()
+    public void RemoveSpaceSeparators_Should_PreserveSpaces_When_InputHasSpaces()
     {
         // Given
         string test = "already has spaces here";
@@ -275,7 +270,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_tabs_and_newlines()
+    public void RemoveSpaceSeparators_Should_HandleTabsAndNewlines_When_InputHasTabsAndNewlines()
     {
         // Given
         string test = "has\ttabs\nand\rnewlines";
@@ -286,7 +281,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_special_characters()
+    public void RemoveSpaceSeparators_Should_PreserveSpecialCharacters_When_InputHasSpecialCharacters()
     {
         // Given
         string test = "test_with_!@#$ special_chars";
@@ -297,7 +292,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_numbers()
+    public void RemoveSpaceSeparators_Should_PreserveNumbers_When_InputHasNumbers()
     {
         // Given
         string test = "entry_123_test_456";
@@ -308,7 +303,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_unicode_characters()
+    public void RemoveSpaceSeparators_Should_PreserveUnicodeCharacters_When_InputHasUnicode()
     {
         // Given
         string test = "café_résumé_naïve";
@@ -326,7 +321,7 @@ public class EntryFormatterServiceTests
     [InlineData("trailing__", "trailing")]
     [InlineData("a", "a")]
     [InlineData("a_b", "a b")]
-    public void RemoveSpaceSeparators_theory_test(string input, string expected)
+    public void RemoveSpaceSeparators_Should_ConvertCorrectly_When_GivenInputExpectedOutput(string input, string expected)
     {
         // When
         var result = _formatterService.RemoveSpaceSeparators(input);
@@ -335,7 +330,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void RemoveSpaceSeparators_handles_only_underscores()
+    public void RemoveSpaceSeparators_Should_ReplaceAllUnderscores_When_InputHasOnlyUnderscores()
     {
         // Given
         string test = "____";
@@ -350,7 +345,7 @@ public class EntryFormatterServiceTests
     // ==========================
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array()
+    public void SeperateSubheadingString_Should_SplitStringIntoArray()
     {
         // Given
         string test = "heading1-heading2-heading3";
@@ -361,7 +356,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_With_Space_Separators()
+    public void SeperateSubheadingString_Should_SplitStringIntoArray_When_InputHasSpaceSeparators()
     {
         // Given
         string test = "heading_1-heading_2-heading_3";
@@ -372,7 +367,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_With_Consecutive_Separators()
+    public void SeperateSubheadingString_Should_SplitStringIntoArray_When_InputHasConsecutiveSeparators()
     {
         // Given
         string test = "heading1--heading2---heading3-----Heading4";
@@ -383,7 +378,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_with_whitespace_at_start_and_end()
+    public void SeperateSubheadingString_Should_SplitStringIntoArray_When_InputHasLeadingAndTrailingWhitespace()
     {
         // Given
         string test = "   heading1-heading2-heading3 ";
@@ -394,7 +389,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Splits_String_Into_Array_with_whitespace_in_Separators_start_and_ends()
+    public void SeperateSubheadingString_Should_SplitStringIntoArray_When_SeparatorsHaveLeadingAndTrailingWhitespace()
     {
         // Given
         string test = "heading1-  heading2  - heading3";
@@ -405,7 +400,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Empty_String()
+    public void SeperateSubheadingString_Should_ReturnEmptyArray_When_InputIsEmpty()
     {
         // Given
         string test = "";
@@ -416,7 +411,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Throws_On_Null_Input()
+    public void SeperateSubheadingString_Should_ThrowArgumentNullException_When_InputIsNull()
     {
         // Given
         string? test = null;
@@ -425,7 +420,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_No_Separators()
+    public void SeperateSubheadingString_Should_ReturnSingleElementArray_When_InputHasNoSeparators()
     {
         // Given
         string test = "heading1";
@@ -436,7 +431,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Only_Separators()
+    public void SeperateSubheadingString_Should_ReturnEmptyArray_When_InputHasOnlySeparators()
     {
         // Given
         string test = "---";
@@ -447,7 +442,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Mixed_Separators()
+    public void SeperateSubheadingString_Should_SplitStringIntoArray_When_InputHasMixedSeparators()
     {
         // Given
         string test = "heading1-heading_2--heading3";
@@ -458,7 +453,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Special_Characters()
+    public void SeperateSubheadingString_Should_HandleSpecialCharacters()
     {
         // Given
         string test = "heading1-!@#$-heading2";
@@ -469,7 +464,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Unicode_Characters()
+    public void SeperateSubheadingString_Should_HandleUnicodeCharacters()
     {
         // Given
         string test = "café-résumé-naïve";
@@ -488,7 +483,7 @@ public class EntryFormatterServiceTests
     )]
     [InlineData("   heading1-heading2-heading3 ", new[] { "heading1", "heading2", "heading3" })]
     [InlineData("heading1-  heading2  - heading3", new[] { "heading1", "heading2", "heading3" })]
-    public void SeperateSubheadingString_theory_test(string input, string[] expected)
+    public void SeperateSubheadingString_Should_SplitCorrectly_When_GivenInputExpectedOutput(string input, string[] expected)
     {
         // When
         var result = _formatterService.SeperateSubheadingString(input);
@@ -497,7 +492,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Only_Whitespace()
+    public void SeperateSubheadingString_Should_ReturnEmptyArray_When_InputIsOnlyWhitespace()
     {
         // Given
         string test = "     ";
@@ -508,7 +503,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Single_Character_Headings()
+    public void SeperateSubheadingString_Should_HandleSingleCharacterHeadings()
     {
         // Given
         string test = "a-b-c-d";
@@ -519,7 +514,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void SeperateSubheadingString_Handles_Very_Long_Heading_Names()
+    public void SeperateSubheadingString_Should_HandleVeryLongHeadingNames()
     {
         // Given - Very long heading names
         var longHeading = string.Concat(Enumerable.Repeat("VeryLongHeadingName", 50));
@@ -540,7 +535,7 @@ public class EntryFormatterServiceTests
     // ==========================
 
     [Fact]
-    public void AddHeadingSeparators_combines_heading_strings()
+    public void AddHeadingSeparators_Should_CombineStringsWithSeparator_When_GivenMultipleStrings()
     {
         // Given
         string[] test = ["Heading 1", "Heading_2-Heading_3", "title of journal entry"];
@@ -551,18 +546,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Combines_Strings_With_Separators()
-    {
-        // Given
-        string[] test = ["Heading 1", "Heading_2", "Heading-3"];
-        // When
-        var result = _formatterService.AddHeadingSeparators(test);
-        // Then
-        result.ShouldBe("Heading_1-Heading_2-Heading-3");
-    }
-
-    [Fact]
-    public void AddHeadingSeparators_Handles_Empty_Array()
+    public void AddHeadingSeparators_Should_HandleEmptyArray()
     {
         // Given
         string[] test = [];
@@ -573,7 +557,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Null_Input()
+    public void AddHeadingSeparators_Should_HandleNullInput()
     {
         // Given
         string[]? test = null;
@@ -582,7 +566,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Trims_Whitespace_From_Sections()
+    public void AddHeadingSeparators_Should_TrimWhitespaceFromSections()
     {
         // Given
         string[] test = ["  Heading 1  ", " Heading_2 ", " Heading-3 "];
@@ -593,7 +577,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Special_Characters()
+    public void AddHeadingSeparators_Should_HandleSpecialCharacters()
     {
         // Given
         string[] test = ["Heading!@#$", "Heading%^&*", "Heading()_+"];
@@ -604,7 +588,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Unicode_Characters()
+    public void AddHeadingSeparators_Should_HandleUnicodeCharacters()
     {
         // Given
         string[] test = ["café", "résumé", "naïve"];
@@ -615,7 +599,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Empty_Strings_In_Array()
+    public void AddHeadingSeparators_Should_HandleEmptyStringsInArray()
     {
         // Given
         string[] test = ["Heading 1", "", "Heading 3"];
@@ -626,7 +610,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Only_Empty_Strings()
+    public void AddHeadingSeparators_Should_HandleOnlyEmptyStrings()
     {
         // Given
         string[] test = ["", "", ""];
@@ -637,7 +621,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Mixed_Separators()
+    public void AddHeadingSeparators_Should_HandleMixedSeparators()
     {
         // Given
         string[] test = ["Heading 1", "Heading_2", "Heading-3"];
@@ -653,7 +637,7 @@ public class EntryFormatterServiceTests
     [InlineData(new string[] { "Heading1", "" }, "Heading1")]
     [InlineData(new string[] { "" }, "")]
     [InlineData(new string[] { "Heading1" }, "Heading1")]
-    public void AddHeadingSeparators_Theory_Tests(string[] input, string expected)
+    public void AddHeadingSeparators_Should_CombineSectionsWithSeparator_When_GivenInputExpectedOutput(string[] input, string expected)
     {
         // When
         var result = _formatterService.AddHeadingSeparators(input);
@@ -662,7 +646,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Only_Whitespace_Strings()
+    public void AddHeadingSeparators_Should_HandleOnlyWhitespaceStrings()
     {
         // Given
         string[] test = ["  ", "   ", "  "];
@@ -673,7 +657,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Single_Element_With_Spaces()
+    public void AddHeadingSeparators_Should_HandleSingleElementWithSpaces()
     {
         // Given
         string[] test = ["Hello World Test"];
@@ -684,7 +668,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Tabs_And_Newlines_In_Sections()
+    public void AddHeadingSeparators_Should_HandleTabsAndNewlinesInSections()
     {
         // Given
         string[] test = ["Hello\tWorld", "Test\nEntry", "Sample\rData"];
@@ -695,7 +679,7 @@ public class EntryFormatterServiceTests
     }
 
     [Fact]
-    public void AddHeadingSeparators_Handles_Large_Array()
+    public void AddHeadingSeparators_Should_HandleLargeArray()
     {
         // Given - Large array (100 sections)
         var largeArray = Enumerable.Range(1, 100).Select(i => $"Section {i}").ToArray();

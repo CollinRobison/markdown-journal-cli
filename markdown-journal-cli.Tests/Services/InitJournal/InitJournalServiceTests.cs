@@ -1,4 +1,5 @@
 using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
@@ -13,14 +14,9 @@ namespace markdown_journal_cli.Tests.Services;
 /// <summary>
 /// Unit tests for <see cref="InitJournalService"/> covering the full initialisation contract.
 /// </summary>
-public class InitJournalServiceTests
+public class InitJournalServiceTests : ServiceTestBase
 {
-    private readonly Mock<IFileSystem> _mockFileSystem;
-    private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
     private readonly Mock<IJournalConfigGenerator> _mockJournalConfigGenerator;
-    private readonly Mock<IFileTracking> _mockFileTracking;
-    private readonly Mock<ITableOfContentsService> _mockTableOfContentsService;
-    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly InitJournalService _service;
 
     private const string JournalDirectory = "/test/journal";
@@ -29,57 +25,41 @@ public class InitJournalServiceTests
 
     public InitJournalServiceTests()
     {
-        _mockFileSystem = new Mock<IFileSystem>();
-        _mockJournalConfiguration = new Mock<IJournalConfiguration>();
         _mockJournalConfigGenerator = new Mock<IJournalConfigGenerator>();
-        _mockFileTracking = new Mock<IFileTracking>();
-        _mockTableOfContentsService = new Mock<ITableOfContentsService>();
-
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                TableOfContentsFileName = DefaultTocName,
-                JournalConfigFileName = ".journalrc",
-            }
-        );
-
-        _mockFileSystem
-            .Setup(f => f.CombinePaths(It.IsAny<string[]>()))
-            .Returns((string[] parts) => Path.Combine(parts));
 
         _service = new InitJournalService(
-            _mockFileSystem.Object,
+            MockFileSystem.Object,
             _mockJournalConfigGenerator.Object,
-            _mockFileTracking.Object,
-            _mockTableOfContentsService.Object,
-            _journalSettings,
-            NoOpFileTransactionCoordinator.Instance,
-            NoOpRollbackReporter.Instance
+            MockFileTracking.Object,
+            MockTableOfContentsService.Object,
+            JournalSettings,
+            NoOpCoordinator,
+            NoOpReporter
         );
     }
 
     #region Guard clauses
 
     [Fact]
-    public void Initialize_ThrowsArgumentException_WhenDirectoryIsNull()
+    public void Initialize_Should_ThrowArgumentException_When_DirectoryIsNull()
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(null!, JournalName, null));
     }
 
     [Fact]
-    public void Initialize_ThrowsArgumentException_WhenDirectoryIsWhitespace()
+    public void Initialize_Should_ThrowArgumentException_When_DirectoryIsWhitespace()
     {
         Should.Throw<ArgumentException>(() => _service.Initialize("   ", JournalName, null));
     }
 
     [Fact]
-    public void Initialize_ThrowsArgumentException_WhenJournalNameIsNull()
+    public void Initialize_Should_ThrowArgumentException_When_JournalNameIsNull()
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(JournalDirectory, null!, null));
     }
 
     [Fact]
-    public void Initialize_ThrowsArgumentException_WhenJournalNameIsWhitespace()
+    public void Initialize_Should_ThrowArgumentException_When_JournalNameIsWhitespace()
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(JournalDirectory, "  ", null));
     }
@@ -89,11 +69,11 @@ public class InitJournalServiceTests
     #region Directory behaviour
 
     [Fact]
-    public void Initialize_DoesNotCreateDirectory()
+    public void Initialize_Should_NotCreateDirectory()
     {
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Never);
     }
 
     #endregion
@@ -101,13 +81,13 @@ public class InitJournalServiceTests
     #region Table of Contents
 
     [Fact]
-    public void Initialize_CreatesTocFile_WhenItDoesNotExist()
+    public void Initialize_Should_CreateTocFile_When_ItDoesNotExist()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockTableOfContentsService.Verify(
+        MockTableOfContentsService.Verify(
             t =>
                 t.UpdateTableOfContents(
                     JournalDirectory,
@@ -119,9 +99,9 @@ public class InitJournalServiceTests
     }
 
     [Fact]
-    public void Initialize_ThrowsException_WhenTocFileAlreadyExists()
+    public void Initialize_Should_ThrowTocFileAlreadyExistsException_When_TocFileAlreadyExists()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
 
         Should.Throw<TocFileAlreadyExistsException>(() =>
             _service.Initialize(JournalDirectory, JournalName, null)
@@ -129,10 +109,10 @@ public class InitJournalServiceTests
     }
 
     [Fact]
-    public void Initialize_UsesTocNameFromParameter_WhenProvided()
+    public void Initialize_Should_UseTocNameFromParameter_When_TocNameProvided()
     {
         const string customToc = "my-custom-toc";
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, customToc);
 
@@ -143,9 +123,9 @@ public class InitJournalServiceTests
     }
 
     [Fact]
-    public void Initialize_UsesDefaultTocName_WhenParameterIsNull()
+    public void Initialize_Should_UseDefaultTocName_When_TocNameIsNull()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
@@ -160,22 +140,9 @@ public class InitJournalServiceTests
     #region Journal config generation
 
     [Fact]
-    public void Initialize_CallsGenerateFromTrackingIndex()
+    public void Initialize_Should_UseCorrectJournalNameInConfigGeneration()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-
-        _service.Initialize(JournalDirectory, JournalName, null);
-
-        _mockJournalConfigGenerator.Verify(
-            g => g.GenerateFromTrackingIndex(JournalDirectory, DefaultTocName, JournalName),
-            Times.Once
-        );
-    }
-
-    [Fact]
-    public void Initialize_ConfigGenerationUsesCorrectJournalName()
-    {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
@@ -186,10 +153,10 @@ public class InitJournalServiceTests
     }
 
     [Fact]
-    public void Initialize_ConfigGenerationUsesResolvedTocFileName()
+    public void Initialize_Should_UseResolvedTocFileNameInConfigGeneration()
     {
         const string customToc = "custom-toc";
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, customToc);
 
@@ -204,23 +171,23 @@ public class InitJournalServiceTests
     #region File tracking index
 
     [Fact]
-    public void Initialize_CallsFileTrackingLoadIndex()
+    public void Initialize_Should_CallFileTrackingLoadIndex()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileTracking.Verify(ft => ft.LoadIndex(JournalDirectory), Times.Once);
+        MockFileTracking.Verify(ft => ft.LoadIndex(JournalDirectory), Times.Once);
     }
 
     [Fact]
-    public void Initialize_CallsFileTrackingUpdateIndex()
+    public void Initialize_Should_CallFileTrackingUpdateIndex()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Exactly(2));
+        MockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Exactly(2));
     }
 
     #endregion
@@ -228,13 +195,13 @@ public class InitJournalServiceTests
     #region Template files not created
 
     [Fact]
-    public void Initialize_DoesNotCreateIntroductionFile()
+    public void Initialize_Should_NotCreateIntroductionFile()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             f =>
                 f.CreateMarkdownFile(
                     It.IsAny<string>(),
@@ -246,13 +213,13 @@ public class InitJournalServiceTests
     }
 
     [Fact]
-    public void Initialize_DoesNotCreateJournalEntryTemplateFile()
+    public void Initialize_Should_NotCreateJournalEntryTemplateFile()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             f =>
                 f.CreateMarkdownFile(
                     It.IsAny<string>(),
@@ -264,13 +231,13 @@ public class InitJournalServiceTests
     }
 
     [Fact]
-    public void Initialize_DoesNotCreateAllMyJournalsFile()
+    public void Initialize_Should_NotCreateAllMyJournalsFile()
     {
-        _mockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
 
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        _mockFileSystem.Verify(
+        MockFileSystem.Verify(
             f =>
                 f.CreateMarkdownFile(
                     It.IsAny<string>(),

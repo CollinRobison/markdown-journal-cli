@@ -1,10 +1,10 @@
 using System.Text.Json;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -18,23 +18,18 @@ namespace markdown_journal_cli.Tests.Commands.Add;
 /// Integration tests for AddTableOfContents command using real services and file operations.
 /// These tests validate actual file I/O and end-to-end scenarios.
 /// </summary>
-public class AddTableOfContentsIntegrationTests : IDisposable
+public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
 {
-    private readonly string _testDirectory;
-    private readonly IFileSystem _fileSystem;
+    // Use TOC-specific journal settings (TOC file name = "TOC", not the default)
+    private readonly IOptions<JournalSettings> _tocJournalSettings;
     private readonly IJournalConfiguration _journalConfiguration;
     private readonly ITableOfContentsService _tocGenerator;
-    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly AddTableOfContents _command;
     private readonly TestConsole _console;
 
-    public AddTableOfContentsIntegrationTests()
+    public AddTableOfContentsIntegrationTests() : base("TestJournal")
     {
-        // Create temporary test directory
-        _testDirectory = Path.Combine(Path.GetTempPath(), $"journal-test-toc-{Guid.NewGuid()}");
-        Directory.CreateDirectory(_testDirectory);
-
-        _journalSettings = Options.Create(
+        _tocJournalSettings = Options.Create(
             new JournalSettings
             {
                 AppName = "md-journal",
@@ -45,50 +40,41 @@ public class AddTableOfContentsIntegrationTests : IDisposable
             }
         );
 
-        // Use real services
-        _fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
+        // Use real services backed by base-class FileSystem
         _journalConfiguration = new JournalConfiguration(
-            _fileSystem,
-            _journalSettings,
+            FileSystem,
+            _tocJournalSettings,
             NullLogger<JournalConfiguration>.Instance,
             Mock.Of<IFileTracking>()
         );
         _tocGenerator = new TableOfContentsService(
-            _fileSystem,
+            FileSystem,
             _journalConfiguration,
-            _journalSettings,
+            _tocJournalSettings,
             NullLogger<TableOfContentsService>.Instance
         );
 
         _console = new TestConsole();
         _command = new AddTableOfContents(
             _console,
-            _fileSystem,
+            FileSystem,
             _journalConfiguration,
             _tocGenerator,
-            _journalSettings,
+            _tocJournalSettings,
             NoOpFileTransactionCoordinator.Instance,
             NoOpRollbackReporter.Instance
         );
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_testDirectory))
-        {
-            Directory.Delete(_testDirectory, true);
-        }
-    }
-
     #region Integration Tests
 
     [Fact]
-    public void Execute_CreatesRealTocFile_WhenJournalIsInitialized()
+    public void Execute_Should_CreateRealTocFile_When_JournalIsInitialized()
     {
         // Arrange
         InitializeTestJournal();
 
-        var settings = new AddTableOfContentsSettings { FilePath = _testDirectory };
+        var settings = new AddTableOfContentsSettings { FilePath = JournalPath };
 
         // Act
         var result = _command.Execute(null!, settings);
@@ -99,7 +85,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         _console.Output.ShouldContain("Created");
 
         // Verify TOC file was created
-        var tocPath = Path.Combine(_testDirectory, "TOC.md");
+        var tocPath = Path.Combine(JournalPath, "TOC.md");
         File.Exists(tocPath).ShouldBeTrue();
 
         // Verify TOC has correct content
@@ -108,12 +94,12 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Execute_UpdatesJournalrcConfig_WhenTocNameDiffers()
+    public void Execute_Should_UpdateJournalrcConfig_When_TocNameDiffers()
     {
         // Arrange
         InitializeTestJournalWithDifferentTocName("OldTOC");
 
-        var settings = new AddTableOfContentsSettings { FilePath = _testDirectory };
+        var settings = new AddTableOfContentsSettings { FilePath = JournalPath };
 
         // Act
         var result = _command.Execute(null!, settings);
@@ -122,7 +108,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         result.ShouldBe(0);
 
         // Verify config was updated
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = File.ReadAllText(journalrcPath);
         var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(journalrcContent);
 
@@ -131,21 +117,21 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         tocConfig.ShouldBe("TOC.md");
 
         // Verify TOC file was created with the new name
-        var tocPath = Path.Combine(_testDirectory, "TOC.md");
+        var tocPath = Path.Combine(JournalPath, "TOC.md");
         File.Exists(tocPath).ShouldBeTrue();
     }
 
     [Fact]
-    public void Execute_WarnsAndDoesNotOverwrite_WhenTocAlreadyExists()
+    public void Execute_Should_WarnAndNotOverwrite_When_TocAlreadyExists()
     {
         // Arrange
         InitializeTestJournal();
 
-        var tocPath = Path.Combine(_testDirectory, "TOC.md");
+        var tocPath = Path.Combine(JournalPath, "TOC.md");
         var existingContent = "# Existing TOC Content\n- Entry 1\n- Entry 2";
         File.WriteAllText(tocPath, existingContent);
 
-        var settings = new AddTableOfContentsSettings { FilePath = _testDirectory };
+        var settings = new AddTableOfContentsSettings { FilePath = JournalPath };
 
         // Act
         var result = _command.Execute(null!, settings);
@@ -161,7 +147,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Execute_CreatesCustomNamedToc_WhenNameSpecified()
+    public void Execute_Should_CreateCustomNamedToc_When_NameSpecified()
     {
         // Arrange
         InitializeTestJournal();
@@ -169,7 +155,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         var customName = "MyCustomTableOfContents";
         var settings = new AddTableOfContentsSettings
         {
-            FilePath = _testDirectory,
+            FilePath = JournalPath,
             TableOfContentsName = customName,
         };
 
@@ -182,11 +168,11 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         _console.Output.ShouldContain($"{customName}.md");
 
         // Verify custom TOC file was created
-        var tocPath = Path.Combine(_testDirectory, $"{customName}.md");
+        var tocPath = Path.Combine(JournalPath, $"{customName}.md");
         File.Exists(tocPath).ShouldBeTrue();
 
         // Verify config was updated
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = File.ReadAllText(journalrcPath);
         var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(journalrcContent);
 
@@ -195,12 +181,12 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Execute_CreatesValidTocStructure_WithExistingEntries()
+    public void Execute_Should_CreateValidTocStructure_When_EntriesExist()
     {
         // Arrange
         InitializeTestJournalWithEntries();
 
-        var settings = new AddTableOfContentsSettings { FilePath = _testDirectory };
+        var settings = new AddTableOfContentsSettings { FilePath = JournalPath };
 
         // Act
         var result = _command.Execute(null!, settings);
@@ -209,7 +195,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         result.ShouldBe(0);
 
         // Verify TOC file was created with entries
-        var tocPath = Path.Combine(_testDirectory, "TOC.md");
+        var tocPath = Path.Combine(JournalPath, "TOC.md");
         File.Exists(tocPath).ShouldBeTrue();
 
         var tocContent = File.ReadAllText(tocPath);
@@ -221,10 +207,10 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Execute_FailsGracefully_WhenDirectoryDoesNotExist()
+    public void Execute_Should_FailGracefully_When_DirectoryDoesNotExist()
     {
         // Arrange
-        var nonExistentDirectory = Path.Combine(_testDirectory, "nonexistent");
+        var nonExistentDirectory = Path.Combine(JournalPath, "nonexistent");
         var settings = new AddTableOfContentsSettings { FilePath = nonExistentDirectory };
 
         // Act
@@ -236,10 +222,10 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Execute_FailsGracefully_WhenJournalrcMissing()
+    public void Execute_Should_FailGracefully_When_JournalrcMissing()
     {
         // Arrange - Create directory but no journalrc
-        var settings = new AddTableOfContentsSettings { FilePath = _testDirectory };
+        var settings = new AddTableOfContentsSettings { FilePath = JournalPath };
 
         // Act
         var result = _command.Execute(null!, settings);
@@ -250,7 +236,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         _console.Output.ShouldContain("journalrc");
 
         // Verify no TOC file was created
-        var tocPath = Path.Combine(_testDirectory, "TOC.md");
+        var tocPath = Path.Combine(JournalPath, "TOC.md");
         File.Exists(tocPath).ShouldBeFalse();
     }
 
@@ -261,7 +247,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     private void InitializeTestJournal()
     {
         // Create .journalrc file with proper structure
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = JsonSerializer.Serialize(
             new
             {
@@ -283,7 +269,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     private void InitializeTestJournalWithDifferentTocName(string oldTocName)
     {
         // Create .journalrc file with different TOC name
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = JsonSerializer.Serialize(
             new
             {
@@ -305,7 +291,7 @@ public class AddTableOfContentsIntegrationTests : IDisposable
     private void InitializeTestJournalWithEntries()
     {
         // Create .journalrc file with entries
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = JsonSerializer.Serialize(
             new
             {
@@ -328,8 +314,8 @@ public class AddTableOfContentsIntegrationTests : IDisposable
         File.WriteAllText(journalrcPath, journalrcContent);
 
         // Create the actual entry files
-        File.WriteAllText(Path.Combine(_testDirectory, "entry1.md"), "# Entry1\nContent");
-        File.WriteAllText(Path.Combine(_testDirectory, "entry2.md"), "# Entry2\nContent");
+        File.WriteAllText(Path.Combine(JournalPath, "entry1.md"), "# Entry1\nContent");
+        File.WriteAllText(Path.Combine(JournalPath, "entry2.md"), "# Entry2\nContent");
     }
 
     #endregion

@@ -4,6 +4,7 @@ using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -19,102 +20,67 @@ namespace markdown_journal_cli.Tests.Commands.Add;
 /// <summary>
 /// Unit tests for AddFileTracking command covering positive, negative, and edge cases.
 /// </summary>
-public class AddFileTrackingCommandTests
+public class AddFileTrackingCommandTests : CommandTestBase
 {
-    private readonly Mock<IFileSystem> _mockFileSystem;
-    private readonly Mock<IFileTracking> _mockFileTracking;
-    private readonly IOptions<JournalSettings> _journalSettings;
-    private readonly TestConsole _console;
-    private readonly CommandAppTester _app;
-
-    public AddFileTrackingCommandTests()
-    {
-        _console = new TestConsole();
-        _mockFileSystem = new Mock<IFileSystem>();
-        _mockFileTracking = new Mock<IFileTracking>();
-
-        _journalSettings = Options.Create(
-            new JournalSettings { AppName = "md-journal", JournalConfigFileName = ".journalrc" }
-        );
-
-        SetupDefaultMockBehaviors();
-
-        var services = new ServiceCollection();
-        services.AddSingleton<IAnsiConsole>(_console);
-        services.AddSingleton(_mockFileSystem.Object);
-        services.AddSingleton(_mockFileTracking.Object);
-        services.AddSingleton(_journalSettings);
-        services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
-        services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
-        services.AddSingleton<AddFileTracking>();
-
-        var registrar = new TypeRegistrar();
-
-        foreach (var service in services.Where(s => s.ImplementationInstance != null))
-        {
-            registrar.RegisterInstance(service.ServiceType, service.ImplementationInstance);
-        }
-
-        _app = new CommandAppTester(registrar);
-        _app.Configure(config =>
-        {
-            config.SetApplicationName(_journalSettings.Value.AppName);
-            config.AddBranch<AddSettings>(
-                "add",
-                add =>
-                {
-                    add.AddCommand<AddFileTracking>("tracking");
-                }
-            );
-        });
-    }
-
-    private void SetupDefaultMockBehaviors()
+    protected override void SetupDefaultBehaviors()
     {
         // Default: .journalrc exists
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(true);
 
         // Default: tracking file doesn't exist yet
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Returns(false);
     }
 
+    private CommandAppTester BuildAddFileTrackingApp() =>
+        BuildApp(
+            config =>
+            {
+                config.SetApplicationName(JournalSettings.Value.AppName);
+                config.AddBranch<AddSettings>(
+                    "add",
+                    add => { add.AddCommand<AddFileTracking>("tracking"); }
+                );
+            },
+            services => { services.AddSingleton<AddFileTracking>(); }
+        );
+
     #region Positive Cases
 
     [Fact]
-    public void Execute_ShouldCreateTrackingFile_WhenJournalrcExistsAndTrackingFileDoesNotExist()
+    public void Execute_Should_CreateTrackingFile_When_JournalrcExistsAndTrackingFileDoesNotExist()
     {
         // Arrange
         var testPath = "/test/journal";
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileTracking.Verify(ft => ft.LoadIndex(testPath), Times.Once);
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(testPath), Times.Once);
+        MockFileTracking.Verify(ft => ft.LoadIndex(testPath), Times.Once);
+        MockFileTracking.Verify(ft => ft.UpdateIndex(testPath), Times.Once);
     }
 
     [Fact]
-    public void Execute_ShouldCreateTrackingFile_WhenIgnoreJournalConfigFlagIsSet()
+    public void Execute_Should_CreateTrackingFile_When_IgnoreJournalConfigFlagIsSet()
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(false);
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking", "--ignoreconfig" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking", "--ignoreconfig" });
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileTracking.Verify(ft => ft.LoadIndex(testPath), Times.Once);
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(testPath), Times.Once);
+        MockFileTracking.Verify(ft => ft.LoadIndex(testPath), Times.Once);
+        MockFileTracking.Verify(ft => ft.UpdateIndex(testPath), Times.Once);
     }
 
     #endregion
@@ -122,52 +88,52 @@ public class AddFileTrackingCommandTests
     #region Negative Cases
 
     [Fact]
-    public void Execute_ShouldReturnError_WhenJournalrcDoesNotExist()
+    public void Execute_Should_ReturnError_When_JournalrcDoesNotExist()
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(false);
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(1);
-        _mockFileTracking.Verify(ft => ft.LoadIndex(It.IsAny<string>()), Times.Never);
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(It.IsAny<string>()), Times.Never);
+        MockFileTracking.Verify(ft => ft.LoadIndex(It.IsAny<string>()), Times.Never);
+        MockFileTracking.Verify(ft => ft.UpdateIndex(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public void Execute_ShouldReturnWarning_WhenTrackingFileAlreadyExists()
+    public void Execute_Should_ReturnWarning_When_TrackingFileAlreadyExists()
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Returns(true);
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(0); // Returns 0 with warning, not error
-        _mockFileTracking.Verify(ft => ft.LoadIndex(It.IsAny<string>()), Times.Never);
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(It.IsAny<string>()), Times.Never);
+        MockFileTracking.Verify(ft => ft.LoadIndex(It.IsAny<string>()), Times.Never);
+        MockFileTracking.Verify(ft => ft.UpdateIndex(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public void Execute_ShouldHandleUnexpectedErrors_Gracefully()
+    public void Execute_Should_HandleUnexpectedErrorsGracefully()
     {
         // Arrange
         var testPath = "/test/journal";
-        _mockFileTracking
+        MockFileTracking
             .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
             .Throws(new InvalidOperationException("Unexpected error"));
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(1);
@@ -178,36 +144,36 @@ public class AddFileTrackingCommandTests
     #region Edge Cases
 
     [Fact]
-    public void Execute_ShouldUseDefaultPath_WhenPathNotSpecified()
+    public void Execute_Should_UseDefaultPath_When_PathNotSpecified()
     {
         // Arrange
         var expectedPath = ".";
 
         // Act
-        var result = _app.Run(new[] { "add", "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        _mockFileTracking.Verify(ft => ft.LoadIndex(expectedPath), Times.Once);
-        _mockFileTracking.Verify(ft => ft.UpdateIndex(expectedPath), Times.Once);
+        MockFileTracking.Verify(ft => ft.LoadIndex(expectedPath), Times.Once);
+        MockFileTracking.Verify(ft => ft.UpdateIndex(expectedPath), Times.Once);
     }
 
     [Fact]
-    public void Execute_ShouldCallFileTrackingInCorrectOrder()
+    public void Execute_Should_CallFileTrackingInCorrectOrder()
     {
         // Arrange
         var testPath = "/test/journal";
         var callOrder = new List<string>();
 
-        _mockFileTracking
+        MockFileTracking
             .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
             .Callback(() => callOrder.Add("LoadIndex"));
-        _mockFileTracking
+        MockFileTracking
             .Setup(ft => ft.UpdateIndex(It.IsAny<string>()))
             .Callback(() => callOrder.Add("UpdateIndex"));
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -215,23 +181,23 @@ public class AddFileTrackingCommandTests
     }
 
     [Fact]
-    public void Execute_ShouldCheckJournalrcBeforeTrackingFile()
+    public void Execute_Should_CheckJournalrcBeforeTrackingFile()
     {
         // Arrange
         var testPath = "/test/journal";
         var checkOrder = new List<string>();
 
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Callback(() => checkOrder.Add("journalrc"))
             .Returns(true);
-        _mockFileSystem
+        MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
             .Callback(() => checkOrder.Add("tracking"))
             .Returns(false);
 
         // Act
-        var result = _app.Run(new[] { "add", "--path", testPath, "tracking" });
+        var result = BuildAddFileTrackingApp().Run(new[] { "add", "--path", testPath, "tracking" });
 
         // Assert
         result.ExitCode.ShouldBe(0);

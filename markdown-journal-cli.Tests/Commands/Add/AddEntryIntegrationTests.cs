@@ -6,8 +6,8 @@ using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Shouldly;
 using Spectre.Console.Testing;
 using Xunit;
@@ -19,120 +19,47 @@ namespace markdown_journal_cli.Tests.Commands.Add;
 /// These tests validate actual performance, file I/O, and end-to-end scenarios.
 /// Uses real FileSystem with temporary directories for true integration testing.
 /// </summary>
-public class AddEntryIntegrationTests : IDisposable
+public class AddEntryIntegrationTests : JournalIntegrationTestBase
 {
-    private readonly string _testDirectory;
-    private readonly IFileSystem _fileSystem;
-    private readonly ITemplateManager _templateManager;
-    private readonly IEntryFormatterService _entryFormatter;
-    private readonly IJournalConfiguration _journalConfiguration;
-    private readonly IFileTracking _fileTracking;
-    private readonly ITableOfContentsService _tocGenerator;
-    private readonly IOptions<JournalSettings> _journalSettings;
     private readonly AddEntry _addEntryCommand;
     private readonly TestConsole _console;
 
-    public AddEntryIntegrationTests()
+    public AddEntryIntegrationTests() : base("TestJournal")
     {
-        // Create temporary test directory
-        _testDirectory = Path.Combine(Path.GetTempPath(), $"journal-test-{Guid.NewGuid()}");
-        Directory.CreateDirectory(_testDirectory);
+        // Initialize journal files on disk
+        InitializeJournal();
 
-        _journalSettings = Options.Create(
-            new JournalSettings
-            {
-                AppName = "md-journal",
-                JournalConfigFileName = ".journalrc",
-                DefaultJournalName = "TestJournal",
-                TableOfContentsFileName = "1a-TableOfContents",
-                TableOfContentsTitle = "Table of Contents",
-                IntroductionFileName = "1b-Intro",
-                IntroductionTitle = "Introduction",
-                JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
-                JournalEntryTemplateTitle = "Journal Entry Template",
-                TitleSpaceSeparator = "_",
-                HeadingSeparator = "-",
-            }
-        );
-
-        // Use real services
-        _fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
-        _templateManager = new TemplateManager(_journalSettings);
-        _entryFormatter = new EntryFormatterService(_journalSettings);
+        var templateManager = new TemplateManager(JournalSettings);
+        var entryFormatter = new EntryFormatterService(JournalSettings);
         var hashService = new HashService();
-        _fileTracking = new FileTracking(_fileSystem, _journalSettings, hashService);
-        _journalConfiguration = new JournalConfiguration(
-            _fileSystem,
-            _journalSettings,
+        var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var journalConfiguration = new JournalConfiguration(
+            FileSystem,
+            JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            _fileTracking
+            fileTracking
         );
-
-        _tocGenerator = new TableOfContentsService(
-            _fileSystem,
-            _journalConfiguration,
-            _journalSettings,
+        var tocGenerator = new TableOfContentsService(
+            FileSystem,
+            journalConfiguration,
+            JournalSettings,
             NullLogger<TableOfContentsService>.Instance
         );
 
-        // Initialize a test journal
-        InitializeTestJournal();
-
-        var console = new TestConsole();
-        _console = console;
+        _console = new TestConsole();
         var journalEntryService = new JournalEntryService(
-            _fileSystem,
-            _journalConfiguration,
-            _journalSettings,
-            _entryFormatter,
-            _templateManager,
-            _fileTracking,
-            _tocGenerator,
+            FileSystem,
+            journalConfiguration,
+            JournalSettings,
+            entryFormatter,
+            templateManager,
+            fileTracking,
+            tocGenerator,
             NoOpFileTransactionCoordinator.Instance,
             NoOpRollbackReporter.Instance,
             NullLogger<JournalEntryService>.Instance
         );
-        _addEntryCommand = new AddEntry(console, journalEntryService);
-    }
-
-    private void InitializeTestJournal()
-    {
-        // Create .journalrc file with proper structure
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
-        var journalrcContent = System.Text.Json.JsonSerializer.Serialize(
-            new
-            {
-                journalName = "TestJournal",
-                tableOfContents = new
-                {
-                    file = "1a-TableOfContents.md",
-                    extensions = new[] { ".md" },
-                    ignoreFiles = Array.Empty<string>(),
-                    structure = new { topics = Array.Empty<object>() },
-                    rootEntries = Array.Empty<object>(),
-                },
-            },
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }
-        );
-        File.WriteAllText(journalrcPath, journalrcContent);
-
-        // Create tracking index file
-        var trackingPath = Path.Combine(_testDirectory, ".md-journal");
-        File.WriteAllText(trackingPath, "{}");
-
-        // Create table of contents file
-        var tocPath = Path.Combine(_testDirectory, "1a-TableOfContents.md");
-        var tocContent =
-            $@"[Back to All My Journals](1h-All_My_Journals.md)
-
-Created: {DateTime.Now:M/d/yyyy}
-Last Edited: {DateTime.Now:M/d/yyyy}
-
-# Table of Contents
-
-## Entries
-";
-        File.WriteAllText(tocPath, tocContent);
+        _addEntryCommand = new AddEntry(_console, journalEntryService);
     }
 
     private int RunCommand(
@@ -147,7 +74,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         var settings = new AddEntrySettings
         {
             EntryName = entryName,
-            FilePath = path ?? _testDirectory,
+            FilePath = path ?? JournalPath,
             Heading = heading,
             Subheading = subheading,
             EntryTitle = title,
@@ -181,7 +108,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
 
         // Verify file was actually created
         var expectedFileName = $"{subheadingString}-PerfTest25.md";
-        var filePath = Path.Combine(_testDirectory, expectedFileName);
+        var filePath = Path.Combine(JournalPath, expectedFileName);
         File.Exists(filePath).ShouldBeTrue($"File should exist at {filePath}");
     }
 
@@ -208,7 +135,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
 
         // Verify file was created with correct structure
         var expectedFileName = $"Main-{subheadingString}-PerfTest25H.md";
-        var filePath = Path.Combine(_testDirectory, expectedFileName);
+        var filePath = Path.Combine(JournalPath, expectedFileName);
         File.Exists(filePath).ShouldBeTrue();
     }
 
@@ -226,7 +153,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         exitCode.ShouldBe(0, "Command failed — check journal setup.");
 
         // Verify markdown file was created
-        var entryFile = Path.Combine(_testDirectory, "Tech-IntegrationTest.md");
+        var entryFile = Path.Combine(JournalPath, "Tech-IntegrationTest.md");
         File.Exists(entryFile).ShouldBeTrue();
         var entryContent = File.ReadAllText(entryFile);
         entryContent.ShouldContain("# IntegrationTest");
@@ -234,18 +161,18 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         entryContent.ShouldContain("Last Edited:");
 
         // Verify .journalrc was updated
-        var journalrcPath = Path.Combine(_testDirectory, ".journalrc");
+        var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = File.ReadAllText(journalrcPath);
         journalrcContent.ShouldContain("IntegrationTest");
         journalrcContent.ShouldContain("Tech");
 
         // Verify tracking index was updated
-        var trackingPath = Path.Combine(_testDirectory, ".md-journal");
+        var trackingPath = Path.Combine(JournalPath, ".md-journal");
         var trackingContent = File.ReadAllText(trackingPath);
         trackingContent.ShouldContain("Tech-IntegrationTest.md");
 
         // Verify table of contents was updated
-        var tocPath = Path.Combine(_testDirectory, "1a-TableOfContents.md");
+        var tocPath = Path.Combine(JournalPath, "1a-TableOfContents.md");
         var tocContent = File.ReadAllText(tocPath);
         tocContent.ShouldContain("IntegrationTest");
     }
@@ -264,12 +191,12 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         exitCode3.ShouldBe(0);
 
         // Verify all files exist
-        File.Exists(Path.Combine(_testDirectory, "CommonHeading-Entry1.md")).ShouldBeTrue();
-        File.Exists(Path.Combine(_testDirectory, "CommonHeading-Entry2.md")).ShouldBeTrue();
-        File.Exists(Path.Combine(_testDirectory, "CommonHeading-Entry3.md")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, "CommonHeading-Entry1.md")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, "CommonHeading-Entry2.md")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, "CommonHeading-Entry3.md")).ShouldBeTrue();
 
         // Verify journalrc has all entries under the same heading
-        var journalrcContent = File.ReadAllText(Path.Combine(_testDirectory, ".journalrc"));
+        var journalrcContent = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
         journalrcContent.ShouldContain("Entry1");
         journalrcContent.ShouldContain("Entry2");
         journalrcContent.ShouldContain("Entry3");
@@ -288,11 +215,11 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         // Assert
         exitCode.ShouldBe(0);
 
-        var expectedFile = Path.Combine(_testDirectory, "Category-Sub1-Sub2-Sub3-ComplexEntry.md");
+        var expectedFile = Path.Combine(JournalPath, "Category-Sub1-Sub2-Sub3-ComplexEntry.md");
         File.Exists(expectedFile).ShouldBeTrue();
 
         // Verify journalrc has correct hierarchy
-        var journalrcContent = File.ReadAllText(Path.Combine(_testDirectory, ".journalrc"));
+        var journalrcContent = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
         journalrcContent.ShouldContain("Category");
         journalrcContent.ShouldContain("Sub1");
         journalrcContent.ShouldContain("Sub2");
@@ -310,7 +237,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         exitCode.ShouldBe(0);
 
         // Verify filename is properly formatted
-        var expectedFile = Path.Combine(_testDirectory, "Tech_News-My_Special_Entry.md");
+        var expectedFile = Path.Combine(JournalPath, "Tech_News-My_Special_Entry.md");
         File.Exists(expectedFile).ShouldBeTrue();
 
         var content = File.ReadAllText(expectedFile);
@@ -321,7 +248,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
     public void Should_Update_TableOfContents_LastEdited_Date()
     {
         // Arrange - Read initial TOC
-        var tocPath = Path.Combine(_testDirectory, "1a-TableOfContents.md");
+        var tocPath = Path.Combine(JournalPath, "1a-TableOfContents.md");
         var initialContent = File.ReadAllText(tocPath);
 
         // Wait a moment to ensure timestamp difference
@@ -348,7 +275,7 @@ Last Edited: {DateTime.Now:M/d/yyyy}
         // Assert
         exitCode.ShouldBe(0);
 
-        var filePath = Path.Combine(_testDirectory, "file_name.md");
+        var filePath = Path.Combine(JournalPath, "file_name.md");
         File.Exists(filePath).ShouldBeTrue();
 
         var content = File.ReadAllText(filePath);
@@ -376,19 +303,4 @@ Last Edited: {DateTime.Now:M/d/yyyy}
 
     #endregion
 
-    public void Dispose()
-    {
-        // Cleanup test directory
-        if (Directory.Exists(_testDirectory))
-        {
-            try
-            {
-                Directory.Delete(_testDirectory, recursive: true);
-            }
-            catch
-            {
-                // Best effort cleanup
-            }
-        }
-    }
 }

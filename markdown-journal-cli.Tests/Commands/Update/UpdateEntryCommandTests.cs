@@ -1,6 +1,7 @@
 using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Moq;
 using Shouldly;
 using Spectre.Console.Cli;
@@ -13,7 +14,7 @@ namespace markdown_journal_cli.Tests.Commands.Update;
 /// Unit tests for <see cref="UpdateEntryCommand"/> covering file rename, display-name update,
 /// heading changes, ignore/unignore, and TOC regeneration.
 /// </summary>
-public class UpdateEntryCommandTests
+public class UpdateEntryCommandTests : CommandTestBase
 {
     private const string TestPath = "/test/journal";
     private const string TestFileName = "My_Entry.md";
@@ -43,7 +44,7 @@ public class UpdateEntryCommandTests
     #region Error Cases
 
     [Fact]
-    public void Execute_ReturnsOne_WhenFileDoesNotExist()
+    public void Execute_Should_ReturnOne_When_FileDoesNotExist()
     {
         // Arrange
         var settings = new UpdateEntrySettings
@@ -79,7 +80,7 @@ public class UpdateEntryCommandTests
     }
 
     [Fact]
-    public void Execute_ReturnsOne_WhenJournalrcNotFound()
+    public void Execute_Should_ReturnOne_When_JournalrcNotFound()
     {
         // Arrange
         var noRcPath = "/test/no-rc";
@@ -120,7 +121,7 @@ public class UpdateEntryCommandTests
     #region File Name Normalization
 
     [Fact]
-    public void Execute_NormalizesFileNameWithoutExtension()
+    public void Execute_Should_NormalizeFileNameWithoutExtension()
     {
         // Arrange — pass filename without .md extension
         var settings = new UpdateEntrySettings
@@ -143,7 +144,7 @@ public class UpdateEntryCommandTests
     #region File Rename
 
     [Fact]
-    public void Execute_RenamesFile_WhenNameFlagProvided()
+    public void Execute_Should_RenameFile_When_NameFlagProvided()
     {
         // Arrange
         var settings = new UpdateEntrySettings
@@ -163,33 +164,12 @@ public class UpdateEntryCommandTests
         );
     }
 
-    [Fact]
-    public void Execute_UpdatesConfigDisplayName_WhenNameProvided()
-    {
-        // Arrange - renaming also changes the display name (no --title override)
-        var settings = new UpdateEntrySettings
-        {
-            FilePath = TestPath,
-            FileName = TestFileName,
-            EntryName = "New Entry",
-        };
-
-        // Act
-        CreateCommand().Execute(CreateCommandContext(), settings);
-
-        // Assert - UpdateEntry was called with the new name
-        _mockFileUpdateService.Verify(
-            x => x.UpdateEntry(TestPath, TestFileName, "New Entry", null, null, false, false, true),
-            Times.Once
-        );
-    }
-
     #endregion
 
     #region Display Name Update
 
     [Fact]
-    public void Execute_UpdatesDisplayNameOnly_WhenTitleFlagProvided()
+    public void Execute_Should_UpdateDisplayNameOnly_When_TitleFlagProvided()
     {
         // Arrange - only --title provided; no rename, no heading change
         var settings = new UpdateEntrySettings
@@ -222,7 +202,7 @@ public class UpdateEntryCommandTests
     }
 
     [Fact]
-    public void Execute_PrefersTitleOverNameForDisplayName_WhenBothProvided()
+    public void Execute_Should_PreferTitleOverNameForDisplayName_When_BothProvided()
     {
         // Arrange - both --name and --title provided; title wins for TOC display name
         var settings = new UpdateEntrySettings
@@ -258,7 +238,7 @@ public class UpdateEntryCommandTests
     #region Heading Changes
 
     [Fact]
-    public void Execute_UpdatesHeadings_WhenHeadingsFlagProvided()
+    public void Execute_Should_UpdateHeadings_When_HeadingsFlagProvided()
     {
         // Arrange
         var settings = new UpdateEntrySettings
@@ -295,7 +275,7 @@ public class UpdateEntryCommandTests
     #region Ignore / Unignore
 
     [Fact]
-    public void Execute_AddsToIgnoreList_WhenIgnoreFlagProvided()
+    public void Execute_Should_AddToIgnoreList_When_IgnoreFlagProvided()
     {
         // Arrange
         var settings = new UpdateEntrySettings
@@ -318,7 +298,7 @@ public class UpdateEntryCommandTests
     }
 
     [Fact]
-    public void Execute_RemovesFromIgnoreList_WhenUnignoreFlagProvided()
+    public void Execute_Should_RemoveFromIgnoreList_When_UnignoreFlagProvided()
     {
         // Arrange
         var settings = new UpdateEntrySettings
@@ -345,7 +325,7 @@ public class UpdateEntryCommandTests
     #region Success Cases
 
     [Fact]
-    public void Execute_CallsUpdateEntry_WithAllParameters()
+    public void Execute_Should_CallUpdateEntryWithAllParameters()
     {
         // Arrange
         var settings = new UpdateEntrySettings
@@ -384,7 +364,7 @@ public class UpdateEntryCommandTests
     #region No-Backlinks Flag
 
     [Fact]
-    public void Execute_PassesUpdateBacklinks_True_ByDefault()
+    public void Execute_Should_PassUpdateBacklinksTrue_ByDefault()
     {
         // Arrange — --no-backlinks not set; default is to update backlinks
         var settings = new UpdateEntrySettings
@@ -405,7 +385,7 @@ public class UpdateEntryCommandTests
     }
 
     [Fact]
-    public void Execute_PassesUpdateBacklinks_False_WhenNoBacklinksFlagSet()
+    public void Execute_Should_PassUpdateBacklinksFalse_When_NoBacklinksFlagSet()
     {
         // Arrange — --no-backlinks present; backlink scan should be skipped
         var settings = new UpdateEntrySettings
@@ -431,7 +411,7 @@ public class UpdateEntryCommandTests
     #region Success
 
     [Fact]
-    public void Execute_ReturnsZero_OnSuccess()
+    public void Execute_Should_ReturnZeroOnSuccess()
     {
         // Arrange — minimal valid invocation (no actual changes needed)
         var settings = new UpdateEntrySettings

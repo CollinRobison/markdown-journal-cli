@@ -1,3 +1,4 @@
+using Shouldly;
 using markdown_journal_cli;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
@@ -5,6 +6,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -14,7 +16,7 @@ using Spectre.Console.Testing;
 
 namespace markdown_journal_cli.Tests.Commands.Add;
 
-public class AddJournalrcCommandTests
+public class AddJournalrcCommandTests : CommandTestBase
 {
     private readonly TestFileSystem _fileSystem;
     private readonly TestConsole _console;
@@ -66,7 +68,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_JournalrcAlreadyExists_ReturnsErrorCode()
+    public void Execute_Should_ReturnErrorCode_When_JournalrcAlreadyExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -85,7 +87,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_WithValidTocFile_GeneratesFromToc()
+    public void Execute_Should_GenerateFromToc_When_ValidTocFileExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -118,7 +120,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_WithCustomTocFileName_UsesCustomName()
+    public void Execute_Should_UseCustomTocName_When_CustomTocFileNameProvided()
     {
         // Arrange
         var directory = "/test/journal";
@@ -148,12 +150,12 @@ public class AddJournalrcCommandTests
 
         // Verify the config uses the custom TOC filename
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Equal($"{customTocName}.md", config.TableOfContents.File);
     }
 
     [Fact]
-    public void Execute_NoTocButHasTrackingFile_GeneratesFromTracking()
+    public void Execute_Should_GenerateFromTracking_When_NoTocButTrackingFileExists()
     {
         // Arrange
         var directory = "/test/journal";
@@ -197,7 +199,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_NoTocNoTracking_GeneratesFromDirectory()
+    public void Execute_Should_GenerateFromDirectory_When_NoTocAndNoTracking()
     {
         // Arrange
         var directory = "/test/journal";
@@ -223,7 +225,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_EmptyDirectory_GeneratesConfigWithNoEntries()
+    public void Execute_Should_GenerateConfigWithNoEntries_When_DirectoryIsEmpty()
     {
         // Arrange
         var directory = "/test/journal";
@@ -244,7 +246,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_TocWithComplexStructure_GeneratesCorrectConfig()
+    public void Execute_Should_GenerateCorrectConfig_When_TocHasComplexStructure()
     {
         // Arrange
         var directory = "/test/journal";
@@ -279,13 +281,13 @@ public class AddJournalrcCommandTests
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Single(config.TableOfContents.RootEntries);
         Assert.Equal(2, config.TableOfContents.Structure.Topics.Length);
     }
 
     [Fact]
-    public void Execute_DirectoryScanIgnoresSystemFiles_Correctly()
+    public void Execute_Should_IgnoreSystemFiles_When_ScanningDirectory()
     {
         // Arrange
         var directory = "/test/journal";
@@ -313,7 +315,7 @@ public class AddJournalrcCommandTests
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
 
         // 1b and 1c match root entry pattern (1a-9z), but my_entry does not
         // So 2 root entries (1b-Intro and 1c-Journal-Entry-Template)
@@ -340,7 +342,7 @@ public class AddJournalrcCommandTests
     }
 
     [Fact]
-    public void Execute_SetsJournalNameFromDirectory_Correctly()
+    public void Execute_Should_SetJournalNameFromDirectory()
     {
         // Arrange
         var directory = "/test/MyAwesomeJournal";
@@ -357,12 +359,12 @@ public class AddJournalrcCommandTests
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Equal("MyAwesomeJournal", config.JournalName);
     }
 
     [Fact]
-    public void Execute_PreservesTocFileExtensions_Correctly()
+    public void Execute_Should_PreserveTocFileExtensions()
     {
         // Arrange
         var directory = "/test/journal";
@@ -379,7 +381,7 @@ public class AddJournalrcCommandTests
         Assert.Equal(0, result);
 
         var config = _journalConfiguration.Read(directory);
-        Assert.NotNull(config);
+        config.ShouldNotBeNull();
         Assert.Equal([".md"], config.TableOfContents.Extensions);
     }
 }
