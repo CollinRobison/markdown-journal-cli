@@ -198,4 +198,25 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         _console.Output.ShouldContain("Everything is up to date.");
         _console.Output.ShouldNotContain("--sync active");
     }
+
+    [Fact]
+    public void UpdateJournal_Should_AddNewEntryToTracking_When_SyncFlagAndNewFile()
+    {
+        // Arrange — first sync to stabilise, then drop a new raw .md file
+        _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+        var newFilePath = Path.Combine(JournalPath, "New_Entry.md");
+        File.WriteAllText(newFilePath,
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Entry\n\nContent.\n");
+        var contentBefore = File.ReadAllText(newFilePath);
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit 0, file content unchanged (no "Last Edited:" stamp written)
+        result.ExitCode.ShouldBe(0);
+        File.ReadAllText(newFilePath).ShouldBe(contentBefore);
+        // Tracking index must now reference the new file
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        trackingContent.ShouldContain("New_Entry");
+    }
 }
