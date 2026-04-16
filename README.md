@@ -478,7 +478,8 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ add a mdjournal sync alias that does mdjournal update journal but doesn't update the last edited date.
   - for example when people pull from a git repo and have to merge changes so the entry hash tracking might be messed up so you don't want entries looking like they were edited but weren't. 
   - add a flag that stops the update journal command from updating dates as well if they want to go that route. 
-- ⏳ should the business logic be in an sdk that way devs can extend this if it ever becomes useful for others? 
+- ⏳ should the business logic be in an sdk that way devs can extend this if it ever becomes useful for others?
+- ⏳ Make custom agents, prompts, and skills fot copilot, claude, opencode, etc. and a command to add them into a project
 
 **Known Limitations:**
 - Global tool installation not yet configured

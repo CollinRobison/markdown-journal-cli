@@ -61,25 +61,27 @@ A developer accidentally combines `--sync` with `--date`. These flags are contra
 
 - What happens when `--sync` is combined with `--tracking`, `--config`, or `--toc`? These combinations are rejected as validation errors. `--sync` is an all-or-nothing preset; the granular flags exist precisely to scope the update to a single subsystem. Mixing the two sends contradictory intent — "only this one thing" vs. "all three" — and the tool must call that out rather than silently do "all three".
 - What happens when the tracking index file (`.mdjournal`) is missing? The command must throw `TrackingIndexNotFoundException` before any writes — same as the regular update path.
+- What happens when `.mdjournal` exists but is malformed (corrupt / unparseable)? The command must abort with a descriptive error before any writes — treated the same as the missing-file pre-flight guard.
 - What happens when `.journalrc` is missing? The command must throw `JournalrcNotFoundException` before any writes, because `--sync` always includes config and TOC operations.
 - What happens when `--sync` is combined with `--rename-toc`? Both operations execute independently without conflict. `--rename-toc` retains its normal date-stamping behavior on the files it modifies — `--sync` does not suppress `--rename-toc` date writes.
 - Does `--sync` suppress the TOC file's own `Last Edited:` stamp during regeneration? No. The TOC file is infrastructure, not a user-authored journal entry. It continues to receive `lastEditedDate: DateTime.Now` as in the existing `UpdateTableOfContents` path. Only user entry files are protected.
+- If `--sync` partially fails (e.g., tracking index updates succeed but TOC regeneration fails due to a write error), the command rolls back all subsystem writes atomically — same transaction behavior as the existing `update journal` command. This prevents a corrupt half-synced state.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: The `update journal` command MUST accept a new `--sync` flag.
-- **FR-002**: When `--sync` is specified, the command MUST update the tracking index (tracking-only path, no date writes) — equivalent in effect to `--tracking`.
+- **FR-002**: When `--sync` is specified, the command MUST update the tracking index (tracking-only path, no date writes) — equivalent in effect to `--tracking`. For new entry files not yet in the index, the current computed hash is written (same as normal first-time tracking).
 - **FR-003**: When `--sync` is specified, the command MUST update the journal configuration — equivalent in effect to `--config`.
 - **FR-004**: When `--sync` is specified, the command MUST regenerate the table of contents — equivalent in effect to `--toc`.
 - **FR-005**: When `--sync` is specified, the command MUST NOT write "Last Edited:" date changes to user-authored journal entry files. The TOC file's own `Last Edited:` metadata is exempt — it is infrastructure and continues to be stamped with today's date during TOC regeneration.
 - **FR-006**: When `--sync` is combined with any of `--date`, `--tracking`, `--config`, or `--toc`, the command MUST return a validation error before performing any I/O. Each of these flags contradicts `--sync`: `--date` requests date writes that `--sync` explicitly suppresses; `--tracking`, `--config`, and `--toc` scope the update to a single subsystem while `--sync` is an all-or-nothing preset.
-- **FR-007**: When `--sync` is combined with `--dry-run`, the command MUST produce a preview report consistent with what `--tracking --config --toc --dry-run` would show, without writing any files.
+- **FR-007**: When `--sync` is combined with `--dry-run`, the command MUST produce a preview report covering the same three sections (tracking changes, config changes, and TOC diff) as `--tracking --config --toc --dry-run` would show, without writing any files.
 - **FR-008**: The `--sync` flag MUST compose cleanly with `--path` to target a non-default journal location.
 - **FR-009**: When `--sync` is specified and the journal is already up to date, the command MUST print "Everything is up to date." and exit 0.
 - **FR-010**: All existing unit and integration tests for the `update journal` command MUST continue to pass without modification.
-- **FR-011**: New tests MUST cover: sync updates tracking/config/TOC; sync does not write dates on entry files (TOC date stamp is allowed); sync + dry-run shows preview without writes; sync + date, sync + tracking, sync + config, and sync + toc are each rejected at validation.
+- **FR-011**: New tests MUST cover: sync updates tracking/config/TOC; sync does not write dates on entry files (TOC date stamp is allowed); sync + dry-run shows preview without writes; sync + date, sync + tracking, sync + config, and sync + toc are each rejected at validation; atomic rollback on partial failure (unit test, `TestFileSystem`); abort on malformed `.mdjournal` (unit test, `TestFileSystem`).
 - **FR-012**: When `--sync` is active and file changes are detected, the command MUST print a single summary line indicating that Last Edited date updates were skipped (e.g., `[dim]--sync active: Last Edited dates were not updated[/]`). This line MUST NOT appear when the journal is already up to date.
 
 ### Key Entities
@@ -105,6 +107,11 @@ A developer accidentally combines `--sync` with `--date`. These flags are contra
 - Q: When `--sync` is combined with `--rename-toc`, should `--rename-toc`'s date stamps on modified files be suppressed? → A: No — `--rename-toc` retains its normal date-stamping behavior regardless of `--sync` (Edge Cases updated).
 - Q: When `--sync` runs and file changes are detected, should the console indicate that date updates were skipped? → A: Yes — a single summary line `[dim]--sync active: Last Edited dates were not updated[/]` after the tracking/config/TOC output; no per-file noise (FR-012 added).
 - Q: Should `--sync` combined with granular flags (`--tracking`, `--config`, `--toc`) be allowed as redundant but valid, or rejected? → A: Rejected — the granular flags communicate "only this subsystem", which contradicts `--sync`'s all-or-nothing preset. Allowing the combination silently does more than the user named, which is confusing UX (FR-006, SC-003, Edge Cases, Assumptions updated).
+- Q: If `--sync` partially fails (e.g., tracking succeeds but TOC write fails), should the command roll back all changes atomically or leave partial state? → A: Roll back atomically — same transaction pattern as existing `update journal` (Edge Cases updated).
+- Q: When `--sync` adds a new entry file to the tracking index for the first time, what hash is written? → A: The current computed hash — same as normal first-time tracking (consistent with `add entry` behavior; FR-002 clarified).
+- Q: Should the `--sync active` summary line appear when the journal is already up to date? → A: No — suppress it; only show when changes were made (confirms FR-012).
+- Q: When `.mdjournal` exists but is malformed, how should `--sync` behave? → A: Abort with a descriptive error before any writes — same pre-flight guard as missing-file cases (Edge Cases updated).
+- Q: Should rollback and malformed-index abort tests be unit tests (`TestFileSystem`) or integration tests (real filesystem)? → A: Unit tests with `TestFileSystem` for both — consistent with existing rollback test tier (FR-011 updated).
 
 ## Assumptions
 
