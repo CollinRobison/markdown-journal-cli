@@ -165,4 +165,21 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         var contentAfter = File.ReadAllText(entryFile);
         contentAfter.ShouldBe(originalContent);
     }
+
+    [Fact]
+    public void UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag()
+    {
+        // Arrange — corrupt the tracking hash so --sync has work to do
+        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        File.WriteAllText(trackingPath, "{}");
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit code 0, tracking index no longer empty, config still valid
+        result.ExitCode.ShouldBe(0);
+        var trackingContent = File.ReadAllText(trackingPath);
+        trackingContent.ShouldNotBe("{}");
+        _console.Output.ShouldContain("--sync active");
+    }
 }
