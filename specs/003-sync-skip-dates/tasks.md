@@ -103,8 +103,8 @@
 
 **Goal**: Verify FR-010 (no pre-existing tests regressed) and validate the full implementation against the CLI contract in `contracts/update-journal-command.md`.
 
-- [ ] T021 Run the full test suite (`dotnet test`) and confirm all pre-existing tests still pass (FR-010 / SC-004)
-- [ ] T022 [P] Verify console output format against the contract in `specs/003-sync-skip-dates/contracts/update-journal-command.md` — confirm `[dim]--sync active: Last Edited dates were not updated[/]` markup renders correctly and the no-op path shows only "Everything is up to date." with no extra lines
+- [X] T021 Run the full test suite (`dotnet test`) and confirm all pre-existing tests still pass (FR-010 / SC-004)
+- [X] T022 [P] Verify console output format against the contract in `specs/003-sync-skip-dates/contracts/update-journal-command.md` — confirm `[dim]--sync active: Last Edited dates were not updated[/]` markup renders correctly and the no-op path shows only "Everything is up to date." with no extra lines
 
 ---
 

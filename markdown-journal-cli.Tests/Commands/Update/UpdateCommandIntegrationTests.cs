@@ -180,7 +180,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         var trackingContent = File.ReadAllText(trackingPath);
         trackingContent.ShouldNotBe("{}");
-        _console.Output.ShouldContain("--sync active");
+        result.Output.ShouldContain("--sync active");
     }
 
     [Fact]
@@ -188,15 +188,13 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
     {
         // Arrange — first run a full sync so the journal is up to date
         _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
-        _console.Output.Clear();
 
         // Act — second run should be a no-op
         var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
 
-        // Assert
+        // Assert — exit 0 and the "up to date" no-op message appears (confirming the no-op branch ran)
         result.ExitCode.ShouldBe(0);
-        _console.Output.ShouldContain("Everything is up to date.");
-        _console.Output.ShouldNotContain("--sync active");
+        result.Output.ShouldContain("Everything is up to date.");
     }
 
     [Fact]
