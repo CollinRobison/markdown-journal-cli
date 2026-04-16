@@ -20,7 +20,7 @@
 
 **Purpose**: The `bool Sync` property and its `Validate()` conflict checks must exist in `UpdateJournalSettings` before the routing logic in `UpdateCommand` can reference `settings.Sync`. This single change unblocks all user story implementation and all tests.
 
-- [ ] T001 Add `bool Sync` property with `[CommandOption("--sync")]` and four `Validate()` conflict checks (`--sync`+`--date`, `--sync`+`--tracking`, `--sync`+`--config`, `--sync`+`--toc`) to `UpdateJournalSettings` in `markdown-journal-cli/Commands/Update/UpdateSettings.cs`
+- [X] T001 Add `bool Sync` property with `[CommandOption("--sync")]` and four `Validate()` conflict checks (`--sync`+`--date`, `--sync`+`--tracking`, `--sync`+`--config`, `--sync`+`--toc`) to `UpdateJournalSettings` in `markdown-journal-cli/Commands/Update/UpdateSettings.cs`
 
 **Checkpoint**: `settings.Sync` is now available — all three user story phases can proceed.
 
