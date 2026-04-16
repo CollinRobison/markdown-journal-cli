@@ -1722,5 +1722,34 @@ public class UpdateCommandTests : CommandTestBase
         _console.Output.ShouldContain("Everything is up to date.");
     }
 
+    [Fact]
+    public void ExecuteCore_Should_NotCallUpdateLastEditedDates_When_SyncFlagSet()
+    {
+        // Arrange
+        SetupModifiedFiles("file.md");
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — trackingOnly=false must NEVER be called; trackingOnly=true must be called once
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateLastEditedDatesAndTracking(
+                It.IsAny<string>(),
+                It.IsAny<ChangeDetectionResult>(),
+                false
+            ),
+            Times.Never
+        );
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateLastEditedDatesAndTracking(
+                It.IsAny<string>(),
+                It.IsAny<ChangeDetectionResult>(),
+                true
+            ),
+            Times.Once
+        );
+    }
+
     #endregion
 }
