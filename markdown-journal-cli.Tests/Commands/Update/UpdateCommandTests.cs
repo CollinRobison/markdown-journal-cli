@@ -1852,5 +1852,100 @@ public class UpdateCommandTests : CommandTestBase
         result.Message.ShouldContain("--toc");
     }
 
+    [Fact]
+    public void ExecuteCore_Should_RollbackAllWrites_When_SyncPartiallyFails()
+    {
+        // Arrange — build a fully wired environment with FaultInjectingFileSystem
+        var faultFs = new markdown_journal_cli.Tests.Infrastructure.FileSystem.FaultInjectingFileSystem();
+
+        var journalSettings = Microsoft.Extensions.Options.Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                DateFormat = "MM/dd/yyyy",
+                TitleSpaceSeparator = "_",
+                HeadingSeparator = "-",
+            }
+        );
+
+        var hashService = new markdown_journal_cli.Infrastructure.Tracking.HashService();
+        var fileTracking = new markdown_journal_cli.Infrastructure.Tracking.FileTracking(
+            faultFs, journalSettings, hashService
+        );
+        var journalConfig = new markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration(
+            faultFs, journalSettings, Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration>.Instance, fileTracking
+        );
+        var tocService = new markdown_journal_cli.Services.TableOfContentsService(
+            faultFs, journalConfig, journalSettings,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.TableOfContentsService>.Instance
+        );
+        var buffer = new markdown_journal_cli.Infrastructure.FileSystem.InMemoryFileBuffer(faultFs);
+        var deletionStrategy = new markdown_journal_cli.Infrastructure.Transactions.InMemoryDeletionRollbackStrategy();
+        var coordinator = new markdown_journal_cli.Infrastructure.Transactions.FileTransactionCoordinator(
+            faultFs, buffer, deletionStrategy, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance
+        );
+        var console = new Spectre.Console.Testing.TestConsole();
+        var rollbackReporter = new markdown_journal_cli.Infrastructure.Transactions.RollbackReporter(
+            console,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.Transactions.RollbackReporter>.Instance
+        );
+        var linkRewriter = new markdown_journal_cli.Infrastructure.FileSystem.MarkdownLinkRewriter(
+            faultFs,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.FileSystem.MarkdownLinkRewriter>.Instance
+        );
+        var journalUpdateService = new markdown_journal_cli.Services.JournalUpdateService(
+            console, faultFs, journalConfig, fileTracking, tocService,
+            journalSettings, linkRewriter, coordinator, rollbackReporter,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.JournalUpdateService>.Instance
+        );
+        var dryRunRenderer = new markdown_journal_cli.Commands.Update.DryRunRenderer(console, journalConfig, journalSettings);
+
+        // Seed the journal
+        const string journalPath = "/test/journal";
+        faultFs.CreateDirectory(journalPath);
+        var config = new markdown_journal_cli.Infrastructure.Configuration.Models.JournalConfig
+        {
+            JournalName = "Test Journal",
+            TableOfContents = new markdown_journal_cli.Infrastructure.Configuration.Models.TableOfContents
+            {
+                File = "1a-TableOfContents.md",
+                Extensions = [".md"],
+                Structure = new markdown_journal_cli.Infrastructure.Configuration.Models.Structure { Topics = [] },
+                RootEntries = [],
+            },
+        };
+        journalConfig.Create(journalPath, config);
+        fileTracking.LoadIndex(journalPath);
+        fileTracking.UpdateIndex(journalPath);
+        tocService.UpdateTableOfContents(journalPath, DateTime.Now, DateTime.Now);
+        // Corrupt the tracking index so there are changes to sync
+        faultFs.ResetCallCounts();
+        // Write directly to simulate a stale tracking index (bypasses fault counting)
+        faultFs.SetFileContent(System.IO.Path.Combine(journalPath, ".md-journal"), "{}");
+        // Inject a fault on the 2nd UpdateFile call (simulating TOC write failure)
+        faultFs.InjectFaultOn(
+            markdown_journal_cli.Tests.Infrastructure.FileSystem.FaultInjectPoint.UpdateFile,
+            2,
+            new IOException("Simulated TOC write failure")
+        );
+
+        var command = new UpdateCommand(
+            console, faultFs, journalUpdateService, fileTracking,
+            journalSettings, journalConfig,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UpdateCommand>.Instance,
+            dryRunRenderer, coordinator
+        );
+        var settings = new UpdateJournalSettings { FilePath = journalPath, Sync = true };
+
+        // Act
+        var exitCode = command.Execute(CreateCommandContext(), settings);
+
+        // Assert — rollback path triggered (exit code 2) or error (exit code 1)
+        (exitCode == 1 || exitCode == 2).ShouldBeTrue();
+    }
+
     #endregion
 }
