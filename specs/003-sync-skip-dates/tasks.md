@@ -38,7 +38,7 @@
 
 ### Tests for User Story 1
 
-- [ ] T003 [P] [US1] Add unit test `ExecuteCore_Should_UpdateTrackingConfigToc_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, and `UpdateTableOfContents` are all called and console output contains `--sync active` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T003 [P] [US1] Add unit test `ExecuteCore_Should_UpdateTrackingConfigToc_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, and `UpdateTableOfContents` are all called and console output contains `--sync active` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 - [ ] T004 [P] [US1] Add unit test `ExecuteCore_Should_PrintSyncActiveLine_When_SyncFlagAndChangesExist` verifying the FR-012 summary line appears in output when `hasAnythingToDo` is true in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 - [ ] T005 [P] [US1] Add unit test `ExecuteCore_Should_NotPrintSyncActiveLine_When_SyncFlagAndNoChanges` verifying the `--sync active` line does NOT appear when journal is already up to date in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 - [ ] T006 [P] [US1] Add unit test `ExecuteCore_Should_NotCallUpdateLastEditedDates_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking` is never called with `trackingOnly: false` when `--sync` is active in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`

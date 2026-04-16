@@ -1660,4 +1660,39 @@ public class UpdateCommandTests : CommandTestBase
     }
 
     #endregion
+
+    #region Sync Flag
+
+    [Fact]
+    public void ExecuteCore_Should_UpdateTrackingConfigToc_When_SyncFlagSet()
+    {
+        // Arrange
+        SetupModifiedFiles("file.md");
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateLastEditedDatesAndTracking(
+                TestPath,
+                It.IsAny<ChangeDetectionResult>(),
+                true
+            ),
+            Times.Once
+        );
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalConfigSyncResult>()),
+            Times.Once
+        );
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateTableOfContents(TestPath),
+            Times.Once
+        );
+        _console.Output.ShouldContain("--sync active");
+    }
+
+    #endregion
 }
