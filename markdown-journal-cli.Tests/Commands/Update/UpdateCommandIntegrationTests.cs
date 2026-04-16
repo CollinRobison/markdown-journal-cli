@@ -182,4 +182,20 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         trackingContent.ShouldNotBe("{}");
         _console.Output.ShouldContain("--sync active");
     }
+
+    [Fact]
+    public void UpdateJournal_Should_ReturnZeroAndPrintUpToDate_When_SyncFlagAndJournalCurrent()
+    {
+        // Arrange — first run a full sync so the journal is up to date
+        _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+        _console.Output.Clear();
+
+        // Act — second run should be a no-op
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        _console.Output.ShouldContain("Everything is up to date.");
+        _console.Output.ShouldNotContain("--sync active");
+    }
 }
