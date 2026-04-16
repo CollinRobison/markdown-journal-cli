@@ -1834,5 +1834,14 @@ public class UpdateCommandTests : CommandTestBase
         result.Message.ShouldContain("--tracking");
     }
 
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndConfigCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, ConfigFlag = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--config");
+    }
+
     #endregion
 }
