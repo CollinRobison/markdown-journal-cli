@@ -65,7 +65,7 @@
 ### Tests for User Story 2
 
 - [X] T013 [P] [US2] Add unit test `ExecuteDryRun_Should_IncludeAllSections_When_SyncFlag` verifying `BuildDryRunReport` is called with non-null `trackingChanges`, non-null `configChanges`, and `includeToc: true` when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T014 [P] [US2] Add unit test `ExecuteDryRun_Should_WriteNoFiles_When_SyncDryRun` verifying no write methods on `IFileSystem` are called when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T014 [P] [US2] Add unit test `ExecuteDryRun_Should_WriteNoFiles_When_SyncDryRun` verifying no write methods on `IFileSystem` are called when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 
 **Checkpoint**: US2 is fully functional — `--sync --dry-run` shows all three preview sections and makes no writes.
 

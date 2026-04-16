@@ -1792,5 +1792,29 @@ public class UpdateCommandTests : CommandTestBase
         );
     }
 
+    [Fact]
+    public void ExecuteDryRun_Should_WriteNoFiles_When_SyncDryRun()
+    {
+        // Arrange
+        var settings = new UpdateJournalSettings { FilePath = TestPath, DryRun = true, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — no file write methods called
+        MockFileSystem.Verify(
+            fs => fs.CreateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        MockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
     #endregion
 }
