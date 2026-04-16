@@ -81,7 +81,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndDateCombined` verifying `ValidationResult.Error` with message naming `--date` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T015 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndDateCombined` verifying `ValidationResult.Error` with message naming `--date` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 - [ ] T016 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndTrackingCombined` verifying `ValidationResult.Error` with message naming `--tracking` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 - [ ] T017 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndConfigCombined` verifying `ValidationResult.Error` with message naming `--config` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 - [ ] T018 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndTocCombined` verifying `ValidationResult.Error` with message naming `--toc` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`

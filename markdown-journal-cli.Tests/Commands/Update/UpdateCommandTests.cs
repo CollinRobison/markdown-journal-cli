@@ -1816,5 +1816,14 @@ public class UpdateCommandTests : CommandTestBase
         );
     }
 
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndDateCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, DateFlag = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--date");
+    }
+
     #endregion
 }
