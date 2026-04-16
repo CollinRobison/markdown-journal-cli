@@ -34,7 +34,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Exclude `settings.Sync` from the `bool all` local variable detection in `UpdateCommand.ExecuteCore`, update the outer change-detection guard to include `settings.Sync`, and add the `--sync` routing block (calls `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, `UpdateTableOfContents`, then prints the FR-012 summary line) in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
+- [X] T002 [US1] Exclude `settings.Sync` from the `bool all` local variable detection in `UpdateCommand.ExecuteCore`, update the outer change-detection guard to include `settings.Sync`, and add the `--sync` routing block (calls `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, `UpdateTableOfContents`, then prints the FR-012 summary line) in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
 
 ### Tests for User Story 1
 
