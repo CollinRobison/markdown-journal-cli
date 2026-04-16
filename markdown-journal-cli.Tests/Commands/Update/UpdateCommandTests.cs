@@ -1825,5 +1825,14 @@ public class UpdateCommandTests : CommandTestBase
         result.Message.ShouldContain("--date");
     }
 
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndTrackingCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, Tracking = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--tracking");
+    }
+
     #endregion
 }
