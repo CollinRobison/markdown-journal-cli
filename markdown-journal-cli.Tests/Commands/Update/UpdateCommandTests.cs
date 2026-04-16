@@ -1751,5 +1751,46 @@ public class UpdateCommandTests : CommandTestBase
         );
     }
 
+    [Fact]
+    public void ExecuteDryRun_Should_IncludeAllSections_When_SyncFlag()
+    {
+        // Arrange — report with tracking, config, and TOC changes
+        var report = new UpdateDryRunReport
+        {
+            TrackingChanges = new ChangeDetectionResult { ModifiedFiles = ["entry.md"] },
+            ConfigChanges = new JournalConfigSyncResult { FilesToAdd = ["entry.md"] },
+            TocPreview = new TocDiffResult { CurrentContent = "old", PreviewContent = "new" },
+        };
+        _mockJournalUpdateService
+            .Setup(s =>
+                s.BuildDryRunReport(
+                    It.IsAny<string>(),
+                    It.IsAny<ChangeDetectionResult?>(),
+                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string?>()
+                )
+            )
+            .Returns(report);
+
+        var settings = new UpdateJournalSettings { FilePath = TestPath, DryRun = true, Sync = true };
+
+        // Act
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — BuildDryRunReport called with non-null tracking, config, and includeToc=true
+        result.ShouldBe(0);
+        _mockJournalUpdateService.Verify(
+            s => s.BuildDryRunReport(
+                TestPath,
+                It.IsNotNull<ChangeDetectionResult?>(),
+                It.IsNotNull<JournalConfigSyncResult?>(),
+                true,
+                null
+            ),
+            Times.Once
+        );
+    }
+
     #endregion
 }
