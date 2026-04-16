@@ -1694,5 +1694,19 @@ public class UpdateCommandTests : CommandTestBase
         _console.Output.ShouldContain("--sync active");
     }
 
+    [Fact]
+    public void ExecuteCore_Should_PrintSyncActiveLine_When_SyncFlagAndChangesExist()
+    {
+        // Arrange
+        SetupModifiedFiles("file.md");
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        _console.Output.ShouldContain("--sync active: Last Edited dates were not updated");
+    }
+
     #endregion
 }
