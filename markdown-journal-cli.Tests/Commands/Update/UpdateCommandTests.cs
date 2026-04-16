@@ -1843,5 +1843,14 @@ public class UpdateCommandTests : CommandTestBase
         result.Message.ShouldContain("--config");
     }
 
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndTocCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, TocFlag = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--toc");
+    }
+
     #endregion
 }
