@@ -219,4 +219,23 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
         trackingContent.ShouldContain("New_Entry");
     }
+
+    [Fact]
+    public void UpdateJournal_Should_RemoveDeletedEntryFromTracking_When_SyncFlagAndDeletedFile()
+    {
+        // Arrange — sync once to register Alpha, then delete it
+        _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+        var entryFile = Directory
+            .GetFiles(JournalPath, "*.md", SearchOption.AllDirectories)
+            .First(f => !Path.GetFileName(f).StartsWith("1a-") && !Path.GetFileName(f).StartsWith("1b-") && !Path.GetFileName(f).StartsWith("1c-"));
+        File.Delete(entryFile);
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit 0, deleted file no longer in tracking index
+        result.ExitCode.ShouldBe(0);
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        trackingContent.ShouldNotContain(Path.GetFileNameWithoutExtension(entryFile));
+    }
 }

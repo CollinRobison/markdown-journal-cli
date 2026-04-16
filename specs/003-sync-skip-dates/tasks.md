@@ -46,7 +46,7 @@
 - [X] T008 [P] [US1] Add integration test `UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag` verifying tracking hashes and config are updated after sync in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
 - [X] T009 [P] [US1] Add integration test `UpdateJournal_Should_ReturnZeroAndPrintUpToDate_When_SyncFlagAndJournalCurrent` verifying exit 0 and "Everything is up to date." when nothing has changed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
 - [X] T010 [P] [US1] Add integration test `UpdateJournal_Should_AddNewEntryToTracking_When_SyncFlagAndNewFile` verifying a new (untracked) entry file is added to the tracking index without writing a "Last Edited:" date in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
-- [ ] T011 [P] [US1] Add integration test `UpdateJournal_Should_RemoveDeletedEntryFromTracking_When_SyncFlagAndDeletedFile` verifying deleted entries are removed from tracking/config without modifying remaining entry files in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
+- [X] T011 [P] [US1] Add integration test `UpdateJournal_Should_RemoveDeletedEntryFromTracking_When_SyncFlagAndDeletedFile` verifying deleted entries are removed from tracking/config without modifying remaining entry files in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
 
 **Checkpoint**: US1 is fully functional — `--sync` syncs all three subsystems without date writes. All 9 tests above pass.
 
