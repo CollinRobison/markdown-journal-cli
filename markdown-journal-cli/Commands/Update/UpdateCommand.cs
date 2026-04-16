@@ -184,9 +184,9 @@ public sealed class UpdateCommand(
     {
         _logger.LogDebug("Dry-run mode active, skipping all writes");
 
-        var includeTracking = all || settings.DateFlag || settings.Tracking;
-        var includeConfig = all || settings.ConfigFlag;
-        var includeToc = all || settings.TocFlag;
+        var includeTracking = all || settings.DateFlag || settings.Tracking || settings.Sync;
+        var includeConfig = all || settings.ConfigFlag || settings.Sync;
+        var includeToc = all || settings.TocFlag || settings.Sync;
 
         ChangeDetectionResult? fileResults = includeTracking
             ? _fileTracking.DetectChangesWithoutUpdate(settings.FilePath)

@@ -60,7 +60,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Update `ExecuteDryRun` include-flag expressions to include `settings.Sync` for `includeTracking`, `includeConfig`, and `includeToc` in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
+- [X] T012 [US2] Update `ExecuteDryRun` include-flag expressions to include `settings.Sync` for `includeTracking`, `includeConfig`, and `includeToc` in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
 
 ### Tests for User Story 2
 
