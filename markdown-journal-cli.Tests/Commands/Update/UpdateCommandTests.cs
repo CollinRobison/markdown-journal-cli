@@ -1947,5 +1947,28 @@ public class UpdateCommandTests : CommandTestBase
         (exitCode == 1 || exitCode == 2).ShouldBeTrue();
     }
 
+    [Fact]
+    public void ExecuteCore_Should_AbortBeforeWrites_When_SyncAndTrackingIndexMalformed()
+    {
+        // Arrange — simulate malformed .mdjournal by making DetectChangesWithoutUpdate throw
+        // (which is what FileTracking does when the JSON is invalid)
+        MockFileTracking
+            .Setup(ft => ft.DetectChangesWithoutUpdate(TestPath))
+            .Throws(new System.Text.Json.JsonException("Unexpected character 'n' at position 0."));
+
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — returns error exit code; no writes
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
     #endregion
 }

@@ -95,7 +95,7 @@
 **Goal**: Cover atomic rollback on partial failure and malformed tracking-index abort — both as unit tests using `TestFileSystem` per FR-011 and spec clarification (Q8/Q9 session 2026-04-15).
 
 - [X] T019 [P] Add unit test `ExecuteCore_Should_RollbackAllWrites_When_SyncPartiallyFails` using `TestFileSystem` + `FaultInjectingFileSystem` to simulate TOC write failure mid-sync, verifying exit code 2 and no partial file state in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T020 [P] Add unit test `ExecuteCore_Should_AbortBeforeWrites_When_SyncAndTrackingIndexMalformed` using `TestFileSystem` with malformed `.mdjournal` content, verifying a descriptive error is returned and no writes are performed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T020 [P] Add unit test `ExecuteCore_Should_AbortBeforeWrites_When_SyncAndTrackingIndexMalformed` using `TestFileSystem` with malformed `.mdjournal` content, verifying a descriptive error is returned and no writes are performed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 
 ---
 
