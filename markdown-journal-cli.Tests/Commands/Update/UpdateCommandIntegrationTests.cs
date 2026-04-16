@@ -143,4 +143,26 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         var updatedContent = File.ReadAllText(tocPath);
         updatedContent.ShouldContain("Alpha");
     }
+
+    [Fact]
+    public void UpdateJournal_Should_NotModifyEntryLastEditedDates_When_SyncFlag()
+    {
+        // Arrange — find the Alpha entry file and read its Last Edited date
+        var entryFile = Directory
+            .GetFiles(JournalPath, "*.md", SearchOption.AllDirectories)
+            .First(f => !Path.GetFileName(f).StartsWith("1a-") && !Path.GetFileName(f).StartsWith("1b-") && !Path.GetFileName(f).StartsWith("1c-"));
+        var originalContent = File.ReadAllText(entryFile);
+
+        // Corrupt the tracking hash so there are changes to sync
+        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        File.WriteAllText(trackingPath, "{}");
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit code 0 and entry file content unchanged
+        result.ExitCode.ShouldBe(0);
+        var contentAfter = File.ReadAllText(entryFile);
+        contentAfter.ShouldBe(originalContent);
+    }
 }
