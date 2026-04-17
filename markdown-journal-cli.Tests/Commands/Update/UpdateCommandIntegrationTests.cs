@@ -143,4 +143,97 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         var updatedContent = File.ReadAllText(tocPath);
         updatedContent.ShouldContain("Alpha");
     }
+
+    [Fact]
+    public void UpdateJournal_Should_NotModifyEntryLastEditedDates_When_SyncFlag()
+    {
+        // Arrange — find the Alpha entry file and read its Last Edited date
+        var entryFile = Directory
+            .GetFiles(JournalPath, "*.md", SearchOption.AllDirectories)
+            .First(f => !Path.GetFileName(f).StartsWith("1a-") && !Path.GetFileName(f).StartsWith("1b-") && !Path.GetFileName(f).StartsWith("1c-"));
+        var originalContent = File.ReadAllText(entryFile);
+
+        // Corrupt the tracking hash so there are changes to sync
+        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        File.WriteAllText(trackingPath, "{}");
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit code 0 and entry file content unchanged
+        result.ExitCode.ShouldBe(0);
+        var contentAfter = File.ReadAllText(entryFile);
+        contentAfter.ShouldBe(originalContent);
+    }
+
+    [Fact]
+    public void UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag()
+    {
+        // Arrange — corrupt the tracking hash so --sync has work to do
+        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        File.WriteAllText(trackingPath, "{}");
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit code 0, tracking index no longer empty, config still valid
+        result.ExitCode.ShouldBe(0);
+        var trackingContent = File.ReadAllText(trackingPath);
+        trackingContent.ShouldNotBe("{}");
+        result.Output.ShouldContain("--sync active");
+    }
+
+    [Fact]
+    public void UpdateJournal_Should_ReturnZeroAndPrintUpToDate_When_SyncFlagAndJournalCurrent()
+    {
+        // Arrange — first run a full sync so the journal is up to date
+        _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Act — second run should be a no-op
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit 0 and the "up to date" no-op message appears (confirming the no-op branch ran)
+        result.ExitCode.ShouldBe(0);
+        result.Output.ShouldContain("Everything is up to date.");
+    }
+
+    [Fact]
+    public void UpdateJournal_Should_AddNewEntryToTracking_When_SyncFlagAndNewFile()
+    {
+        // Arrange — first sync to stabilise, then drop a new raw .md file
+        _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+        var newFilePath = Path.Combine(JournalPath, "New_Entry.md");
+        File.WriteAllText(newFilePath,
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Entry\n\nContent.\n");
+        var contentBefore = File.ReadAllText(newFilePath);
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit 0, file content unchanged (no "Last Edited:" stamp written)
+        result.ExitCode.ShouldBe(0);
+        File.ReadAllText(newFilePath).ShouldBe(contentBefore);
+        // Tracking index must now reference the new file
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        trackingContent.ShouldContain("New_Entry");
+    }
+
+    [Fact]
+    public void UpdateJournal_Should_RemoveDeletedEntryFromTracking_When_SyncFlagAndDeletedFile()
+    {
+        // Arrange — sync once to register Alpha, then delete it
+        _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+        var entryFile = Directory
+            .GetFiles(JournalPath, "*.md", SearchOption.AllDirectories)
+            .First(f => !Path.GetFileName(f).StartsWith("1a-") && !Path.GetFileName(f).StartsWith("1b-") && !Path.GetFileName(f).StartsWith("1c-"));
+        File.Delete(entryFile);
+
+        // Act
+        var result = _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
+
+        // Assert — exit 0, deleted file no longer in tracking index
+        result.ExitCode.ShouldBe(0);
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        trackingContent.ShouldNotContain(Path.GetFileNameWithoutExtension(entryFile));
+    }
 }

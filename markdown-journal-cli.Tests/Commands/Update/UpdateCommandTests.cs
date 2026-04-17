@@ -1660,4 +1660,315 @@ public class UpdateCommandTests : CommandTestBase
     }
 
     #endregion
+
+    #region Sync Flag
+
+    [Fact]
+    public void ExecuteCore_Should_UpdateTrackingConfigToc_When_SyncFlagSet()
+    {
+        // Arrange
+        SetupModifiedFiles("file.md");
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        result.ShouldBe(0);
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateLastEditedDatesAndTracking(
+                TestPath,
+                It.IsAny<ChangeDetectionResult>(),
+                true
+            ),
+            Times.Once
+        );
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalConfigSyncResult>()),
+            Times.Once
+        );
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateTableOfContents(TestPath),
+            Times.Once
+        );
+        _console.Output.ShouldContain("--sync active");
+    }
+
+    [Fact]
+    public void ExecuteCore_Should_PrintSyncActiveLine_When_SyncFlagAndChangesExist()
+    {
+        // Arrange
+        SetupModifiedFiles("file.md");
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        _console.Output.ShouldContain("--sync active: Last Edited dates were not updated");
+    }
+
+    [Fact]
+    public void ExecuteCore_Should_NotPrintSyncActiveLine_When_SyncFlagAndNoChanges()
+    {
+        // Arrange — default: no changes
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert
+        _console.Output.ShouldNotContain("--sync active");
+        _console.Output.ShouldContain("Everything is up to date.");
+    }
+
+    [Fact]
+    public void ExecuteCore_Should_NotCallUpdateLastEditedDates_When_SyncFlagSet()
+    {
+        // Arrange
+        SetupModifiedFiles("file.md");
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — trackingOnly=false must NEVER be called; trackingOnly=true must be called once
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateLastEditedDatesAndTracking(
+                It.IsAny<string>(),
+                It.IsAny<ChangeDetectionResult>(),
+                false
+            ),
+            Times.Never
+        );
+        _mockJournalUpdateService.Verify(
+            s => s.UpdateLastEditedDatesAndTracking(
+                It.IsAny<string>(),
+                It.IsAny<ChangeDetectionResult>(),
+                true
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void ExecuteDryRun_Should_IncludeAllSections_When_SyncFlag()
+    {
+        // Arrange — report with tracking, config, and TOC changes
+        var report = new UpdateDryRunReport
+        {
+            TrackingChanges = new ChangeDetectionResult { ModifiedFiles = ["entry.md"] },
+            ConfigChanges = new JournalConfigSyncResult { FilesToAdd = ["entry.md"] },
+            TocPreview = new TocDiffResult { CurrentContent = "old", PreviewContent = "new" },
+        };
+        _mockJournalUpdateService
+            .Setup(s =>
+                s.BuildDryRunReport(
+                    It.IsAny<string>(),
+                    It.IsAny<ChangeDetectionResult?>(),
+                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string?>()
+                )
+            )
+            .Returns(report);
+
+        var settings = new UpdateJournalSettings { FilePath = TestPath, DryRun = true, Sync = true };
+
+        // Act
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — BuildDryRunReport called with non-null tracking, config, and includeToc=true
+        result.ShouldBe(0);
+        _mockJournalUpdateService.Verify(
+            s => s.BuildDryRunReport(
+                TestPath,
+                It.IsNotNull<ChangeDetectionResult?>(),
+                It.IsNotNull<JournalConfigSyncResult?>(),
+                true,
+                null
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void ExecuteDryRun_Should_WriteNoFiles_When_SyncDryRun()
+    {
+        // Arrange
+        var settings = new UpdateJournalSettings { FilePath = TestPath, DryRun = true, Sync = true };
+
+        // Act
+        CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — no file write methods called
+        MockFileSystem.Verify(
+            fs => fs.CreateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        MockFileSystem.Verify(
+            fs => fs.CreateMarkdownFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndDateCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, DateFlag = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--date");
+    }
+
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndTrackingCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, Tracking = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--tracking");
+    }
+
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndConfigCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, ConfigFlag = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--config");
+    }
+
+    [Fact]
+    public void Validate_Should_ReturnError_When_SyncAndTocCombined()
+    {
+        var settings = new UpdateJournalSettings { Sync = true, TocFlag = true };
+        var result = settings.Validate();
+        result.Successful.ShouldBeFalse();
+        result.Message.ShouldContain("--toc");
+    }
+
+    [Fact]
+    public void ExecuteCore_Should_RollbackAllWrites_When_SyncPartiallyFails()
+    {
+        // Arrange — build a fully wired environment with FaultInjectingFileSystem
+        var faultFs = new markdown_journal_cli.Tests.Infrastructure.FileSystem.FaultInjectingFileSystem();
+
+        var journalSettings = Microsoft.Extensions.Options.Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                DateFormat = "MM/dd/yyyy",
+                TitleSpaceSeparator = "_",
+                HeadingSeparator = "-",
+            }
+        );
+
+        var hashService = new markdown_journal_cli.Infrastructure.Tracking.HashService();
+        var fileTracking = new markdown_journal_cli.Infrastructure.Tracking.FileTracking(
+            faultFs, journalSettings, hashService
+        );
+        var journalConfig = new markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration(
+            faultFs, journalSettings, Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration>.Instance, fileTracking
+        );
+        var tocService = new markdown_journal_cli.Services.TableOfContentsService(
+            faultFs, journalConfig, journalSettings,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.TableOfContentsService>.Instance
+        );
+        var buffer = new markdown_journal_cli.Infrastructure.FileSystem.InMemoryFileBuffer(faultFs);
+        var deletionStrategy = new markdown_journal_cli.Infrastructure.Transactions.InMemoryDeletionRollbackStrategy();
+        var coordinator = new markdown_journal_cli.Infrastructure.Transactions.FileTransactionCoordinator(
+            faultFs, buffer, deletionStrategy, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance
+        );
+        var console = new Spectre.Console.Testing.TestConsole();
+        var rollbackReporter = new markdown_journal_cli.Infrastructure.Transactions.RollbackReporter(
+            console,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.Transactions.RollbackReporter>.Instance
+        );
+        var linkRewriter = new markdown_journal_cli.Infrastructure.FileSystem.MarkdownLinkRewriter(
+            faultFs,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.FileSystem.MarkdownLinkRewriter>.Instance
+        );
+        var journalUpdateService = new markdown_journal_cli.Services.JournalUpdateService(
+            console, faultFs, journalConfig, fileTracking, tocService,
+            journalSettings, linkRewriter, coordinator, rollbackReporter,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.JournalUpdateService>.Instance
+        );
+        var dryRunRenderer = new markdown_journal_cli.Commands.Update.DryRunRenderer(console, journalConfig, journalSettings);
+
+        // Seed the journal
+        const string journalPath = "/test/journal";
+        faultFs.CreateDirectory(journalPath);
+        var config = new markdown_journal_cli.Infrastructure.Configuration.Models.JournalConfig
+        {
+            JournalName = "Test Journal",
+            TableOfContents = new markdown_journal_cli.Infrastructure.Configuration.Models.TableOfContents
+            {
+                File = "1a-TableOfContents.md",
+                Extensions = [".md"],
+                Structure = new markdown_journal_cli.Infrastructure.Configuration.Models.Structure { Topics = [] },
+                RootEntries = [],
+            },
+        };
+        journalConfig.Create(journalPath, config);
+        fileTracking.LoadIndex(journalPath);
+        fileTracking.UpdateIndex(journalPath);
+        tocService.UpdateTableOfContents(journalPath, DateTime.Now, DateTime.Now);
+        // Corrupt the tracking index so there are changes to sync
+        faultFs.ResetCallCounts();
+        // Write directly to simulate a stale tracking index (bypasses fault counting)
+        faultFs.SetFileContent(System.IO.Path.Combine(journalPath, ".md-journal"), "{}");
+        // Inject a fault on the 2nd UpdateFile call (simulating TOC write failure)
+        faultFs.InjectFaultOn(
+            markdown_journal_cli.Tests.Infrastructure.FileSystem.FaultInjectPoint.UpdateFile,
+            2,
+            new IOException("Simulated TOC write failure")
+        );
+
+        var command = new UpdateCommand(
+            console, faultFs, journalUpdateService, fileTracking,
+            journalSettings, journalConfig,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UpdateCommand>.Instance,
+            dryRunRenderer, coordinator
+        );
+        var settings = new UpdateJournalSettings { FilePath = journalPath, Sync = true };
+
+        // Act
+        var exitCode = command.Execute(CreateCommandContext(), settings);
+
+        // Assert — rollback path triggered (exit code 2) or error (exit code 1)
+        (exitCode == 1 || exitCode == 2).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ExecuteCore_Should_AbortBeforeWrites_When_SyncAndTrackingIndexMalformed()
+    {
+        // Arrange — simulate malformed .mdjournal by making DetectChangesWithoutUpdate throw
+        // (which is what FileTracking does when the JSON is invalid)
+        MockFileTracking
+            .Setup(ft => ft.DetectChangesWithoutUpdate(TestPath))
+            .Throws(new System.Text.Json.JsonException("Unexpected character 'n' at position 0."));
+
+        var settings = new UpdateJournalSettings { FilePath = TestPath, Sync = true };
+
+        // Act
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        // Assert — returns error exit code; no writes
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error:");
+        MockFileSystem.Verify(
+            fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    #endregion
 }

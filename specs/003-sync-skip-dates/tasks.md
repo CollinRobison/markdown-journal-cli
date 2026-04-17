@@ -20,7 +20,7 @@
 
 **Purpose**: The `bool Sync` property and its `Validate()` conflict checks must exist in `UpdateJournalSettings` before the routing logic in `UpdateCommand` can reference `settings.Sync`. This single change unblocks all user story implementation and all tests.
 
-- [ ] T001 Add `bool Sync` property with `[CommandOption("--sync")]` and four `Validate()` conflict checks (`--sync`+`--date`, `--sync`+`--tracking`, `--sync`+`--config`, `--sync`+`--toc`) to `UpdateJournalSettings` in `markdown-journal-cli/Commands/Update/UpdateSettings.cs`
+- [X] T001 Add `bool Sync` property with `[CommandOption("--sync")]` and four `Validate()` conflict checks (`--sync`+`--date`, `--sync`+`--tracking`, `--sync`+`--config`, `--sync`+`--toc`) to `UpdateJournalSettings` in `markdown-journal-cli/Commands/Update/UpdateSettings.cs`
 
 **Checkpoint**: `settings.Sync` is now available — all three user story phases can proceed.
 
@@ -34,19 +34,19 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Exclude `settings.Sync` from the `bool all` local variable detection in `UpdateCommand.ExecuteCore`, update the outer change-detection guard to include `settings.Sync`, and add the `--sync` routing block (calls `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, `UpdateTableOfContents`, then prints the FR-012 summary line) in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
+- [X] T002 [US1] Exclude `settings.Sync` from the `bool all` local variable detection in `UpdateCommand.ExecuteCore`, update the outer change-detection guard to include `settings.Sync`, and add the `--sync` routing block (calls `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, `UpdateTableOfContents`, then prints the FR-012 summary line) in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
 
 ### Tests for User Story 1
 
-- [ ] T003 [P] [US1] Add unit test `ExecuteCore_Should_UpdateTrackingConfigToc_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, and `UpdateTableOfContents` are all called and console output contains `--sync active` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T004 [P] [US1] Add unit test `ExecuteCore_Should_PrintSyncActiveLine_When_SyncFlagAndChangesExist` verifying the FR-012 summary line appears in output when `hasAnythingToDo` is true in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T005 [P] [US1] Add unit test `ExecuteCore_Should_NotPrintSyncActiveLine_When_SyncFlagAndNoChanges` verifying the `--sync active` line does NOT appear when journal is already up to date in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T006 [P] [US1] Add unit test `ExecuteCore_Should_NotCallUpdateLastEditedDates_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking` is never called with `trackingOnly: false` when `--sync` is active in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T007 [P] [US1] Add integration test `UpdateJournal_Should_NotModifyEntryLastEditedDates_When_SyncFlag` on a journal with stale tracking — verifies entry file "Last Edited:" fields are unchanged after sync in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
-- [ ] T008 [P] [US1] Add integration test `UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag` verifying tracking hashes and config are updated after sync in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
-- [ ] T009 [P] [US1] Add integration test `UpdateJournal_Should_ReturnZeroAndPrintUpToDate_When_SyncFlagAndJournalCurrent` verifying exit 0 and "Everything is up to date." when nothing has changed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
-- [ ] T010 [P] [US1] Add integration test `UpdateJournal_Should_AddNewEntryToTracking_When_SyncFlagAndNewFile` verifying a new (untracked) entry file is added to the tracking index without writing a "Last Edited:" date in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
-- [ ] T011 [P] [US1] Add integration test `UpdateJournal_Should_RemoveDeletedEntryFromTracking_When_SyncFlagAndDeletedFile` verifying deleted entries are removed from tracking/config without modifying remaining entry files in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
+- [X] T003 [P] [US1] Add unit test `ExecuteCore_Should_UpdateTrackingConfigToc_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking(trackingOnly: true)`, `UpdateJournalConfig`, and `UpdateTableOfContents` are all called and console output contains `--sync active` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T004 [P] [US1] Add unit test `ExecuteCore_Should_PrintSyncActiveLine_When_SyncFlagAndChangesExist` verifying the FR-012 summary line appears in output when `hasAnythingToDo` is true in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T005 [P] [US1] Add unit test `ExecuteCore_Should_NotPrintSyncActiveLine_When_SyncFlagAndNoChanges` verifying the `--sync active` line does NOT appear when journal is already up to date in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T006 [P] [US1] Add unit test `ExecuteCore_Should_NotCallUpdateLastEditedDates_When_SyncFlagSet` verifying `UpdateLastEditedDatesAndTracking` is never called with `trackingOnly: false` when `--sync` is active in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T007 [P] [US1] Add integration test `UpdateJournal_Should_NotModifyEntryLastEditedDates_When_SyncFlag` on a journal with stale tracking — verifies entry file "Last Edited:" fields are unchanged after sync in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
+- [X] T008 [P] [US1] Add integration test `UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag` verifying tracking hashes and config are updated after sync in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
+- [X] T009 [P] [US1] Add integration test `UpdateJournal_Should_ReturnZeroAndPrintUpToDate_When_SyncFlagAndJournalCurrent` verifying exit 0 and "Everything is up to date." when nothing has changed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
+- [X] T010 [P] [US1] Add integration test `UpdateJournal_Should_AddNewEntryToTracking_When_SyncFlagAndNewFile` verifying a new (untracked) entry file is added to the tracking index without writing a "Last Edited:" date in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
+- [X] T011 [P] [US1] Add integration test `UpdateJournal_Should_RemoveDeletedEntryFromTracking_When_SyncFlagAndDeletedFile` verifying deleted entries are removed from tracking/config without modifying remaining entry files in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs`
 
 **Checkpoint**: US1 is fully functional — `--sync` syncs all three subsystems without date writes. All 9 tests above pass.
 
@@ -60,12 +60,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Update `ExecuteDryRun` include-flag expressions to include `settings.Sync` for `includeTracking`, `includeConfig`, and `includeToc` in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
+- [X] T012 [US2] Update `ExecuteDryRun` include-flag expressions to include `settings.Sync` for `includeTracking`, `includeConfig`, and `includeToc` in `markdown-journal-cli/Commands/Update/UpdateCommand.cs`
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add unit test `ExecuteDryRun_Should_IncludeAllSections_When_SyncFlag` verifying `BuildDryRunReport` is called with non-null `trackingChanges`, non-null `configChanges`, and `includeToc: true` when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T014 [P] [US2] Add unit test `ExecuteDryRun_Should_WriteNoFiles_When_SyncDryRun` verifying no write methods on `IFileSystem` are called when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T013 [P] [US2] Add unit test `ExecuteDryRun_Should_IncludeAllSections_When_SyncFlag` verifying `BuildDryRunReport` is called with non-null `trackingChanges`, non-null `configChanges`, and `includeToc: true` when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T014 [P] [US2] Add unit test `ExecuteDryRun_Should_WriteNoFiles_When_SyncDryRun` verifying no write methods on `IFileSystem` are called when `--sync --dry-run` is used in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 
 **Checkpoint**: US2 is fully functional — `--sync --dry-run` shows all three preview sections and makes no writes.
 
@@ -81,10 +81,10 @@
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndDateCombined` verifying `ValidationResult.Error` with message naming `--date` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T016 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndTrackingCombined` verifying `ValidationResult.Error` with message naming `--tracking` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T017 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndConfigCombined` verifying `ValidationResult.Error` with message naming `--config` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T018 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndTocCombined` verifying `ValidationResult.Error` with message naming `--toc` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T015 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndDateCombined` verifying `ValidationResult.Error` with message naming `--date` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T016 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndTrackingCombined` verifying `ValidationResult.Error` with message naming `--tracking` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T017 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndConfigCombined` verifying `ValidationResult.Error` with message naming `--config` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T018 [P] [US3] Add unit test `Validate_Should_ReturnError_When_SyncAndTocCombined` verifying `ValidationResult.Error` with message naming `--toc` in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 
 **Checkpoint**: US3 is fully functional — all four contradictory combinations are rejected at validation before any I/O.
 
@@ -94,8 +94,8 @@
 
 **Goal**: Cover atomic rollback on partial failure and malformed tracking-index abort — both as unit tests using `TestFileSystem` per FR-011 and spec clarification (Q8/Q9 session 2026-04-15).
 
-- [ ] T019 [P] Add unit test `ExecuteCore_Should_RollbackAllWrites_When_SyncPartiallyFails` using `TestFileSystem` + `FaultInjectingFileSystem` to simulate TOC write failure mid-sync, verifying exit code 2 and no partial file state in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
-- [ ] T020 [P] Add unit test `ExecuteCore_Should_AbortBeforeWrites_When_SyncAndTrackingIndexMalformed` using `TestFileSystem` with malformed `.mdjournal` content, verifying a descriptive error is returned and no writes are performed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T019 [P] Add unit test `ExecuteCore_Should_RollbackAllWrites_When_SyncPartiallyFails` using `TestFileSystem` + `FaultInjectingFileSystem` to simulate TOC write failure mid-sync, verifying exit code 2 and no partial file state in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
+- [X] T020 [P] Add unit test `ExecuteCore_Should_AbortBeforeWrites_When_SyncAndTrackingIndexMalformed` using `TestFileSystem` with malformed `.mdjournal` content, verifying a descriptive error is returned and no writes are performed in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandTests.cs`
 
 ---
 
@@ -103,8 +103,8 @@
 
 **Goal**: Verify FR-010 (no pre-existing tests regressed) and validate the full implementation against the CLI contract in `contracts/update-journal-command.md`.
 
-- [ ] T021 Run the full test suite (`dotnet test`) and confirm all pre-existing tests still pass (FR-010 / SC-004)
-- [ ] T022 [P] Verify console output format against the contract in `specs/003-sync-skip-dates/contracts/update-journal-command.md` — confirm `[dim]--sync active: Last Edited dates were not updated[/]` markup renders correctly and the no-op path shows only "Everything is up to date." with no extra lines
+- [X] T021 Run the full test suite (`dotnet test`) and confirm all pre-existing tests still pass (FR-010 / SC-004)
+- [X] T022 [P] Verify console output format against the contract in `specs/003-sync-skip-dates/contracts/update-journal-command.md` — confirm `[dim]--sync active: Last Edited dates were not updated[/]` markup renders correctly and the no-op path shows only "Everything is up to date." with no extra lines
 
 ---
 

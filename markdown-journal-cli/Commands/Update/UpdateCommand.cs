@@ -68,10 +68,11 @@ public sealed class UpdateCommand(
                 && !settings.ConfigFlag
                 && !settings.TocFlag
                 && !settings.Tracking
+                && !settings.Sync           // ← new exclusion
                 && settings.RenameToc is null;
 
             if (
-                (all || settings.ConfigFlag || settings.TocFlag || settings.RenameToc is not null)
+                (all || settings.ConfigFlag || settings.TocFlag || settings.Sync || settings.RenameToc is not null)
                 && !_fileSystem.FileExists(journalrcPath)
             )
                 throw new JournalrcNotFoundException(settings.FilePath);
@@ -92,13 +93,14 @@ public sealed class UpdateCommand(
                 || settings.Tracking
                 || settings.ConfigFlag
                 || settings.TocFlag
+                || settings.Sync
             )
             {
                 var fileResults = _fileTracking.DetectChangesWithoutUpdate(settings.FilePath);
 
                 // Pre-detect config drift to include in the early-return check
                 var configDrift =
-                    (all || settings.ConfigFlag)
+                    (all || settings.ConfigFlag || settings.Sync)
                         ? _journalConfiguration.DetectConfigChanges(settings.FilePath)
                         : null;
 
@@ -120,8 +122,16 @@ public sealed class UpdateCommand(
                         settings.Tracking
                     );
                 }
+                else if (settings.Sync)
+                {
+                    _journalUpdateService.UpdateLastEditedDatesAndTracking(
+                        settings.FilePath,
+                        fileResults,
+                        trackingOnly: true
+                    );
+                }
 
-                if (all || settings.ConfigFlag)
+                if (all || settings.ConfigFlag || settings.Sync)
                 {
                     // Re-detect after tracking update so same-run additions/deletions are captured
                     var configSyncResult = _journalConfiguration.DetectConfigChanges(
@@ -130,8 +140,11 @@ public sealed class UpdateCommand(
                     _journalUpdateService.UpdateJournalConfig(settings.FilePath, configSyncResult);
                 }
 
-                if (all || settings.TocFlag)
+                if (all || settings.TocFlag || settings.Sync)
                     _journalUpdateService.UpdateTableOfContents(settings.FilePath);
+
+                if (settings.Sync)
+                    _console.MarkupLine("[dim]--sync active: Last Edited dates were not updated[/]");
             }
 
             outerTx.Commit();
@@ -171,9 +184,9 @@ public sealed class UpdateCommand(
     {
         _logger.LogDebug("Dry-run mode active, skipping all writes");
 
-        var includeTracking = all || settings.DateFlag || settings.Tracking;
-        var includeConfig = all || settings.ConfigFlag;
-        var includeToc = all || settings.TocFlag;
+        var includeTracking = all || settings.DateFlag || settings.Tracking || settings.Sync;
+        var includeConfig = all || settings.ConfigFlag || settings.Sync;
+        var includeToc = all || settings.TocFlag || settings.Sync;
 
         ChangeDetectionResult? fileResults = includeTracking
             ? _fileTracking.DetectChangesWithoutUpdate(settings.FilePath)
