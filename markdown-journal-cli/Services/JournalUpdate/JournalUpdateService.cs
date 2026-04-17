@@ -424,8 +424,16 @@ public sealed class JournalUpdateService(
                     }
                 }
                 _fileTracking.UpdateFileInIndex(journalPath, relativePath);
-                _console.MarkupLine($"[dim]  Updated: {relativePath.EscapeMarkup()}[/]");
-                _logger.LogDebug("Updated Last Edited date: {RelativePath}", relativePath);
+                if (trackingOnly)
+                {
+                    _console.MarkupLine($"[dim]  Re-tracked: {relativePath.EscapeMarkup()}[/]");
+                    _logger.LogDebug("Re-tracked modified file (no date write): {RelativePath}", relativePath);
+                }
+                else
+                {
+                    _console.MarkupLine($"[dim]  Updated: {relativePath.EscapeMarkup()}[/]");
+                    _logger.LogDebug("Updated Last Edited date: {RelativePath}", relativePath);
+                }
             }
 
             foreach (var relativePath in fileResults.AddedFiles)
@@ -442,7 +450,7 @@ public sealed class JournalUpdateService(
                 _logger.LogDebug("Removed from tracking: {RelativePath}", relativePath);
             }
 
-            if (fileResults.ModifiedFiles.Count > 0)
+            if (fileResults.ModifiedFiles.Count > 0 && !trackingOnly)
                 _console.MarkupLine(
                     $"[green]Updated dates for {fileResults.ModifiedFiles.Count} file(s).[/]"
                 );

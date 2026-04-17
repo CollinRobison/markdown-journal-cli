@@ -389,6 +389,37 @@ public class JournalUpdateServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public void UpdateLastEditedDatesAndTracking_Should_PrintReTrackedLabel_When_TrackingOnly()
+    {
+        // Arrange — simulates --sync: file is modified but dates must NOT be stamped
+        const string relativePath = "note.md";
+        var fileResults = new ChangeDetectionResult { ModifiedFiles = [relativePath] };
+        var sut = CreateSut();
+
+        // Act
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
+
+        // Assert — output uses "Re-tracked:" (not "Updated:") and suppresses "Updated dates for" summary
+        _console.Output.ShouldContain("Re-tracked:");
+        _console.Output.ShouldNotContain("Updated:");
+        _console.Output.ShouldNotContain("Updated dates for");
+    }
+
+    [Fact]
+    public void UpdateLastEditedDatesAndTracking_Should_NotPrintUpdatedDatesSummary_When_TrackingOnly()
+    {
+        // Arrange
+        var fileResults = new ChangeDetectionResult { ModifiedFiles = ["a.md", "b.md"] };
+        var sut = CreateSut();
+
+        // Act
+        sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
+
+        // Assert — "Updated dates for X file(s)." must never appear when --sync is active
+        _console.Output.ShouldNotContain("Updated dates for");
+    }
+
+    [Fact]
     public void UpdateLastEditedDatesAndTracking_Should_UpdateTrackingIndex_When_FileIsModified()
     {
         // Arrange

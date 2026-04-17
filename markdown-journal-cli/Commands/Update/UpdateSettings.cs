@@ -55,8 +55,29 @@ public class UpdateJournalSettings : UpdateSettings
     )]
     public bool DryRun { get; set; }
 
+    [CommandOption("--sync")]
+    [Description(
+        "Update tracking index, config, and table of contents without writing \"Last Edited:\" " +
+        "to user entry files. Designed for post-git-pull / post-merge scenarios where file " +
+        "hashes may be stale but entries have not been genuinely edited."
+    )]
+    public bool Sync { get; set; }
+
     public override ValidationResult Validate()
     {
+        if (Sync && DateFlag)
+            return ValidationResult.Error(
+                "--sync and --date are mutually exclusive. --sync suppresses date writes; --date requests them.");
+        if (Sync && Tracking)
+            return ValidationResult.Error(
+                "--sync and --tracking are mutually exclusive. --sync is an all-or-nothing preset; use --tracking alone to scope to one subsystem.");
+        if (Sync && ConfigFlag)
+            return ValidationResult.Error(
+                "--sync and --config are mutually exclusive. --sync is an all-or-nothing preset; use --config alone to scope to one subsystem.");
+        if (Sync && TocFlag)
+            return ValidationResult.Error(
+                "--sync and --toc are mutually exclusive. --sync is an all-or-nothing preset; use --toc alone to scope to one subsystem.");
+
         if (RenameToc is not null && RenameToc.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
         {
             return ValidationResult.Error(

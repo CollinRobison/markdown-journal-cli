@@ -75,6 +75,14 @@ public sealed class FaultInjectingFileSystem : TestFileSystem
     /// <summary>Resets all call counters so subsequent InjectFaultOn calls count from 1 again.</summary>
     public void ResetCallCounts() => _callCounts.Clear();
 
+    /// <summary>
+    /// Directly writes <paramref name="content"/> to the in-memory store at
+    /// <paramref name="absolutePath"/>, bypassing fault injection and call counters.
+    /// Use this for test setup when you need to pre-seed or corrupt a file.
+    /// </summary>
+    public void SetFileContent(string absolutePath, string content) =>
+        _files[absolutePath] = content;
+
     private void MaybeThrow(FaultInjectPoint point)
     {
         _callCounts.TryGetValue(point, out var count);

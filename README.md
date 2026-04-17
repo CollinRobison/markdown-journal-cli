@@ -31,6 +31,8 @@ Running `mdjournal update journal` ties everything together:
 3. Syncs `.journalrc` so new files are registered and deleted ones are removed
 4. Regenerates the Table of Contents from `.journalrc`
 
+Use `--sync` instead when you want to resync tracking/config/TOC after a git pull or merge without touching "Last Edited" dates on your entries.
+
 You never need to edit `.journalrc` or `.mdjournal` by hand — the CLI keeps them in sync.
 
 ## �📋 Table of Contents
@@ -109,6 +111,9 @@ mdjournal update --path ~/Documents/MyJournal journal --toc       # Only update 
 
 # Rename the TOC file and update all references
 mdjournal update --path ~/Documents/MyJournal journal --rename-toc MyContents
+
+# Sync tracking, config, and TOC after a git pull (no "Last Edited" date writes)
+mdjournal update --path ~/Documents/MyJournal journal --sync
 
 # Rename an entry and update all references
 mdjournal update --path ~/Documents/MyJournal entry my_entry --name new_name
@@ -278,11 +283,13 @@ mdjournal update journal [options]
 - `-t|--tracking` - Only update tracking index without modifying "Last Edited:" metadata (overrides `--dates`)
 - `--toc|--tableofcontents` - Only regenerate the table of contents
 - `--rename-toc <name>` - Rename the TOC file to `<name>.md`, update `.journalrc`, rewrite all inline link references across the journal, and stamp "Last Edited" on every changed file
+- `--sync` - Update tracking index, config, and TOC without writing "Last Edited:" to user entry files. Designed for post-git-pull / post-merge scenarios where file hashes may be stale but entries have not been genuinely edited. Mutually exclusive with `--date`, `--tracking`, `--config`, and `--toc`
 - `--dry-run|--check` - Preview all changes that would be applied without making any writes (dry-run mode)
 
 **Behavior:**
 - **Without flags**: Updates configuration, dates, and TOC (equivalent to `--config --dates --toc`)
 - **With flags**: Only performs the specified updates
+- **`--sync` preset**: Updates tracking index, config, and TOC without writing "Last Edited:" to user entry files. Mutually exclusive with `--date`, `--tracking`, `--config`, and `--toc`. Prints `--sync active: Last Edited dates were not updated` when changes are made. If the journal is already up to date, prints "Everything is up to date." and exits 0 without writing any files
 - **Tracking override**: When `--tracking` is specified with `--dates`, tracking takes precedence and metadata is not modified
 - **Change Detection**: Uses SHA256 hashing to identify added, modified, and deleted files. 
 - **TOC File Exclusion**: Automatically prevents the TOC file from appearing as an entry in its own contents
@@ -293,6 +300,12 @@ mdjournal update journal [options]
 ```bash
 # Update everything (config, dates, and TOC)
 mdjournal update journal --path ~/Documents/MyJournal
+
+# Sync tracking, config, and TOC after a git pull (no "Last Edited" date writes)
+mdjournal update journal --path ~/Documents/MyJournal --sync
+
+# Preview what --sync would change without applying
+mdjournal update journal --path ~/Documents/MyJournal --sync --dry-run
 
 # Preview all changes without applying (dry-run)
 mdjournal update journal --path ~/Documents/MyJournal --dry-run
@@ -323,6 +336,7 @@ mdjournal update journal --path ~/Documents/MyJournal --config --toc
 - **Configuration (`--config`)**: Adds new markdown files to `.journalrc` and removes deleted files
 - **Dates (`--dates`)**: Updates "Last Edited:" metadata in modified files and refreshes the tracking index
 - **Tracking (`--tracking`)**: Updates tracking index without modifying "Last Edited:" metadata (useful for resynchronizing without changing file contents)
+- **Sync (`--sync`)**: Updates tracking index, config, and TOC without writing "Last Edited:" to user entry files. Ideal for post-git-pull or post-merge scenarios where entry hashes are stale but entries were not genuinely edited. The TOC file's own "Last Edited:" is still updated (it is infrastructure, not a user entry). Combines with `--dry-run` to preview changes
 - **Table of Contents (`--toc`)**: Regenerates the TOC markdown file from current configuration
 - **Rename TOC (`--rename-toc <name>`)**: Renames the TOC file on disk, updates `.journalrc`, rewrites all inline markdown link references across the journal, and stamps "Last Edited" on every modified file. Pass the stem only — `.md` is appended automatically. Errors if a file named `<name>.md` already exists.
 
@@ -444,10 +458,11 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ `add entry` command for creating journal entries
 - ✅ `add config`, `add toc`, and `add tracking` commands for existing journals
 - ✅ **`update journal` command** for synchronizing file changes (config, dates, TOC, tracking)
+- ✅ **`update journal --sync` flag** — resync tracking, config, and TOC after a git pull or merge without writing "Last Edited:" dates to user entry files; composes with `--dry-run`; mutually exclusive with `--date`, `--tracking`, `--config`, and `--toc`
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ **`remove entry` command** — delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead inline links (`--clean-refs`); `rm` alias supported
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **1045 passing unit tests** covering core functionality
+- ✅ **1076 passing unit tests** covering core functionality
 - ✅ **`--dry-run` / `--check` flag** on `update journal` — previews all changes (tracking, config, TOC, rename-toc) without any writes, with Spectre.Console color-coded tables
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
@@ -475,10 +490,8 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ Look into making the .journalrc only handle journal settings and breaking off the toc structure into its own file. 
   - ⏳ look into putting .mdjournal and the toc structure file into their own directory so they are less likely to get edited by the user. 
     - (maybe make the directory .mdjournal -> rename current tracking file from .mdjournal to .entrytracking and toc structure to .journaltoc)
-- ⏳ add a mdjournal sync alias that does mdjournal update journal but doesn't update the last edited date.
-  - for example when people pull from a git repo and have to merge changes so the entry hash tracking might be messed up so you don't want entries looking like they were edited but weren't. 
-  - add a flag that stops the update journal command from updating dates as well if they want to go that route. 
-- ⏳ should the business logic be in an sdk that way devs can extend this if it ever becomes useful for others? 
+- ⏳ should the business logic be in an sdk that way devs can extend this if it ever becomes useful for others?
+- ⏳ Make custom agents, prompts, and skills fot copilot, claude, opencode, etc. and a command to add them into a project
 
 **Known Limitations:**
 - Global tool installation not yet configured
