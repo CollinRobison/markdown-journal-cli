@@ -38,8 +38,8 @@ public sealed class RemoveEntryService(
     private readonly ILogger<RemoveEntryService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
 
-    public void ValidatePreconditions(string journalPath, string fileName) =>
-        ResolveAndValidate(journalPath, fileName);
+    public void ValidatePreconditions(string journalPath, string fileName, bool cleanRefs = false) =>
+        ResolveAndValidate(journalPath, fileName, cleanRefs);
 
     public IReadOnlyList<string> RemoveEntry(string journalPath, string fileName, bool cleanRefs)
     {
@@ -50,7 +50,7 @@ public sealed class RemoveEntryService(
         );
 
         // Run all guard checks (same as ValidatePreconditions) before any writes.
-        var (resolvedFileName, absoluteEntryPath) = ResolveAndValidate(journalPath, fileName);
+        var (resolvedFileName, absoluteEntryPath, fileExists) = ResolveAndValidate(journalPath, fileName, cleanRefs);
 
         var trackingFileName = $".{_journalSettings.AppName}";
         var journalrcPath = _fileSystem.CombinePaths(
@@ -82,11 +82,22 @@ public sealed class RemoveEntryService(
                 tx.Track(trackingAbsPath);
             if (_fileSystem.FileExists(tocAbsPath))
                 tx.Track(tocAbsPath);
-            tx.TrackDelete(absoluteEntryPath);
+            if (fileExists)
+                tx.TrackDelete(absoluteEntryPath);
 
-            // 6. Delete the file
-            _logger.LogDebug("Deleting file '{AbsoluteEntryPath}'", absoluteEntryPath);
-            _fileSystem.DeleteFile(absoluteEntryPath);
+            // 6. Delete the file (skip if already absent from disk)
+            if (fileExists)
+            {
+                _logger.LogDebug("Deleting file '{AbsoluteEntryPath}'", absoluteEntryPath);
+                _fileSystem.DeleteFile(absoluteEntryPath);
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "File '{AbsoluteEntryPath}' is already absent; skipping delete step",
+                    absoluteEntryPath
+                );
+            }
 
             // 7. Remove from config
             _logger.LogDebug("Removing '{FileName}' from journal config", resolvedFileName);
@@ -149,11 +160,15 @@ public sealed class RemoveEntryService(
 
     /// <summary>
     /// Validates all guard preconditions for a remove operation and returns the normalised
-    /// file name and its absolute path. Throws on the first violated condition.
+    /// file name, its absolute path, and whether the file currently exists on disk.
+    /// Throws on the first violated condition.
+    /// When <paramref name="cleanRefs"/> is <c>true</c> the file-existence assertion is
+    /// relaxed so that orphaned references can still be cleaned up after a manual deletion.
     /// </summary>
-    private (string resolvedFileName, string absoluteEntryPath) ResolveAndValidate(
+    private (string resolvedFileName, string absoluteEntryPath, bool fileExists) ResolveAndValidate(
         string journalPath,
-        string fileName
+        string fileName,
+        bool cleanRefs = false
     )
     {
         // 1. Normalise fileName — append .md if missing
@@ -211,17 +226,28 @@ public sealed class RemoveEntryService(
         if (targetedProtectedFile is not null)
             throw new ProtectedJournalFileException(fileName);
 
-        // 5. Resolve absolute entry path; validate file exists
+        // 5. Resolve absolute entry path; check file existence
         var absoluteEntryPath = _fileSystem.CombinePaths(journalPath, resolvedFileName);
         _logger.LogDebug("Resolved entry path: '{AbsoluteEntryPath}'", absoluteEntryPath);
-        if (!_fileSystem.FileExists(absoluteEntryPath))
+        var fileExists = _fileSystem.FileExists(absoluteEntryPath);
+
+        if (!fileExists && !cleanRefs)
         {
+            // Without --clean-refs there is nothing useful to do for a missing file.
             throw new FileNotFoundException(
                 $"Entry file '{resolvedFileName}' not found at '{journalPath}'.",
                 absoluteEntryPath
             );
         }
 
-        return (resolvedFileName, absoluteEntryPath);
+        if (!fileExists)
+        {
+            _logger.LogDebug(
+                "Entry file '{ResolvedFileName}' is absent from disk; proceeding with ref cleanup only",
+                resolvedFileName
+            );
+        }
+
+        return (resolvedFileName, absoluteEntryPath, fileExists);
     }
 }

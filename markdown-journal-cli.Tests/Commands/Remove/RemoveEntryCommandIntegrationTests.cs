@@ -149,4 +149,30 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error");
     }
+
+    [Fact]
+    public void Execute_Should_Succeed_When_EntryAlreadyDeletedAndCleanRefsSet()
+    {
+        // Arrange — seed a second entry (Beta) that links to Alpha, then manually
+        // delete Alpha so it is absent from disk but still referenced by Beta.
+        var betaPath = Path.Combine(JournalPath, "Beta.md");
+        File.WriteAllText(betaPath, "# Beta\n\nSee [Alpha](Alpha.md) for details.");
+
+        var alphaPath = Path.Combine(JournalPath, "Alpha.md");
+        File.Delete(alphaPath);
+        File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent before the test");
+
+        // Act
+        var result = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]
+        );
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        result.Output.ShouldContain("Success:");
+
+        // The dead link in Beta.md should have been stripped
+        var betaContent = File.ReadAllText(betaPath);
+        betaContent.ShouldNotContain("Alpha.md");
+    }
 }

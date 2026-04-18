@@ -14,11 +14,19 @@ public interface IRemoveEntryService
     /// </summary>
     /// <param name="journalPath">The journal directory.</param>
     /// <param name="fileName">The entry filename (with or without .md extension).</param>
+    /// <param name="cleanRefs">
+    /// When <c>true</c>, the file-existence check is relaxed — a missing entry file does not
+    /// throw <see cref="System.IO.FileNotFoundException"/> so that orphaned references can
+    /// still be cleaned up.  All other guards (journalrc, tracking index, protected files)
+    /// remain mandatory.
+    /// </param>
     /// <exception cref="Exceptions.JournalrcNotFoundException">The .journalrc file is missing.</exception>
     /// <exception cref="Exceptions.TrackingIndexNotFoundException">The .mdjournal tracking index is missing.</exception>
     /// <exception cref="Exceptions.ProtectedJournalFileException">The target file is a protected journal file.</exception>
-    /// <exception cref="System.IO.FileNotFoundException">The entry file does not exist.</exception>
-    void ValidatePreconditions(string journalPath, string fileName);
+    /// <exception cref="System.IO.FileNotFoundException">
+    /// The entry file does not exist and <paramref name="cleanRefs"/> is <c>false</c>.
+    /// </exception>
+    void ValidatePreconditions(string journalPath, string fileName, bool cleanRefs = false);
 
     /// <summary>
     /// Removes a journal entry and returns the relative paths of any files whose dead links

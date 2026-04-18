@@ -268,6 +268,89 @@ public class RemoveEntryServiceTests : ServiceTestBase
         MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
+    [Fact]
+    public void RemoveEntry_Should_SucceedWithoutDeleting_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange — file is missing from disk
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act — should NOT throw
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
+
+        // Assert — no delete attempted
+        result.ShouldBeEmpty();
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_StillUpdateConfigAndTrackingAndToc_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act
+        _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
+
+        // Assert — all metadata cleanup still happens
+        MockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(JournalPath, EntryFileName),
+            Times.Once
+        );
+        MockFileTracking.Verify(
+            ft => ft.RemoveFileFromIndex(JournalPath, EntryFileName),
+            Times.Once
+        );
+        MockTableOfContentsService.Verify(
+            t => t.UpdateTableOfContents(JournalPath, null, It.IsAny<DateTime?>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_StillStripLinksInDirectory_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+        var modifiedFiles = new[] { "other.md" };
+        _mockLinkRewriter
+            .Setup(r => r.StripLinksInDirectory(JournalPath, EntryFileName, null))
+            .Returns(modifiedFiles);
+
+        // Act
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
+
+        // Assert
+        result.ShouldBe(modifiedFiles);
+        _mockLinkRewriter.Verify(
+            r => r.StripLinksInDirectory(JournalPath, EntryFileName, null),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void ValidatePreconditions_Should_NotThrow_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act & Assert — should not throw
+        Should.NotThrow(() =>
+            _service.ValidatePreconditions(JournalPath, EntryFileName, cleanRefs: true)
+        );
+    }
+
+    [Fact]
+    public void ValidatePreconditions_Should_ThrowFileNotFoundException_When_FileAbsentAndCleanRefsFalse()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act & Assert — existing behaviour preserved when cleanRefs is false
+        Should.Throw<FileNotFoundException>(() =>
+            _service.ValidatePreconditions(JournalPath, EntryFileName, cleanRefs: false)
+        );
+    }
+
     // ------------------------------------------------------------------
     // Filename normalisation
     // ------------------------------------------------------------------
