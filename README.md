@@ -362,14 +362,17 @@ mdjournal rm entry <fileName> [options]
 
 **Examples:**
 ```bash
-# Remove an entry (prompts for confirmation)
+# Remove an entry and clean up any dead links in other entries (prompts for confirmation)
+mdjournal remove entry old_notes --path ~/Documents/MyJournal --clean-refs
+
+# Remove and clean up dead links without a confirmation prompt
+mdjournal remove entry old_notes --path ~/Documents/MyJournal --clean-refs --force
+
+# Remove an entry (prompts for confirmation) — use when no other entries link to it
 mdjournal remove entry old_notes --path ~/Documents/MyJournal
 
 # Remove without confirmation prompt
 mdjournal remove entry old_notes --path ~/Documents/MyJournal --force
-
-# Remove and clean up dead links in other entries
-mdjournal remove entry old_notes --path ~/Documents/MyJournal --force --clean-refs
 
 # Using the rm alias
 mdjournal rm entry old_notes --path ~/Documents/MyJournal --force
@@ -486,7 +489,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
-- ⏳ update the `delete entry` command when using the `--clean-refs` flag, after a file has already been deleted, to allow it to still clean up the references to that file link in other files.
 - ⏳ Look into making the .journalrc only handle journal settings and breaking off the toc structure into its own file. 
   - ⏳ look into putting .mdjournal and the toc structure file into their own directory so they are less likely to get edited by the user. 
     - (maybe make the directory .mdjournal -> rename current tracking file from .mdjournal to .entrytracking and toc structure to .journaltoc)

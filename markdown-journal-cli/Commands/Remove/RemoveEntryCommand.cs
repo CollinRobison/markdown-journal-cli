@@ -39,7 +39,7 @@ public sealed class RemoveEntryCommand(
             {
                 // Validate all preconditions before prompting; surfaces errors without
                 // asking the user to confirm an action that was never possible.
-                _removeEntryService.ValidatePreconditions(settings.FilePath, settings.FileName);
+                _removeEntryService.ValidatePreconditions(settings.FilePath, settings.FileName, settings.CleanRefs);
 
                 var confirmed = _console.Confirm(
                     $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone.",
@@ -53,35 +53,59 @@ public sealed class RemoveEntryCommand(
                 }
             }
 
-            var modifiedFiles = _removeEntryService.RemoveEntry(
+            var result = _removeEntryService.RemoveEntry(
                 settings.FilePath,
                 settings.FileName,
                 settings.CleanRefs
             );
 
-            _console.MarkupLine($"[green]Removed:[/] '{settings.FileName.EscapeMarkup()}'");
-            _console.MarkupLine(
-                $"[dim]  - {settings.FileName.EscapeMarkup()} removed from config[/]"
-            );
-            _console.MarkupLine(
-                $"[dim]  - {settings.FileName.EscapeMarkup()} removed from tracking[/]"
-            );
-            _console.MarkupLine("[green]Table of contents updated.[/]");
+            bool anythingRemoved = result.FileExistedOnDisk || result.RemovedFromConfig || result.RemovedFromTracking;
 
-            if (settings.CleanRefs && modifiedFiles.Count > 0)
+            if (anythingRemoved)
             {
-                foreach (var relativePath in modifiedFiles)
-                {
-                    _console.MarkupLine($"[dim]  Stripped links: {relativePath.EscapeMarkup()}[/]");
-                }
-                _console.MarkupLine(
-                    $"[green]Cleaned dead references in {modifiedFiles.Count} file(s).[/]"
-                );
+                _console.MarkupLine($"[green]Removed:[/] '{settings.FileName.EscapeMarkup()}'");
+                if (result.RemovedFromConfig)
+                    _console.MarkupLine(
+                        $"[dim]  - {settings.FileName.EscapeMarkup()} removed from config[/]"
+                    );
+                if (result.RemovedFromTracking)
+                    _console.MarkupLine(
+                        $"[dim]  - {settings.FileName.EscapeMarkup()} removed from tracking[/]"
+                    );
+                if (result.RemovedFromConfig)
+                    _console.MarkupLine("[green]Table of contents updated.[/]");
             }
 
-            _console.MarkupLine(
-                $"[green]Success:[/] Entry '{settings.FileName.EscapeMarkup()}' removed."
-            );
+            if (settings.CleanRefs)
+            {
+                if (result.StrippedLinkFiles.Count > 0)
+                {
+                    foreach (var relativePath in result.StrippedLinkFiles)
+                    {
+                        _console.MarkupLine($"[dim]  Stripped links: {relativePath.EscapeMarkup()}[/]");
+                    }
+                    _console.MarkupLine(
+                        $"[green]Cleaned dead references in {result.StrippedLinkFiles.Count} file(s).[/]"
+                    );
+                }
+                else
+                {
+                    _console.MarkupLine("[dim]No dead references found.[/]");
+                }
+            }
+
+            if (anythingRemoved)
+            {
+                _console.MarkupLine(
+                    $"[green]Success:[/] Entry '{settings.FileName.EscapeMarkup()}' removed."
+                );
+            }
+            else
+            {
+                _console.MarkupLine(
+                    $"[dim]'{settings.FileName.EscapeMarkup()}' was not found in the journal — nothing to remove.[/]"
+                );
+            }
 
             _logger.LogDebug(
                 "RemoveEntryCommand completed successfully for '{FileName}'",

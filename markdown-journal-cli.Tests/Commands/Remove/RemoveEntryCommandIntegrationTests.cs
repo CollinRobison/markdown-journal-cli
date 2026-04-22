@@ -149,4 +149,102 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error");
     }
+
+    [Fact]
+    public void Execute_Should_Succeed_When_EntryAlreadyDeletedAndCleanRefsSet()
+    {
+        // Arrange — seed a second entry (Beta) that links to Alpha, then manually
+        // delete Alpha so it is absent from disk but still referenced by Beta.
+        var betaPath = Path.Combine(JournalPath, "Beta.md");
+        File.WriteAllText(betaPath, "# Beta\n\nSee [Alpha](Alpha.md) for details.");
+
+        var alphaPath = Path.Combine(JournalPath, "Alpha.md");
+        File.Delete(alphaPath);
+        File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent before the test");
+
+        // Act
+        var result = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]
+        );
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        result.Output.ShouldContain("Success:");
+
+        // The dead link in Beta.md should have been stripped
+        var betaContent = File.ReadAllText(betaPath);
+        betaContent.ShouldNotContain("Alpha.md");
+    }
+
+    [Fact]
+    public void Execute_Should_ShowPromptNotError_When_FileAlreadyDeletedAndCleanRefsSetWithoutForce()
+    {
+        // Arrange — manually delete Alpha so it is absent from disk
+        var alphaPath = Path.Combine(JournalPath, "Alpha.md");
+        File.Delete(alphaPath);
+        File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent");
+
+        // Simulate the user confirming the prompt
+        _app.Console.Input.PushTextWithEnter("y");
+
+        // Act — --clean-refs set, but NOT --force: should show the confirmation prompt
+        var result = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs"]
+        );
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        result.Output.ShouldContain("Success:");
+        result.Output.ShouldNotContain("Error:");
+    }
+
+    [Fact]
+    public void Execute_Should_CompletePartialCleanup_When_FileDeletedButMetadataIntact()
+    {
+        // Arrange — manually delete Alpha.md, leaving config and tracking intact
+        var alphaPath = Path.Combine(JournalPath, "Alpha.md");
+        File.Delete(alphaPath);
+        File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent");
+
+        // Verify Alpha is still in the .journalrc config before the command runs
+        var journalrcContent = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
+        journalrcContent.ShouldContain("Alpha");
+
+        // Act
+        var result = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]
+        );
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+        result.Output.ShouldContain("Success:");
+
+        // Alpha should no longer appear in the config after cleanup
+        var configAfter = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
+        configAfter.ShouldNotContain("Alpha.md");
+    }
+
+    [Fact]
+    public void Execute_Should_NotReportFalseRemovals_When_SecondRunOnFullyCleanedJournal()
+    {
+        // Arrange — first run cleans up Alpha
+        var firstResult = _app.Run(["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]);
+        var offsetAfterFirstRun = firstResult.Output.Length;
+
+        // Act — second run on an already fully-cleaned journal
+        var secondResult = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]
+        );
+
+        // Only examine the output produced by the second run
+        var secondRunOutput = secondResult.Output[offsetAfterFirstRun..];
+
+        // Assert
+        secondResult.ExitCode.ShouldBe(0);
+        // Must NOT claim it removed things that were already gone
+        secondRunOutput.ShouldNotContain("removed from config");
+        secondRunOutput.ShouldNotContain("removed from tracking");
+        // Must always show a message about dead refs
+        secondRunOutput.ShouldContain("No dead references found.");
+    }
 }

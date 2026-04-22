@@ -4,6 +4,7 @@ using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Services.RemoveEntry;
@@ -81,6 +82,20 @@ public class RemoveEntryServiceTests : ServiceTestBase
                 )
             )
             .Returns(Array.Empty<string>());
+
+        MockJournalConfiguration
+            .Setup(jc => jc.RemoveEntry(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+
+        MockFileTracking
+            .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex
+            {
+                Files = new Dictionary<string, FileState>
+                {
+                    [EntryFileName] = new FileState { FilePath = EntryFilePath, Hash = "abc", LastChecked = DateTime.Now },
+                },
+            });
     }
 
     // ------------------------------------------------------------------
@@ -94,7 +109,10 @@ public class RemoveEntryServiceTests : ServiceTestBase
         var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
 
         // Assert
-        result.ShouldBeEmpty();
+        result.StrippedLinkFiles.ShouldBeEmpty();
+        result.FileExistedOnDisk.ShouldBeTrue();
+        result.RemovedFromConfig.ShouldBeTrue();
+        result.RemovedFromTracking.ShouldBeTrue();
         MockFileSystem.Verify(fs => fs.DeleteFile(EntryFilePath), Times.Once);
         MockJournalConfiguration.Verify(
             jc => jc.RemoveEntry(JournalPath, EntryFileName),
@@ -136,7 +154,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
         var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
 
         // Assert
-        result.ShouldBe(modifiedFiles);
+        result.StrippedLinkFiles.ShouldBe(modifiedFiles);
         MockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, "other.md"), Times.Once);
         MockFileTracking.Verify(ft => ft.UpdateFileInIndex(JournalPath, "another.md"), Times.Once);
     }
@@ -268,6 +286,90 @@ public class RemoveEntryServiceTests : ServiceTestBase
         MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
+    [Fact]
+    public void RemoveEntry_Should_SucceedWithoutDeleting_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange — file is missing from disk
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act — should NOT throw
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
+
+        // Assert — no delete attempted
+        result.StrippedLinkFiles.ShouldBeEmpty();
+        result.FileExistedOnDisk.ShouldBeFalse();
+        MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_StillUpdateConfigAndTrackingAndToc_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act
+        _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
+
+        // Assert — all metadata cleanup still happens
+        MockJournalConfiguration.Verify(
+            jc => jc.RemoveEntry(JournalPath, EntryFileName),
+            Times.Once
+        );
+        MockFileTracking.Verify(
+            ft => ft.RemoveFileFromIndex(JournalPath, EntryFileName),
+            Times.Once
+        );
+        MockTableOfContentsService.Verify(
+            t => t.UpdateTableOfContents(JournalPath, null, It.IsAny<DateTime?>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_StillStripLinksInDirectory_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+        var modifiedFiles = new[] { "other.md" };
+        _mockLinkRewriter
+            .Setup(r => r.StripLinksInDirectory(JournalPath, EntryFileName, null))
+            .Returns(modifiedFiles);
+
+        // Act
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: true);
+
+        // Assert
+        result.StrippedLinkFiles.ShouldBe(modifiedFiles);
+        _mockLinkRewriter.Verify(
+            r => r.StripLinksInDirectory(JournalPath, EntryFileName, null),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void ValidatePreconditions_Should_NotThrow_When_FileAbsentAndCleanRefsIsTrue()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act & Assert — should not throw
+        Should.NotThrow(() =>
+            _service.ValidatePreconditions(JournalPath, EntryFileName, cleanRefs: true)
+        );
+    }
+
+    [Fact]
+    public void ValidatePreconditions_Should_ThrowFileNotFoundException_When_FileAbsentAndCleanRefsFalse()
+    {
+        // Arrange
+        MockFileSystem.Setup(fs => fs.FileExists(EntryFilePath)).Returns(false);
+
+        // Act & Assert — existing behaviour preserved when cleanRefs is false
+        Should.Throw<FileNotFoundException>(() =>
+            _service.ValidatePreconditions(JournalPath, EntryFileName, cleanRefs: false)
+        );
+    }
+
     // ------------------------------------------------------------------
     // Filename normalisation
     // ------------------------------------------------------------------
@@ -329,5 +431,50 @@ public class RemoveEntryServiceTests : ServiceTestBase
         );
 
         MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_ReturnRemovedFromConfigFalse_When_EntryNotInConfig()
+    {
+        // Arrange
+        MockJournalConfiguration
+            .Setup(jc => jc.RemoveEntry(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(false);
+
+        // Act
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
+
+        // Assert
+        result.RemovedFromConfig.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_ReturnRemovedFromConfigTrue_When_EntryWasInConfig()
+    {
+        // Arrange
+        MockJournalConfiguration
+            .Setup(jc => jc.RemoveEntry(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+
+        // Act
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
+
+        // Assert
+        result.RemovedFromConfig.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RemoveEntry_Should_ReturnRemovedFromTrackingFalse_When_EntryNotInIndex()
+    {
+        // Arrange
+        MockFileTracking
+            .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
+            .Returns(new JournalIndex());
+
+        // Act
+        var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);
+
+        // Assert
+        result.RemovedFromTracking.ShouldBeFalse();
     }
 }
