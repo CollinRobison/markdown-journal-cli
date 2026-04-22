@@ -24,6 +24,7 @@ mdjournal remove entry old-notes.md --clean-refs
 | Yes | No | Delete file; update config/tracking/TOC |
 | Yes | Yes | Delete file; update config/tracking/TOC; strip dead links |
 | **No** | **Yes** | **Skip delete; update config/tracking/TOC; strip dead links** ← NEW |
+| **No (also absent from config/tracking)** | **Yes** | **No-op; report 0 stripped links; no false "removed from config/tracking" output** ← NEW (US3) |
 | No | No | `FileNotFoundException` error (unchanged) |
 
 ## Contracts: CLI command schema

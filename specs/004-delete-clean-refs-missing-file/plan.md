@@ -7,6 +7,8 @@
 
 When `--clean-refs` is set, the `remove entry` command must tolerate a target file that no longer exists on disk. Currently `ResolveAndValidate` throws `FileNotFoundException` before any cleanup occurs. The fix conditionally relaxes the file-existence guard when `cleanRefs` is true, skips the delete step for an already-absent file, and still performs all remaining cleanup: config removal, tracking removal, TOC regeneration, and dead-link stripping.
 
+Two additional behavioural requirements were added after initial planning (FR-007, FR-008): the command must output honest "removed from config/tracking" lines only when those entries were actually present and removed, and must always print the stripped-link count (even when 0) so users can confirm no dead links remain. These are implemented via a new `RemoveEntryResult` record returned by `RemoveEntry`.
+
 ## Technical Context
 
 **Language/Version**: C# 13 / .NET 10 (`net10.0`)  

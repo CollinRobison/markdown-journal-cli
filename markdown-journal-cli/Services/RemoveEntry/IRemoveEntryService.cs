@@ -29,8 +29,8 @@ public interface IRemoveEntryService
     void ValidatePreconditions(string journalPath, string fileName, bool cleanRefs = false);
 
     /// <summary>
-    /// Removes a journal entry and returns the relative paths of any files whose dead links
-    /// were stripped (populated only when <paramref name="cleanRefs"/> is <c>true</c>).
+    /// Removes a journal entry and returns a <see cref="RemoveEntryResult"/> describing
+    /// what was found and removed (file on disk, config entry, tracking entry, and dead links).
     /// </summary>
     /// <param name="journalPath">The journal directory.</param>
     /// <param name="fileName">The entry filename (with or without .md extension).</param>
@@ -39,8 +39,8 @@ public interface IRemoveEntryService
     /// removed file, then re-hashes those files in the tracking index.
     /// </param>
     /// <returns>
-    /// A read-only list of relative file paths that were modified by the dead-link cleanup.
-    /// Empty when <paramref name="cleanRefs"/> is <c>false</c> or no links were found.
+    /// A <see cref="RemoveEntryResult"/> with flags indicating which resources were present
+    /// and removed, and the relative paths of files modified by dead-link cleanup.
     /// </returns>
-    IReadOnlyList<string> RemoveEntry(string journalPath, string fileName, bool cleanRefs);
+    RemoveEntryResult RemoveEntry(string journalPath, string fileName, bool cleanRefs);
 }

@@ -8,6 +8,22 @@ using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Services.RemoveEntry;
 
+/// <summary>
+/// Describes the outcome of a <see cref="RemoveEntryService.RemoveEntry"/> call,
+/// capturing exactly which resources were present and removed so callers can emit
+/// honest, non-redundant status messages.
+/// </summary>
+/// <param name="FileExistedOnDisk">Whether the entry file existed on disk at the time of removal.</param>
+/// <param name="RemovedFromConfig">Whether the entry was found in .journalrc and removed.</param>
+/// <param name="RemovedFromTracking">Whether the entry was found in the tracking index and removed.</param>
+/// <param name="StrippedLinkFiles">Relative paths of files whose dead links were stripped (non-empty only when cleanRefs is true).</param>
+public record RemoveEntryResult(
+    bool FileExistedOnDisk,
+    bool RemovedFromConfig,
+    bool RemovedFromTracking,
+    IReadOnlyList<string> StrippedLinkFiles
+);
+
 public sealed class RemoveEntryService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
@@ -41,7 +57,7 @@ public sealed class RemoveEntryService(
     public void ValidatePreconditions(string journalPath, string fileName, bool cleanRefs = false) =>
         ResolveAndValidate(journalPath, fileName, cleanRefs);
 
-    public IReadOnlyList<string> RemoveEntry(string journalPath, string fileName, bool cleanRefs)
+    public RemoveEntryResult RemoveEntry(string journalPath, string fileName, bool cleanRefs)
     {
         _logger.LogDebug(
             "RemoveEntry called for '{FileName}' in '{JournalPath}'",
@@ -101,18 +117,23 @@ public sealed class RemoveEntryService(
 
             // 7. Remove from config
             _logger.LogDebug("Removing '{FileName}' from journal config", resolvedFileName);
-            _journalConfiguration.RemoveEntry(journalPath, resolvedFileName);
+            bool removedFromConfig = _journalConfiguration.RemoveEntry(journalPath, resolvedFileName);
 
-            // 8. Remove from tracking index
+            // 8. Remove from tracking index (check presence before removing)
             _logger.LogDebug("Removing '{FileName}' from tracking index", resolvedFileName);
+            var trackingIndex = _fileTracking.LoadIndex(journalPath);
+            bool removedFromTracking = trackingIndex?.Files.ContainsKey(resolvedFileName) ?? false;
             _fileTracking.RemoveFileFromIndex(journalPath, resolvedFileName);
 
-            // 9. Regenerate TOC
-            _logger.LogDebug("Regenerating table of contents");
-            _tableOfContentsService.UpdateTableOfContents(
-                journalPath,
-                lastEditedDate: DateTime.Now
-            );
+            // 9. Regenerate TOC only when the entry was actually found in and removed from config
+            if (removedFromConfig)
+            {
+                _logger.LogDebug("Regenerating table of contents");
+                _tableOfContentsService.UpdateTableOfContents(
+                    journalPath,
+                    lastEditedDate: DateTime.Now
+                );
+            }
 
             // 10. Optionally strip dead links across the journal
             if (cleanRefs)
@@ -139,12 +160,12 @@ public sealed class RemoveEntryService(
                     resolvedFileName,
                     modifiedFiles.Count
                 );
-                return modifiedFiles;
+                return new RemoveEntryResult(fileExists, removedFromConfig, removedFromTracking, modifiedFiles);
             }
 
             tx.Commit();
             _logger.LogDebug("Successfully removed entry '{FileName}'", resolvedFileName);
-            return [];
+            return new RemoveEntryResult(fileExists, removedFromConfig, removedFromTracking, []);
         }
         catch (Exception ex)
         {

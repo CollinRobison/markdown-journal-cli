@@ -362,14 +362,17 @@ mdjournal rm entry <fileName> [options]
 
 **Examples:**
 ```bash
-# Remove an entry (prompts for confirmation)
+# Remove an entry and clean up any dead links in other entries (prompts for confirmation)
+mdjournal remove entry old_notes --path ~/Documents/MyJournal --clean-refs
+
+# Remove and clean up dead links without a confirmation prompt
+mdjournal remove entry old_notes --path ~/Documents/MyJournal --clean-refs --force
+
+# Remove an entry (prompts for confirmation) — use when no other entries link to it
 mdjournal remove entry old_notes --path ~/Documents/MyJournal
 
 # Remove without confirmation prompt
 mdjournal remove entry old_notes --path ~/Documents/MyJournal --force
-
-# Remove and clean up dead links in other entries
-mdjournal remove entry old_notes --path ~/Documents/MyJournal --force --clean-refs
 
 # Using the rm alias
 mdjournal rm entry old_notes --path ~/Documents/MyJournal --force

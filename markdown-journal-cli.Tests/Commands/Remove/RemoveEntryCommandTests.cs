@@ -34,7 +34,7 @@ public class RemoveEntryCommandTests : CommandTestBase
 
         _mockRemoveEntryService
             .Setup(s => s.RemoveEntry(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Returns(Array.Empty<string>());
+            .Returns(new RemoveEntryResult(true, true, true, Array.Empty<string>()));
     }
 
     // ------------------------------------------------------------------
@@ -134,7 +134,7 @@ public class RemoveEntryCommandTests : CommandTestBase
         var modifiedFiles = new[] { "other_entry.md", "another.md" };
         _mockRemoveEntryService
             .Setup(s => s.RemoveEntry(TestPath, TestFileName, true))
-            .Returns(modifiedFiles);
+            .Returns(new RemoveEntryResult(true, true, true, modifiedFiles));
 
         var settings = new RemoveEntrySettings
         {
@@ -288,7 +288,7 @@ public class RemoveEntryCommandTests : CommandTestBase
         // Arrange — a filename with characters that could be misread as Spectre markup
         _mockRemoveEntryService
             .Setup(s => s.RemoveEntry(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Returns(Array.Empty<string>());
+            .Returns(new RemoveEntryResult(true, true, true, Array.Empty<string>()));
 
         var settings = new RemoveEntrySettings
         {
@@ -368,7 +368,7 @@ public class RemoveEntryCommandTests : CommandTestBase
         var modifiedFiles = new[] { "linked-entry.md" };
         _mockRemoveEntryService
             .Setup(s => s.RemoveEntry(TestPath, TestFileName, true))
-            .Returns(modifiedFiles);
+            .Returns(new RemoveEntryResult(false, true, true, modifiedFiles));
 
         var settings = new RemoveEntrySettings
         {
@@ -424,5 +424,55 @@ public class RemoveEntryCommandTests : CommandTestBase
             s => s.ValidatePreconditions(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
             Times.Never
         );
+    }
+
+    [Fact]
+    public void Execute_Should_NotPrintRemovedFromConfig_When_AlreadyAbsent()
+    {
+        // FR-007: when nothing was removed the removal header must not appear and
+        // the final message must indicate nothing was found rather than showing "Success:".
+        _mockRemoveEntryService
+            .Setup(s => s.RemoveEntry(TestPath, TestFileName, true))
+            .Returns(new RemoveEntryResult(false, false, false, Array.Empty<string>()));
+
+        var settings = new RemoveEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            Force = true,
+            CleanRefs = true,
+        };
+
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        result.ShouldBe(0);
+        _console.Output.ShouldNotContain("removed from config");
+        _console.Output.ShouldNotContain("removed from tracking");
+        _console.Output.ShouldNotContain("Success:");
+        _console.Output.ShouldContain("not found in the journal");
+        _console.Output.ShouldContain("No dead references found.");
+    }
+
+    [Fact]
+    public void Execute_Should_PrintNoDeadRefsMessage_When_CleanRefsSetAndNoLinksFound()
+    {
+        // FR-008: when --clean-refs is set and no dead links are found, a clear message is shown.
+        _mockRemoveEntryService
+            .Setup(s => s.RemoveEntry(TestPath, TestFileName, true))
+            .Returns(new RemoveEntryResult(true, true, true, Array.Empty<string>()));
+
+        var settings = new RemoveEntrySettings
+        {
+            FilePath = TestPath,
+            FileName = TestFileName,
+            Force = true,
+            CleanRefs = true,
+        };
+
+        var result = CreateCommand().Execute(CreateCommandContext(), settings);
+
+        result.ShouldBe(0);
+        _console.Output.ShouldContain("No dead references found.");
+        _console.Output.ShouldNotContain("Cleaned dead references in 0");
     }
 }

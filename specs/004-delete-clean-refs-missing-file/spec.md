@@ -39,10 +39,26 @@ A previous `remove entry` command was interrupted after the file was deleted but
 
 ---
 
+### User Story 3 - Fully-Cleaned State: File Gone From Everywhere (Priority: P2)
+
+The file is already absent from disk **and** is no longer present in the config or tracking index (either because a previous `--clean-refs` run completed, or the user cleaned things up manually). The user re-runs `remove entry <file> --clean-refs` just to be sure. The command should confirm that nothing needed doing — it must not report a deletion that never happened or leave the user confused.
+
+**Why this priority**: Without this, repeated runs of `--clean-refs` produce misleading "Removed" output even when nothing was actually removed, eroding trust in the command's output.
+
+**Independent Test**: Run `remove entry <file> --clean-refs --force` twice. The second run must exit 0 and output nothing about removing from config/tracking (since those entries are gone), and must report 0 stripped links.
+
+**Acceptance Scenarios**:
+
+1. **Given** a journal entry file is absent from disk, config, and tracking index, **When** the user runs `remove entry <file> --clean-refs --force`, **Then** the command exits 0, reports that the file was already absent from config and tracking (or simply skips those steps silently), reports 0 stripped links, and does not print misleading "Removed from config/tracking" lines.
+
+2. **Given** the fully-cleaned state above, **When** the command completes, **Then** the user can infer from the output that (A) the file no longer exists anywhere in the journal and (B) there are no remaining dead links.
+
+---
+
 ### Edge Cases
 
 - What happens when the file doesn't exist AND `--clean-refs` is **not** set? → Must still fail with an error (existing behaviour preserved).
-- What happens when the file doesn't exist AND neither config nor tracking contain a reference to it? → Should succeed gracefully with no-ops.
+- What happens when the file doesn't exist AND neither config nor tracking contain a reference to it? → Exits 0 with a "nothing to clean" summary; does not claim a deletion occurred.
 - What happens when `--clean-refs` is true but the file still exists on disk? → Normal flow unchanged; file is deleted then refs are cleaned.
 
 ## Requirements *(mandatory)*
@@ -55,6 +71,8 @@ A previous `remove entry` command was interrupted after the file was deleted but
 - **FR-004**: The command MUST exit 0 after a successful `--clean-refs` run on an already-deleted file, and MUST report the number of files whose dead links were stripped.
 - **FR-005**: Config removal and tracking-index removal MUST be attempted even when the file was already absent from disk; the operations MUST be idempotent (no error if already removed).
 - **FR-006**: The transaction rollback mechanism MUST NOT attempt to restore a file that was not present at the start of the operation.
+- **FR-007**: When `--clean-refs` is set and the target entry is absent from **both** config and tracking at the time the command runs, the command MUST NOT output lines claiming the entry was "removed from config" or "removed from tracking". It MUST instead indicate the entry was already absent from those stores (or omit those lines entirely).
+- **FR-008**: When `--clean-refs` is set, the command output MUST always provide a definitive signal that dead-link cleanup has completed — either by reporting the count of modified files or an equivalent message such as "No dead references found." when none were stripped. This gives the user confidence that no dead links remain and that the journal is fully consistent. This requirement applies only to `--clean-refs` runs; non-`--clean-refs` invocations MUST NOT print any dead-link status.
 
 ### Key Entities
 
@@ -71,6 +89,7 @@ A previous `remove entry` command was interrupted after the file was deleted but
 - **SC-003**: Config and tracking index no longer reference the deleted file after the command completes.
 - **SC-004**: Existing behaviour is fully preserved: without `--clean-refs`, missing files still return exit code 1 with a `FileNotFoundException` error message.
 - **SC-005**: All existing tests continue to pass; new tests cover the already-deleted-file scenario for both `cleanRefs = true` and `cleanRefs = false`.
+- **SC-006**: Running `remove entry <file> --clean-refs --force` a second time (fully-cleaned state) exits 0 and does not print "removed from config" or "removed from tracking" — it reports 0 stripped links, giving the user confidence the journal is clean.
 
 ## Assumptions
 
