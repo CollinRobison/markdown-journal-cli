@@ -35,11 +35,13 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
 
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);
         var templateManager = new TemplateManager(JournalSettings);
@@ -47,7 +49,8 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             journalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
         var linkRewriter = new MarkdownLinkRewriter(FileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
         var buffer = new InMemoryFileBuffer(FileSystem);

@@ -57,19 +57,27 @@ public sealed class InitJournalService(
         if (_fileSystem.FileExists(tocPath))
             throw new TocFileAlreadyExistsException(journalDirectory, tocFile);
 
+        var metadataDir = _fileSystem.CombinePaths(journalDirectory, _journalSettings.MetadataDirName);
+
         using var tx = _txCoordinator.Begin();
         try
         {
-            var trackingPath = _fileSystem.CombinePaths(
-                journalDirectory,
-                $".{_journalSettings.AppName}"
-            );
+            var trackingIndexPath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
+            var tocStructurePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TocStructureFileName);
             var journalrcPath = _fileSystem.CombinePaths(
                 journalDirectory,
                 _journalSettings.JournalConfigFileName
             );
 
-            tx.TrackNew(trackingPath);
+            // Create metadata directory if it doesn't exist
+            if (!_fileSystem.DirectoryExists(metadataDir))
+            {
+                tx.TrackNewDirectory(metadataDir);
+                _fileSystem.CreateDirectory(metadataDir);
+            }
+
+            tx.TrackNew(trackingIndexPath);
+            tx.TrackNew(tocStructurePath);
             tx.TrackNew(journalrcPath);
             tx.TrackNew(tocPath);
 
@@ -77,14 +85,14 @@ public sealed class InitJournalService(
             _fileTracking.LoadIndex(journalDirectory);
             _fileTracking.UpdateIndex(journalDirectory);
 
-            // 2. Create journal configuration
+            // 2. Create journal configuration (also seeds .journaltoc via AddEntry calls)
             _configGenerator.GenerateFromTrackingIndex(
                 journalDirectory,
                 resolvedTocName,
                 journalName
             );
 
-            // 3. Create table of contents (reads from configuration)
+            // 3. Create table of contents (reads from configuration and .journaltoc)
             _tableOfContentsService.UpdateTableOfContents(
                 journalDirectory,
                 createdDate: DateTime.Now,
@@ -108,3 +116,4 @@ public sealed class InitJournalService(
         }
     }
 }
+

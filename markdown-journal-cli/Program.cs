@@ -9,6 +9,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Services.RemoveEntry;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,7 +46,9 @@ public static class Program
         host.Services.AddSingleton<IFileSystem, FileSystem>();
         host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();
         host.Services.AddSingleton<ITemplateManager, TemplateManager>();
+        host.Services.AddSingleton<IJournalTocStructureRepository, JournalTocStructureRepository>();
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
+        host.Services.AddSingleton<IJournalValidator, JournalValidator>();
         host.Services.AddSingleton<INewJournalService, NewJournalService>();
         host.Services.AddSingleton<IInitJournalService, InitJournalService>();
         host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();

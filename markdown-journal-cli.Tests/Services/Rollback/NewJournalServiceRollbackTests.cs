@@ -26,7 +26,8 @@ public class NewJournalServiceRollbackTests : ServiceRollbackTestBase
             JournalSettings,
             Coordinator,
             RollbackReporter,
-            NullLogger<NewJournalService>.Instance
+            NullLogger<NewJournalService>.Instance,
+            TocStructureRepository
         );
     }
 

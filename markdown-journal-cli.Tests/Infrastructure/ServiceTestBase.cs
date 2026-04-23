@@ -25,6 +25,7 @@ public abstract class ServiceTestBase
     protected readonly Mock<ITemplateManager> MockTemplateManager;
     protected readonly Mock<ITableOfContentsService> MockTableOfContentsService;
     protected readonly Mock<IEntryFormatterService> MockEntryFormatterService;
+    protected readonly Mock<IJournalTocStructureRepository> MockTocStructureRepository;
     protected readonly IOptions<JournalSettings> JournalSettings;
 
     // ── NoOp transaction infrastructure (for tests that don't verify rollback) ──
@@ -39,6 +40,7 @@ public abstract class ServiceTestBase
         MockTemplateManager = MockFactory.CreateTemplateManager();
         MockTableOfContentsService = MockFactory.CreateTableOfContentsService();
         MockEntryFormatterService = MockFactory.CreateEntryFormatterService();
+        MockTocStructureRepository = MockFactory.CreateTocStructureRepository();
         JournalSettings = MockFactory.CreateJournalSettings();
 
         NoOpCoordinator = NoOpFileTransactionCoordinator.Instance;

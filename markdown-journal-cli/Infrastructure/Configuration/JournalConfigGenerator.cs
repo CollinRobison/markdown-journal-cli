@@ -16,7 +16,8 @@ public class JournalConfigGenerator(
     IFileTracking fileTracking,
     IEntryFormatterService entryFormatter,
     IJournalConfiguration journalConfiguration,
-    IOptions<JournalSettings> journalSettings
+    IOptions<JournalSettings> journalSettings,
+    IJournalTocStructureRepository tocStructureRepository
 ) : IJournalConfigGenerator
 {
     private readonly IFileSystem _fileSystem =
@@ -30,6 +31,11 @@ public class JournalConfigGenerator(
     private readonly IJournalConfiguration _journalConfiguration =
         journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IJournalTocStructureRepository _tocStructureRepository =
+        tocStructureRepository ?? throw new ArgumentNullException(nameof(tocStructureRepository));
+
+    private string GetMetadataDir(string directory) =>
+        Path.Combine(directory, _journalSettings.MetadataDirName);
 
     /// <inheritdoc />
     public JournalConfigGenerationResult? GenerateFromTableOfContents(
@@ -39,40 +45,22 @@ public class JournalConfigGenerator(
     )
     {
         if (string.IsNullOrWhiteSpace(directory))
-        {
-            throw new ArgumentException(
-                "Directory cannot be null or whitespace.",
-                nameof(directory)
-            );
-        }
+            throw new ArgumentException("Directory cannot be null or whitespace.", nameof(directory));
 
         if (string.IsNullOrWhiteSpace(tocFileName))
-        {
-            throw new ArgumentException(
-                "TOC file name cannot be null or whitespace.",
-                nameof(tocFileName)
-            );
-        }
+            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
 
-        var tocFilePath = Path.Combine(
-            directory,
-            $"{tocFileName}{FileConstants.MarkdownExtension}"
-        );
+        var tocFilePath = Path.Combine(directory, $"{tocFileName}{FileConstants.MarkdownExtension}");
 
         if (!_fileSystem.FileExists(tocFilePath))
-        {
             return null;
-        }
 
         var tocContent = _fileSystem.GetFileContent(tocFilePath);
         var entries = _tocParser.ParseTableOfContents(tocContent);
 
         if (entries.Length == 0)
-        {
             return null;
-        }
 
-        // Create initial empty config
         var config = new JournalConfig
         {
             JournalName = journalName ?? GetJournalNameFromDirectory(directory),
@@ -81,37 +69,28 @@ public class JournalConfigGenerator(
                 File = $"{tocFileName}{FileConstants.MarkdownExtension}",
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
-                Structure = new Structure { Topics = Array.Empty<Topic>() },
-                RootEntries = Array.Empty<Entries>(),
             },
         };
 
-        // Delete any existing config and save temp config so we can use AddEntry
         var configPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);
         if (_fileSystem.FileExists(configPath))
-        {
             _journalConfiguration.Delete(directory);
-        }
         _journalConfiguration.Create(directory, config);
 
-        // Add each file using AddEntry which handles root vs topic logic and name extraction
-        foreach (var entry in entries)
-        {
-            // AddEntry automatically skips TOC files, so no need to check here
-            // Use the name from TOC, let AddEntry determine structure from filename
-            _journalConfiguration.AddEntry(directory, entry.Name, entry.File, topicPath: null);
-        }
+        var metadataDir = GetMetadataDir(directory);
+        _tocStructureRepository.Save(JournalTocStructure.Empty(), metadataDir);
 
-        // Read back the populated config
+        foreach (var entry in entries)
+            _journalConfiguration.AddEntry(directory, entry.Name, entry.File, topicPath: null);
+
         config = _journalConfiguration.Read(directory)!;
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
         return new JournalConfigGenerationResult
         {
             Config = config,
             Source = "toc",
-            FileCount =
-                config.TableOfContents.RootEntries.Length
-                + CountTopicEntries(config.TableOfContents.Structure.Topics),
+            FileCount = tocStructure.RootEntries.Length + CountTopicEntries(tocStructure.Structure.Topics),
         };
     }
 
@@ -123,41 +102,23 @@ public class JournalConfigGenerator(
     )
     {
         if (string.IsNullOrWhiteSpace(directory))
-        {
-            throw new ArgumentException(
-                "Directory cannot be null or whitespace.",
-                nameof(directory)
-            );
-        }
+            throw new ArgumentException("Directory cannot be null or whitespace.", nameof(directory));
 
         if (string.IsNullOrWhiteSpace(tocFileName))
-        {
-            throw new ArgumentException(
-                "TOC file name cannot be null or whitespace.",
-                nameof(tocFileName)
-            );
-        }
+            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
 
-        var trackingFilePath = Path.Combine(directory, $".{_journalSettings.AppName}");
+        var metadataDir = GetMetadataDir(directory);
+        var trackingFilePath = Path.Combine(metadataDir, _journalSettings.TrackingFileName);
 
         if (!_fileSystem.FileExists(trackingFilePath))
-        {
             return null;
-        }
 
         var index = _fileTracking.LoadIndex(directory);
 
-        // A tracking file that contains zero entries is a valid empty-journal state (e.g. a
-        // brand-new directory with no .md files yet). We still create the config so that
-        // downstream steps (TOC generation, etc.) have a well-formed .journalrc to work with.
-        // Get all markdown files from tracking index
         var markdownFiles = index
-            .Files.Keys.Where(f =>
-                f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)
-            )
+            .Files.Keys.Where(f => f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        // Create initial empty config
         var config = new JournalConfig
         {
             JournalName = journalName ?? GetJournalNameFromDirectory(directory),
@@ -166,37 +127,27 @@ public class JournalConfigGenerator(
                 File = $"{tocFileName}{FileConstants.MarkdownExtension}",
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
-                Structure = new Structure { Topics = Array.Empty<Topic>() },
-                RootEntries = Array.Empty<Entries>(),
             },
         };
 
-        // Delete any existing config and save temp config so we can use AddEntry
         var configPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);
         if (_fileSystem.FileExists(configPath))
-        {
             _journalConfiguration.Delete(directory);
-        }
         _journalConfiguration.Create(directory, config);
 
-        // Add each file using AddEntry which handles root vs topic logic and name extraction
-        foreach (var file in markdownFiles)
-        {
-            // AddEntry automatically skips TOC files, so no need to check here
-            // Pass an empty string for name and null for topicPath - AddEntry will extract everything from the filename
-            _journalConfiguration.AddEntry(directory, string.Empty, file, topicPath: null);
-        }
+        _tocStructureRepository.Save(JournalTocStructure.Empty(), metadataDir);
 
-        // Read back the populated config
+        foreach (var file in markdownFiles)
+            _journalConfiguration.AddEntry(directory, string.Empty, file, topicPath: null);
+
         config = _journalConfiguration.Read(directory)!;
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
         return new JournalConfigGenerationResult
         {
             Config = config,
             Source = "tracking",
-            FileCount =
-                config.TableOfContents.RootEntries.Length
-                + CountTopicEntries(config.TableOfContents.Structure.Topics),
+            FileCount = tocStructure.RootEntries.Length + CountTopicEntries(tocStructure.Structure.Topics),
         };
     }
 
@@ -208,34 +159,18 @@ public class JournalConfigGenerator(
     )
     {
         if (string.IsNullOrWhiteSpace(directory))
-        {
-            throw new ArgumentException(
-                "Directory cannot be null or whitespace.",
-                nameof(directory)
-            );
-        }
+            throw new ArgumentException("Directory cannot be null or whitespace.", nameof(directory));
 
         if (string.IsNullOrWhiteSpace(tocFileName))
-        {
-            throw new ArgumentException(
-                "TOC file name cannot be null or whitespace.",
-                nameof(tocFileName)
-            );
-        }
+            throw new ArgumentException("TOC file name cannot be null or whitespace.", nameof(tocFileName));
 
-        // Get all markdown files in directory
         var markdownFiles = _fileSystem
-            .GetFiles(
-                directory,
-                $"*{FileConstants.MarkdownExtension}",
-                SearchOption.TopDirectoryOnly
-            )
+            .GetFiles(directory, $"*{FileConstants.MarkdownExtension}", SearchOption.TopDirectoryOnly)
             .Select(f => Path.GetFileName(f))
             .Where(f => !string.IsNullOrEmpty(f))
             .Cast<string>()
             .ToList();
 
-        // Create initial empty config
         var config = new JournalConfig
         {
             JournalName = journalName ?? GetJournalNameFromDirectory(directory),
@@ -244,43 +179,32 @@ public class JournalConfigGenerator(
                 File = $"{tocFileName}{FileConstants.MarkdownExtension}",
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
-                Structure = new Structure { Topics = Array.Empty<Topic>() },
-                RootEntries = Array.Empty<Entries>(),
             },
         };
 
-        // Delete any existing config and save temp config so we can use AddEntry
         var configPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);
         if (_fileSystem.FileExists(configPath))
-        {
             _journalConfiguration.Delete(directory);
-        }
         _journalConfiguration.Create(directory, config);
 
-        // Add each file using AddEntry which handles root vs topic logic and name extraction
-        foreach (var file in markdownFiles)
-        {
-            // AddEntry automatically skips TOC files, so no need to check here
-            // Pass null for both name and topicPath - AddEntry will extract everything from the filename
-            _journalConfiguration.AddEntry(directory, null!, file, topicPath: null);
-        }
+        var metadataDir = GetMetadataDir(directory);
+        _tocStructureRepository.Save(JournalTocStructure.Empty(), metadataDir);
 
-        // Read back the populated config
+        foreach (var file in markdownFiles)
+            _journalConfiguration.AddEntry(directory, null!, file, topicPath: null);
+
         config = _journalConfiguration.Read(directory)!;
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
         return new JournalConfigGenerationResult
         {
             Config = config,
             Source = "directory",
-            FileCount =
-                config.TableOfContents.RootEntries.Length
-                + CountTopicEntries(config.TableOfContents.Structure.Topics),
+            FileCount = tocStructure.RootEntries.Length + CountTopicEntries(tocStructure.Structure.Topics),
         };
     }
 
-    /// <summary>
-    /// Recursively counts all entries in topics and their subtopics.
-    /// </summary>
+    /// <summary>Recursively counts all entries in topics and their subtopics.</summary>
     private int CountTopicEntries(Topic[] topics)
     {
         var count = 0;
@@ -288,21 +212,15 @@ public class JournalConfigGenerator(
         {
             count += topic.Entries.Length;
             if (topic.Subtopics != null)
-            {
                 count += CountTopicEntries(topic.Subtopics);
-            }
         }
         return count;
     }
 
     private string GetJournalNameFromDirectory(string directory)
     {
-        // Convert to absolute path if relative
         var absolutePath = Path.IsPathRooted(directory) ? directory : Path.GetFullPath(directory);
-
-        // Get the directory name from the absolute path
         var dirName = Path.GetFileName(absolutePath);
-
         return string.IsNullOrEmpty(dirName) ? "MyJournal" : dirName;
     }
 }

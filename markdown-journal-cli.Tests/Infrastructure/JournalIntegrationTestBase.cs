@@ -56,19 +56,22 @@ public abstract class JournalIntegrationTestBase : IDisposable
                 TitleSpaceSeparator = "_",
                 HeadingSeparator = "-",
                 DateFormat = "MM/dd/yyyy",
+                MetadataDirName = ".mdjournal",
+                TrackingFileName = ".journalindex",
+                TocStructureFileName = ".journaltoc",
             }
         );
     }
 
     /// <summary>
-    /// Seeds the journal directory with .journalrc, .mdjournal, and 1a-TableOfContents.md.
+    /// Seeds the journal directory with .journalrc, .mdjournal/, and 1a-TableOfContents.md.
     /// Call from subclass constructor after registering services if you need a pre-initialized journal.
     /// </summary>
     protected void InitializeJournal()
     {
         var settings = JournalSettings.Value;
 
-        // Write .journalrc
+        // Write .journalrc (no structure/rootEntries — those are in .journaltoc)
         var journalrcPath = Path.Combine(JournalPath, settings.JournalConfigFileName);
         var journalrcContent = JsonSerializer.Serialize(
             new
@@ -79,17 +82,31 @@ public abstract class JournalIntegrationTestBase : IDisposable
                     file = $"{settings.TableOfContentsFileName}.md",
                     extensions = new[] { ".md" },
                     ignoreFiles = Array.Empty<string>(),
-                    structure = new { topics = Array.Empty<object>() },
-                    rootEntries = Array.Empty<object>(),
                 },
             },
             new JsonSerializerOptions { WriteIndented = true }
         );
         File.WriteAllText(journalrcPath, journalrcContent);
 
-        // Write tracking index (.md-journal)
-        var trackingPath = Path.Combine(JournalPath, $".{settings.AppName}");
+        // Create .mdjournal metadata directory
+        var metadataDir = Path.Combine(JournalPath, settings.MetadataDirName);
+        Directory.CreateDirectory(metadataDir);
+
+        // Write tracking index (.mdjournal/.journalindex)
+        var trackingPath = Path.Combine(metadataDir, settings.TrackingFileName);
         File.WriteAllText(trackingPath, "{}");
+
+        // Write TOC structure (.mdjournal/.journaltoc)
+        var tocStructurePath = Path.Combine(metadataDir, settings.TocStructureFileName);
+        var tocStructureContent = JsonSerializer.Serialize(
+            new
+            {
+                structure = new { topics = Array.Empty<object>() },
+                rootEntries = Array.Empty<object>(),
+            },
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        File.WriteAllText(tocStructurePath, tocStructureContent);
 
         // Write Table of Contents
         var tocPath = Path.Combine(JournalPath, $"{settings.TableOfContentsFileName}.md");

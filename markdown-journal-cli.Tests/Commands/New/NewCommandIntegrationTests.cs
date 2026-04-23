@@ -32,11 +32,13 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
         // Tests will use JournalRoot as the parent dir and create fresh journals inside it.
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var templateManager = new TemplateManager(JournalSettings);
         var buffer = new InMemoryFileBuffer(FileSystem);
@@ -55,7 +57,8 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
             JournalSettings,
             coordinator,
             rollbackReporter,
-            NullLogger<NewJournalService>.Instance
+            NullLogger<NewJournalService>.Instance,
+            tocStructureRepository
         );
 
         var services = new ServiceCollection();

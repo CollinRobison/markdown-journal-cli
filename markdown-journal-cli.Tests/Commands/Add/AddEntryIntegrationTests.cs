@@ -33,17 +33,20 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         var entryFormatter = new EntryFormatterService(JournalSettings);
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var tocGenerator = new TableOfContentsService(
             FileSystem,
             journalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
 
         _console = new TestConsole();

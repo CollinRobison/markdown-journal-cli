@@ -49,4 +49,13 @@ public class JournalSettings
 
     [Required]
     public string DateFormat { get; set; } = "MM/dd/yyyy";
+
+    [Required]
+    public string MetadataDirName { get; set; } = ".mdjournal";
+
+    [Required]
+    public string TrackingFileName { get; set; } = ".journalindex";
+
+    [Required]
+    public string TocStructureFileName { get; set; } = ".journaltoc";
 }

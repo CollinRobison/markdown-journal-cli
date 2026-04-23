@@ -30,6 +30,14 @@ public class TestFileSystem : IFileSystem
     public virtual bool DirectoryExists(string path) => _directories.ContainsKey(path);
 
     /// <summary>
+    /// Returns true when the path is tracked as a directory in the in-memory file system.
+    /// A path is a directory when it was previously passed to <see cref="CreateDirectory"/>.
+    /// </summary>
+    /// <param name="path">The path to check.</param>
+    /// <returns><c>true</c> if the path is a known directory; otherwise, <c>false</c>.</returns>
+    public virtual bool IsDirectory(string path) => _directories.ContainsKey(path);
+
+    /// <summary>
     /// Creates a directory entry in the in-memory file system.
     /// If the directory already exists in the in-memory store, this method does nothing.
     /// </summary>

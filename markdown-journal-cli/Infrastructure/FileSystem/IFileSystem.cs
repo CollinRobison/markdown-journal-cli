@@ -6,6 +6,14 @@ namespace markdown_journal_cli.Infrastructure.FileSystem;
 public interface IFileSystem
 {
     /// <summary>
+    /// Determines whether the specified path exists and refers to a directory
+    /// (as opposed to a file or a missing path).
+    /// </summary>
+    /// <param name="path">The path to check.</param>
+    /// <returns>true if the path exists and is a directory; otherwise, false.</returns>
+    bool IsDirectory(string path);
+
+    /// <summary>
     /// Determines whether the specified directory exists.
     /// </summary>
     /// <param name="path">The directory path to check.</param>

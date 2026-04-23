@@ -38,7 +38,8 @@ public class InitJournalServiceRollbackTests : ServiceRollbackTestBase
             FileTracking,
             EntryFormatter,
             JournalConfiguration,
-            JournalSettings
+            JournalSettings,
+            TocStructureRepository
         );
 
         return new InitJournalService(

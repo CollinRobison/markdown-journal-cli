@@ -18,6 +18,7 @@ public class JournalConfigGeneratorTests
     private readonly IEntryFormatterService _entryFormatter;
     private readonly IJournalConfiguration _journalConfiguration;
     private readonly JournalSettings _journalSettings;
+    private readonly JournalTocStructureRepository _tocStructureRepository;
     private readonly JournalConfigGenerator _generator;
 
     public JournalConfigGeneratorTests()
@@ -32,11 +33,16 @@ public class JournalConfigGeneratorTests
             hashService
         );
         _entryFormatter = new EntryFormatterService(Options.Create(_journalSettings));
+        _tocStructureRepository = new JournalTocStructureRepository(
+            _fileSystem,
+            Options.Create(_journalSettings)
+        );
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             Options.Create(_journalSettings),
             NullLogger<JournalConfiguration>.Instance,
-            _fileTracking
+            _fileTracking,
+            _tocStructureRepository
         );
 
         _generator = new JournalConfigGenerator(
@@ -45,8 +51,15 @@ public class JournalConfigGeneratorTests
             _fileTracking,
             _entryFormatter,
             _journalConfiguration,
-            Options.Create(_journalSettings)
+            Options.Create(_journalSettings),
+            _tocStructureRepository
         );
+    }
+
+    private JournalTocStructure LoadTocStructure(string directory)
+    {
+        var metadataDir = $"{directory}/{_journalSettings.MetadataDirName}";
+        return _tocStructureRepository.Load(metadataDir);
     }
 
     [Fact]
@@ -89,15 +102,16 @@ public class JournalConfigGeneratorTests
         var config = result.Config;
         Assert.Equal("journal", config.JournalName);
         Assert.Equal($"{tocFileName}.md", config.TableOfContents.File);
-        Assert.Single(config.TableOfContents.RootEntries);
-        Assert.Single(config.TableOfContents.Structure.Topics);
+        var tocStructure = LoadTocStructure(directory);
+        Assert.Single(tocStructure.RootEntries);
+        Assert.Single(tocStructure.Structure.Topics);
 
-        Assert.Equal("Introduction", config.TableOfContents.RootEntries[0].Name);
-        Assert.Equal("1b-intro.md", config.TableOfContents.RootEntries[0].File);
+        Assert.Equal("Introduction", tocStructure.RootEntries[0].Name);
+        Assert.Equal("1b-intro.md", tocStructure.RootEntries[0].File);
 
         // Topic name comes from filename pattern (work-meeting.md -> "work")
-        Assert.Equal("work", config.TableOfContents.Structure.Topics[0].Name);
-        Assert.Single(config.TableOfContents.Structure.Topics[0].Entries);
+        Assert.Equal("work", tocStructure.Structure.Topics[0].Name);
+        Assert.Single(tocStructure.Structure.Topics[0].Entries);
     }
 
     [Fact]
@@ -129,8 +143,9 @@ public class JournalConfigGeneratorTests
         Assert.Equal(5, result.FileCount); // 1 root + 2 in Tech (1 direct + 2 in Backend) + 1 in Personal
 
         var config = result.Config;
-        Assert.Single(config.TableOfContents.RootEntries);
-        Assert.Equal(2, config.TableOfContents.Structure.Topics.Length);
+        var tocStructure = LoadTocStructure(directory);
+        Assert.Single(tocStructure.RootEntries);
+        Assert.Equal(2, tocStructure.Structure.Topics.Length);
     }
 
     [Fact]
@@ -173,7 +188,9 @@ public class JournalConfigGeneratorTests
     }
   }
 }";
-        _fileSystem.CreateFile(directory, $".{_journalSettings.AppName}", trackingIndexJson);
+        var metadataDir = $"{directory}/{_journalSettings.MetadataDirName}";
+        _fileSystem.CreateDirectory(metadataDir);
+        _fileSystem.CreateFile(metadataDir, _journalSettings.TrackingFileName, trackingIndexJson);
 
         // Act
         var result = _generator.GenerateFromTrackingIndex(directory, "1a-TableOfContents");
@@ -184,24 +201,22 @@ public class JournalConfigGeneratorTests
         Assert.Equal(2, result.FileCount);
 
         var config = result.Config;
+        var tocStructure = LoadTocStructure(directory);
         // Files with hyphens like "work-meeting" become topics
-        Assert.Equal(2, config.TableOfContents.Structure.Topics.Length);
-        Assert.Empty(config.TableOfContents.RootEntries);
+        Assert.Equal(2, tocStructure.Structure.Topics.Length);
+        Assert.Empty(tocStructure.RootEntries);
 
         // Check topics were created correctly
-        var topicNames = config
-            .TableOfContents.Structure.Topics.Select(t => t.Name)
-            .OrderBy(n => n)
-            .ToArray();
+        var topicNames = tocStructure.Structure.Topics.Select(t => t.Name).OrderBy(n => n).ToArray();
         Assert.Contains("work", topicNames);
         Assert.Contains("personal", topicNames);
 
         // Check entries within topics
-        var workTopic = config.TableOfContents.Structure.Topics.First(t => t.Name == "work");
+        var workTopic = tocStructure.Structure.Topics.First(t => t.Name == "work");
         Assert.Single(workTopic.Entries);
         Assert.Equal("meeting", workTopic.Entries[0].Name);
 
-        var personalTopic = config.TableOfContents.Structure.Topics.First(t =>
+        var personalTopic = tocStructure.Structure.Topics.First(t =>
             t.Name == "personal"
         );
         Assert.Single(personalTopic.Entries);
@@ -243,6 +258,11 @@ public class JournalConfigGeneratorTests
 }";
         _fileSystem.CreateFile(directory, $".{_journalSettings.AppName}", trackingIndexJson);
 
+        // Also create at the new path .mdjournal/.journalindex
+        var metadataDir2 = $"{directory}/{_journalSettings.MetadataDirName}";
+        _fileSystem.CreateDirectory(metadataDir2);
+        _fileSystem.CreateFile(metadataDir2, _journalSettings.TrackingFileName, trackingIndexJson);
+
         // Act
         var result = _generator.GenerateFromTrackingIndex(directory, "1a-TableOfContents");
 
@@ -252,29 +272,30 @@ public class JournalConfigGeneratorTests
         var config = result.Config;
         Assert.Equal(2, result.FileCount); // 1b-Intro (root) and work-meeting (topic entry)
 
+        var tocStructure2 = LoadTocStructure(directory);
         // Debug output
-        Console.WriteLine($"Root entries: {config.TableOfContents.RootEntries.Length}");
-        Console.WriteLine($"Topics: {config.TableOfContents.Structure.Topics.Length}");
-        foreach (var entry in config.TableOfContents.RootEntries)
+        Console.WriteLine($"Root entries: {tocStructure2.RootEntries.Length}");
+        Console.WriteLine($"Topics: {tocStructure2.Structure.Topics.Length}");
+        foreach (var entry in tocStructure2.RootEntries)
         {
             Console.WriteLine($"Root entry: {entry.File}");
         }
-        foreach (var topic in config.TableOfContents.Structure.Topics)
+        foreach (var topic in tocStructure2.Structure.Topics)
         {
             Console.WriteLine($"Topic: {topic.Name}, Entries: {topic.Entries.Length}");
         }
 
         // 1b-Intro is a root entry (matches 1a-9z pattern)
-        Assert.Single(config.TableOfContents.RootEntries);
-        Assert.Equal("1b-Intro.md", config.TableOfContents.RootEntries[0].File);
+        Assert.Single(tocStructure2.RootEntries);
+        Assert.Equal("1b-Intro.md", tocStructure2.RootEntries[0].File);
 
         // work-meeting becomes a topic with "work" containing "meeting" entry
-        Assert.Single(config.TableOfContents.Structure.Topics);
-        var workTopic = config.TableOfContents.Structure.Topics[0];
-        Assert.Equal("work", workTopic.Name);
-        Assert.Single(workTopic.Entries);
-        Assert.Equal("meeting", workTopic.Entries[0].Name);
-        Assert.Equal("work-meeting.md", workTopic.Entries[0].File);
+        Assert.Single(tocStructure2.Structure.Topics);
+        var workTopic2 = tocStructure2.Structure.Topics[0];
+        Assert.Equal("work", workTopic2.Name);
+        Assert.Single(workTopic2.Entries);
+        Assert.Equal("meeting", workTopic2.Entries[0].Name);
+        Assert.Equal("work-meeting.md", workTopic2.Entries[0].File);
 
         // TOC should not be in ignoreFiles (it's already in tableOfContents.file)
         Assert.True(
@@ -300,8 +321,9 @@ public class JournalConfigGeneratorTests
         Assert.Equal(0, result.FileCount);
 
         var config = result.Config;
-        Assert.Empty(config.TableOfContents.RootEntries);
-        Assert.Empty(config.TableOfContents.Structure.Topics);
+        var tocStructure = LoadTocStructure(directory);
+        Assert.Empty(tocStructure.RootEntries);
+        Assert.Empty(tocStructure.Structure.Topics);
     }
 
     [Fact]
@@ -325,9 +347,10 @@ public class JournalConfigGeneratorTests
         Assert.Equal(3, result.FileCount);
 
         var config = result.Config;
+        var tocStructure = LoadTocStructure(directory);
         // All files are topic entries (e.g., "work-meeting" creates topic "work" with entry "meeting")
-        Assert.Empty(config.TableOfContents.RootEntries);
-        Assert.Equal(3, config.TableOfContents.Structure.Topics.Length);
+        Assert.Empty(tocStructure.RootEntries);
+        Assert.Equal(3, tocStructure.Structure.Topics.Length);
     }
 
     [Fact]
@@ -351,16 +374,17 @@ public class JournalConfigGeneratorTests
         Assert.Equal(3, result.FileCount); // 1b-Intro, 1c-Template, and work-meeting (only TOC excluded)
 
         var config = result.Config;
+        var tocStructure = LoadTocStructure(directory);
 
         // Root entries are those matching 1a-9z pattern (1b and 1c)
-        Assert.Equal(2, config.TableOfContents.RootEntries.Length);
-        var rootEntryFiles = config.TableOfContents.RootEntries.Select(e => e.File).ToArray();
+        Assert.Equal(2, tocStructure.RootEntries.Length);
+        var rootEntryFiles = tocStructure.RootEntries.Select(e => e.File).ToArray();
         Assert.Contains("1b-Intro.md", rootEntryFiles);
         Assert.Contains("1c-Journal-Entry-Template.md", rootEntryFiles);
 
         // work-meeting should be in the work topic
-        Assert.Single(config.TableOfContents.Structure.Topics);
-        var workTopic = config.TableOfContents.Structure.Topics[0];
+        Assert.Single(tocStructure.Structure.Topics);
+        var workTopic = tocStructure.Structure.Topics[0];
         Assert.Equal("work", workTopic.Name);
         Assert.Single(workTopic.Entries);
         Assert.Equal("work-meeting.md", workTopic.Entries[0].File);
@@ -390,11 +414,12 @@ public class JournalConfigGeneratorTests
 
         // Assert
         Assert.NotNull(result);
-        var config = result.Config;
+
+        var tocStructure = LoadTocStructure(directory);
 
         // All 3 files have topic paths, so should be organized into topics
-        Assert.Empty(config.TableOfContents.RootEntries);
-        Assert.Equal(3, config.TableOfContents.Structure.Topics.Length);
+        Assert.Empty(tocStructure.RootEntries);
+        Assert.Equal(3, tocStructure.Structure.Topics.Length);
 
         // Entry names should be extracted from the last part of the filename
         // Need to recursively get entries from nested topics
@@ -410,7 +435,7 @@ public class JournalConfigGeneratorTests
                 }
             }
         }
-        CollectEntries(config.TableOfContents.Structure.Topics);
+        CollectEntries(tocStructure.Structure.Topics);
 
         Assert.Contains("api design", allEntryNames); // "api_design" -> "api design"
         Assert.Contains("daily standup", allEntryNames); // "daily_standup" -> "daily standup"
@@ -457,7 +482,9 @@ public class JournalConfigGeneratorTests
         _fileSystem.CreateDirectory(directory);
 
         var emptyIndexJson = @"{""Files"": {}}";
-        _fileSystem.CreateFile(directory, $".{_journalSettings.AppName}", emptyIndexJson);
+        var metadataDir = $"{directory}/{_journalSettings.MetadataDirName}";
+        _fileSystem.CreateDirectory(metadataDir);
+        _fileSystem.CreateFile(metadataDir, _journalSettings.TrackingFileName, emptyIndexJson);
 
         // Act
         var result = _generator.GenerateFromTrackingIndex(
@@ -471,8 +498,9 @@ public class JournalConfigGeneratorTests
         Assert.Equal("tracking", result.Source);
         Assert.Equal(0, result.FileCount);
         Assert.Equal("EmptyJournal", result.Config.JournalName);
-        Assert.Empty(result.Config.TableOfContents.RootEntries);
-        Assert.Empty(result.Config.TableOfContents.Structure.Topics);
+        var tocStructure = LoadTocStructure(directory);
+        Assert.Empty(tocStructure.RootEntries);
+        Assert.Empty(tocStructure.Structure.Topics);
     }
 
     [Fact]

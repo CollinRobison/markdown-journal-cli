@@ -38,4 +38,19 @@ public interface ITableOfContentsService
     /// <param name="projectedConfig">The in-memory config to use for TOC generation.</param>
     /// <returns>The generated TOC markdown content as a string.</returns>
     string PreviewTableOfContents(string journalDirectory, JournalConfig projectedConfig);
+
+    /// <summary>
+    /// Generates and returns the TOC markdown content using caller-supplied projected config and
+    /// TOC structure, without writing to disk.
+    /// Used by the dry-run path when both the config and the structural entries are projected.
+    /// </summary>
+    /// <param name="journalDirectory">The directory containing the journal.</param>
+    /// <param name="projectedConfig">The in-memory config to use for TOC generation.</param>
+    /// <param name="projectedTocStructure">The in-memory TOC structure to use.</param>
+    /// <returns>The generated TOC markdown content as a string.</returns>
+    string PreviewTableOfContents(
+        string journalDirectory,
+        JournalConfig projectedConfig,
+        JournalTocStructure projectedTocStructure
+    );
 }

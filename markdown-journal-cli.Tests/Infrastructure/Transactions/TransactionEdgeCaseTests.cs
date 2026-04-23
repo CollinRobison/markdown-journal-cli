@@ -178,6 +178,8 @@ public class TransactionEdgeCaseTests : IDisposable
 
         public bool DirectoryExists(string path) => _inner.DirectoryExists(path);
 
+        public bool IsDirectory(string path) => _inner.IsDirectory(path);
+
         public bool FileExists(string path) => _inner.FileExists(path);
 
         public void CreateDirectory(string path) => _inner.CreateDirectory(path);
