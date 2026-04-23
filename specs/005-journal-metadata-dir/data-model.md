@@ -127,7 +127,7 @@ public class JournalTocStructure
 
 ---
 
-### `JournalIndex` (`.journalindex`) — NO MODEL CHANGE
+### `JournalIndex` (`.journalindex`) — NO MODEL CHANGE *(spec.md terminology: "Tracking File")*
 
 The `JournalIndex` model itself is unchanged (`Dictionary<string, FileState>`). Only the path changes:
 - **Before**: `<journal>/.mdjournal`

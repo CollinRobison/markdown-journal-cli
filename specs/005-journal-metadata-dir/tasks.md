@@ -34,8 +34,8 @@
 
 ### 2b. Domain Models
 
-- [ ] T004 [P] Create `JournalTocStructure` model with JSON-serializable `Structure` and `RootEntries` properties (extracted from existing `TableOfContents`) in `markdown-journal-cli/Infrastructure/Configuration/Models/JournalTocStructure.cs`
-- [ ] T005 Remove `Structure` and `RootEntries` properties from the `TableOfContents` class, keeping only `File`, `Extensions`, and `IgnoreFiles` in `markdown-journal-cli/Infrastructure/Configuration/Models/TableOfContents.cs`
+- [ ] T004 [P] Create `JournalTocStructure` model with JSON-serializable `Structure` and `RootEntries` properties (extracted from existing `TableOfContents`). Use a static `Empty()` factory method (or equivalent constructor) to initialize both to safe defaults (`Structure` with empty `Topics` array; `RootEntries = []`) for use when the `.journaltoc` file is absent. File: `markdown-journal-cli/Infrastructure/Configuration/Models/JournalTocStructure.cs`
+- [ ] T005 *(depends on T004)* Remove `Structure` and `RootEntries` properties from the `TableOfContents` class, keeping only `File`, `Extensions`, and `IgnoreFiles` in `markdown-journal-cli/Infrastructure/Configuration/Models/TableOfContents.cs`
 
 ### 2c. File System Abstraction
 
@@ -46,7 +46,7 @@
 ### 2d. New Repository & Validator Interfaces
 
 - [ ] T009 [P] Create `IJournalTocStructureRepository` interface with `JournalTocStructure Load(string metadataDir)` and `void Save(JournalTocStructure structure, string metadataDir)` in `markdown-journal-cli/Infrastructure/Configuration/IJournalTocStructureRepository.cs`
-- [ ] T010 Implement `JournalTocStructureRepository` — JSON read/write of `.journaltoc` inside `metadataDir` using `JsonSerializer` (WriteIndented = true); return an empty `JournalTocStructure` when the file is absent in `markdown-journal-cli/Infrastructure/Configuration/JournalTocStructureRepository.cs`
+- [ ] T010 Implement `JournalTocStructureRepository` — JSON read/write of `.journaltoc` inside `metadataDir` using `JsonSerializer` (WriteIndented = true); when the file is absent return `JournalTocStructure.Empty()` (per T004: `Structure` with empty `Topics` array and `RootEntries = []`). File: `markdown-journal-cli/Infrastructure/Configuration/JournalTocStructureRepository.cs`
 - [ ] T011 [P] Create `IJournalValidator` interface with `IReadOnlyList<string> ValidateMetadataDirectory(string journalDir)` in `markdown-journal-cli/Infrastructure/Validation/IJournalValidator.cs`
 - [ ] T012 Implement `JournalValidator` — check that `.mdjournal/` exists and is a directory; check that `.journalindex` and `.journaltoc` exist inside it; return a list of missing file/directory names (empty list = valid) in `markdown-journal-cli/Infrastructure/Validation/JournalValidator.cs`
 
@@ -55,7 +55,7 @@
 - [ ] T013 Update `FileTracking` to build the tracking file path as `Path.Combine(journalDir, settings.MetadataDirName, settings.TrackingFileName)` and update `GetCurrentMarkdownFiles` exclusion to skip the entire `.mdjournal/` metadata directory in `markdown-journal-cli/Infrastructure/Tracking/FileTracking.cs`
 - [ ] T014 Update `JournalConfiguration.Create()` and `Update()` to omit `structure` and `rootEntries` from `.journalrc` writes — these fields now live in `.journaltoc` in `markdown-journal-cli/Infrastructure/Configuration/JournalConfiguration.cs`
 - [ ] T015 Update `JournalConfigGenerator` to load TOC structure from `IJournalTocStructureRepository` and save it back via `IJournalTocStructureRepository` rather than reading from `JournalConfig.TableOfContents.Structure` in `markdown-journal-cli/Infrastructure/Configuration/JournalConfigGenerator.cs`
-- [ ] T016 Update `JournalCommand<TSettings>` base class to call `IJournalValidator.ValidateMetadataDirectory(journalDir)` before delegating to the command's business logic; print an actionable error via `IAnsiConsole` listing missing files and return exit code 1 on any failure in `markdown-journal-cli/Commands/JournalCommand.cs`
+- [ ] T016 Update `JournalCommand<TSettings>` base class: (a) add `protected virtual bool SkipMetadataValidation => false;`, (b) call `IJournalValidator.ValidateMetadataDirectory(journalDir)` before delegating — only when `SkipMetadataValidation` is `false`, (c) print an actionable error via `IAnsiConsole` listing missing files and return exit code 1 on any failure. Note: `NewCommand` and `InitCommand` must override this to `true` — see T018 and T034. File: `markdown-journal-cli/Commands/JournalCommand.cs`
 
 ### 2f. Dependency Registration
 
@@ -73,7 +73,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Update `NewJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields in `markdown-journal-cli/Services/NewJournal/NewJournalService.cs`
+- [ ] T018 [US1] Update `NewJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields. Also add `protected override bool SkipMetadataValidation => true;` to `NewCommand` — the journal directory does not exist yet when this command runs. Files: `markdown-journal-cli/Services/NewJournal/NewJournalService.cs`, `markdown-journal-cli/Commands/New/NewCommand.cs`
 - [ ] T019 [US1] Update `NewJournal` service tests to assert: metadata directory exists, `.journalindex` exists inside it, `.journaltoc` exists inside it, and `.journalrc` JSON contains no `structure` or `rootEntries` keys in `markdown-journal-cli.Tests/Services/NewJournal/NewJournalServiceTests.cs`
 - [ ] T020 [US1] Update `QuickstartValidationTests` to expect the new `.mdjournal/` directory layout for all journal-creation scenarios in `markdown-journal-cli.Tests/Infrastructure/QuickstartValidationTests.cs`
 
@@ -94,7 +94,7 @@
 - [ ] T023 [P] [US3] Update `JournalEntryService` to resolve the journal index path from `.mdjournal/.journalindex` and update `.mdjournal/.journaltoc` (via `IJournalTocStructureRepository`) after creating an entry in `markdown-journal-cli/Services/JournalEntry/JournalEntryService.cs`
 - [ ] T024 [P] [US3] Update `RemoveEntryService` to resolve index and TOC structure paths from the metadata directory in `markdown-journal-cli/Services/RemoveEntry/RemoveEntryService.cs`
 - [ ] T025 [P] [US3] Update `JournalFileUpdateService` to resolve any internal metadata file paths from the `.mdjournal/` metadata directory in `markdown-journal-cli/Services/JournalFileUpdate/JournalFileUpdateService.cs`
-- [ ] T026 [US3] Update all command handlers under `markdown-journal-cli/Commands/Add/` to pass the metadata directory path correctly to their underlying services
+- [ ] T026 [US3] Update all command handlers under `markdown-journal-cli/Commands/Add/` to pass the metadata directory path correctly to their underlying services. Explicitly covers: `AddEntryCommand`, `AddTableOfContentsCommand`, `AddFileTrackingCommand`, and `AddJournalrcCommand` — any path previously derived from the journal root or `.journalrc` for internal metadata files must resolve from `.mdjournal/` instead
 - [ ] T027 [US3] Update all command handlers under `markdown-journal-cli/Commands/Update/` to pass the metadata directory path correctly to their underlying services
 - [ ] T028 [US3] Update all command handlers under `markdown-journal-cli/Commands/Remove/` to pass the metadata directory path correctly to their underlying services
 - [ ] T029 [US3] Update all existing service unit tests that set up journal state to use the new `.mdjournal/` metadata directory layout in `markdown-journal-cli.Tests/Services/`
@@ -115,9 +115,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T034 [US2] Update `InitJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields in `markdown-journal-cli/Services/InitJournal/InitJournalService.cs`
+- [ ] T034 [US2] Update `InitJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields. Also add `protected override bool SkipMetadataValidation => true;` to `InitCommand` — the metadata directory is being created by this command and will not exist on entry. Files: `markdown-journal-cli/Services/InitJournal/InitJournalService.cs`, `markdown-journal-cli/Commands/Init/InitCommand.cs`
 - [ ] T035 [US2] Update `InitJournal` service tests to assert: metadata directory exists, `.journalindex` and `.journaltoc` exist inside it, and `.journalrc` JSON has no `structure` or `rootEntries` keys in `markdown-journal-cli.Tests/Services/InitJournal/InitJournalServiceTests.cs`
-- [ ] T036 [US2] Add integration test verifying that when `.mdjournal/` exists as a directory but required files are missing, any subsequent command prints a clear error listing the missing files and returns exit code 1 in `markdown-journal-cli.Tests/Commands/`
+- [ ] T036 [US2] Add integration test verifying that when `.mdjournal/` exists as a directory but required files are missing, any subsequent command prints a clear error listing the missing files and returns exit code 1 in `markdown-journal-cli.Tests/Commands/Init/InitCommandIntegrationTests.cs`
 
 **Checkpoint**: `mdjournal init` creates journals in the new layout. User Story 2 is independently testable.
 
@@ -155,13 +155,14 @@
 ### Documentation
 
 - [ ] T046 [P] Update `docs/ARCHITECTURE.md` — update the journal directory tree to show `.mdjournal/` as a directory containing `.journalindex` and `.journaltoc`, and update component descriptions to match the new layout
-- [ ] T047 [P] Update `README.md` — update the journal layout section to show the `.mdjournal/` directory structure
+- [ ] T047 [P] Update `README.md` — update the journal layout section to show the `.mdjournal/` directory structure; explicitly note that the directory is dot-prefixed and therefore hidden in standard `ls` output on macOS/Linux (SC-004)
 - [ ] T048 [P] Update `docs/DEVELOPMENT.md` — update "Adding a Service" (and related sections) to describe the metadata directory pattern and the new `IJournalTocStructureRepository` / `IJournalValidator` infrastructure
-- [ ] T049 Update the architecture diagram PNG embedded in `docs/ARCHITECTURE.md` by regenerating it from `docs/mdjournal_file_infrastructure.drawio`
+- [ ] T049a Update `docs/mdjournal_file_infrastructure.drawio` — add `.mdjournal/` as a directory node containing `.journalindex` and `.journaltoc`; relabel or remove the old root-level `.mdjournal` file node. Must be completed before T049.
+- [ ] T049 Update the architecture diagram PNG embedded in `docs/ARCHITECTURE.md` by regenerating it from the updated `docs/mdjournal_file_infrastructure.drawio` *(depends on T049a)*
 
 ### Constitution
 
-- [ ] T050 [P] Update the `Serialization` row in `.specify/memory/constitution.md` from `System.Text.Json for .journalrc and .mdjournal` to `System.Text.Json for .journalrc, .journalindex, and .journaltoc (inside .mdjournal/ metadata directory)`; bump the version field from `1.0.0` to `1.0.1`; update the "Last Amended" date
+- [ ] T050 Update the `Serialization` row in `.specify/memory/constitution.md` from `System.Text.Json for .journalrc and .mdjournal` to `System.Text.Json for .journalrc, .journalindex, and .journaltoc (inside .mdjournal/ metadata directory)`; bump the version field from `1.0.0` to `1.0.1`; update the "Last Amended" date. Run this last after all other Polish tasks (T046–T049) are complete.
 
 ### Final Validation
 
