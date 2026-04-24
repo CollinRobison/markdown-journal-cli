@@ -28,6 +28,12 @@ public sealed class NewCommand(
 
     private readonly JournalSettings _journalSettings = journalSettings.Value;
 
+    /// <summary>
+    /// Skips metadata directory validation because NewCommand creates a new journal
+    /// from scratch — the directory does not exist yet.
+    /// </summary>
+    protected override bool SkipMetadataValidation => true;
+
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[name]")]

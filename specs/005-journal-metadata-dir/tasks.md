@@ -73,7 +73,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Update `NewJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields. Also add `protected override bool SkipMetadataValidation => true;` to `NewCommand` — the journal directory does not exist yet when this command runs. Files: `markdown-journal-cli/Services/NewJournal/NewJournalService.cs`, `markdown-journal-cli/Commands/New/NewCommand.cs` *(NewJournalService is done; NewCommand is missing `SkipMetadataValidation` override — blocked on T016)*
+- [x] T018 [US1] Update `NewJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields. Also add `protected override bool SkipMetadataValidation => true;` to `NewCommand` — the journal directory does not exist yet when this command runs. Files: `markdown-journal-cli/Services/NewJournal/NewJournalService.cs`, `markdown-journal-cli/Commands/New/NewCommand.cs` *(NewJournalService is done; NewCommand is missing `SkipMetadataValidation` override — blocked on T016)*
 - [ ] T019 [US1] Update `NewJournal` service tests to assert: metadata directory exists, `.journalindex` exists inside it, `.journaltoc` exists inside it, and `.journalrc` JSON contains no `structure` or `rootEntries` keys in `markdown-journal-cli.Tests/Services/NewJournal/NewJournalServiceTests.cs`
 - [ ] T020 [US1] Update `QuickstartValidationTests` to expect the new `.mdjournal/` directory layout for all journal-creation scenarios in `markdown-journal-cli.Tests/Infrastructure/QuickstartValidationTests.cs`
 
