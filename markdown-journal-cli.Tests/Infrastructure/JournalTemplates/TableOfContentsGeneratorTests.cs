@@ -1,8 +1,10 @@
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace markdown_journal_cli.Tests.Infrastructure.JournalTemplates;
@@ -13,6 +15,7 @@ public class TableOfContentsGeneratorTests
     private readonly TestJournalConfiguration _journalConfiguration;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly TableOfContentsService _generator;
+    private readonly Mock<IJournalTocStructureRepository> _mockTocStructureRepository;
 
     public TableOfContentsGeneratorTests()
     {
@@ -27,11 +30,14 @@ public class TableOfContentsGeneratorTests
                 TableOfContentsTitle = "Table of Contents",
             }
         );
+        _mockTocStructureRepository = new Mock<IJournalTocStructureRepository>();
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>())).Returns(JournalTocStructure.Empty());
         _generator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             _journalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            _mockTocStructureRepository.Object
         );
     }
 
@@ -46,18 +52,20 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries =
-                [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Template", File = "1c-Template.md" },
-                ],
-                Structure = new Structure { Topics = [] },
-            },
+            {            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Template", File = "1c-Template.md" },
+                ],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -80,10 +88,7 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries = [new() { Name = "Intro", File = "intro.md" }],
-                Structure = new Structure { Topics = [] },
-            },
+            {            },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -91,6 +96,12 @@ public class TableOfContentsGeneratorTests
         var editedDate = new DateTime(2026, 1, 4);
 
         // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new() { Name = "Intro", File = "intro.md" }],
+            });
         _generator.UpdateTableOfContents(journalDir, createdDate, editedDate);
 
         // Assert
@@ -111,8 +122,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -129,11 +146,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -155,8 +169,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -189,11 +209,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -216,8 +233,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -267,11 +290,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -296,8 +316,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -310,11 +336,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -337,12 +360,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {},
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries =
-                [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "All My Journals", File = "1h-All-My-Journals.md" },
-                ],
                 Structure = new Structure
                 {
                     Topics =
@@ -376,11 +401,11 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "All My Journals", File = "1h-All-My-Journals.md" },
+                ],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -444,8 +469,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -458,11 +489,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -483,8 +511,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -497,11 +531,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -522,8 +553,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -536,11 +573,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -562,8 +596,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -576,11 +616,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -601,8 +638,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -623,11 +666,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -662,15 +702,22 @@ public class TableOfContentsGeneratorTests
             _fileSystem,
             _journalConfiguration,
             settingsWithoutCaps,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            _mockTocStructureRepository.Object
         );
 
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -694,11 +741,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         generatorWithoutCaps.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -733,15 +777,22 @@ public class TableOfContentsGeneratorTests
             _fileSystem,
             _journalConfiguration,
             settingsWithCaps,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            _mockTocStructureRepository.Object
         );
 
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -754,11 +805,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         generatorWithCaps.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -780,16 +828,19 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-                Structure = new Structure { Topics = [] },
-            },
+            {            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         var originalCreated = new DateTime(2024, 1, 1);
 
         // Create TOC with original created date
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+            });
         _generator.UpdateTableOfContents(journalDir, createdDate: originalCreated);
 
         // Act - Update without providing created date
@@ -813,16 +864,19 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-                Structure = new Structure { Topics = [] },
-            },
+            {            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         var originalLastEdited = new DateTime(2024, 1, 15);
 
         // Create TOC with original last edited date
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+            });
         _generator.UpdateTableOfContents(journalDir, lastEditedDate: originalLastEdited);
 
         // Act - Update without providing last edited date (simulating read-only operations)
@@ -844,10 +898,7 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-                Structure = new Structure { Topics = [] },
-            },
+            {            },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -855,6 +906,12 @@ public class TableOfContentsGeneratorTests
         var originalEdited = new DateTime(2024, 1, 15);
 
         // Create TOC with original dates
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+            });
         _generator.UpdateTableOfContents(journalDir, originalCreated, originalEdited);
 
         // Act - Update with new dates (both should be overridden)
@@ -881,14 +938,17 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-                Structure = new Structure { Topics = [] },
-            },
+            {            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act - Create TOC without any dates
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -910,8 +970,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -942,11 +1008,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -976,8 +1039,14 @@ public class TableOfContentsGeneratorTests
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
             {
-                RootEntries = [],
-                IgnoreFiles = ["abc-test_2-test_file_5.md"],
+                IgnoreFiles = ["abc-test_2-test_file_5.md"],            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
                 Structure = new Structure
                 {
                     Topics =
@@ -1008,11 +1077,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1035,8 +1101,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -1067,11 +1139,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1104,8 +1173,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -1148,11 +1223,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1196,8 +1268,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -1235,11 +1313,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1277,20 +1352,22 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
-            {
-                RootEntries =
-                [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Template", File = "1c-Template.md" },
-                    new() { Name = "Draft", File = "1d-Draft.md" },
-                ],
-                IgnoreFiles = ["1d-Draft.md"],
-                Structure = new Structure { Topics = [] },
+            {                IgnoreFiles = ["1d-Draft.md"],
             },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Template", File = "1c-Template.md" },
+                    new() { Name = "Draft", File = "1d-Draft.md" },
+                ],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1315,8 +1392,14 @@ public class TableOfContentsGeneratorTests
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
             {
-                RootEntries = [],
-                IgnoreFiles = ["abc-test_2-test_file_5.md", "abc-test_2-test_file_6.md"],
+                IgnoreFiles = ["abc-test_2-test_file_5.md", "abc-test_2-test_file_6.md"],            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
                 Structure = new Structure
                 {
                     Topics =
@@ -1354,11 +1437,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1382,8 +1462,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -1412,11 +1498,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1451,8 +1534,14 @@ public class TableOfContentsGeneratorTests
         {
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
+            {            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
             {
-                RootEntries = [],
                 Structure = new Structure
                 {
                     Topics =
@@ -1506,11 +1595,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1563,19 +1649,21 @@ public class TableOfContentsGeneratorTests
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
             {
-                File = "newtoc.md",
-                RootEntries =
-                [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Newtoc", File = "newtoc.md" }, // TOC file shouldn't appear
-                    new() { Name = "Other", File = "other.md" },
-                ],
-                Structure = new Structure { Topics = [] },
-            },
+                File = "newtoc.md",            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Newtoc", File = "newtoc.md" }, // TOC file shouldn't appear
+                    new() { Name = "Other", File = "other.md" },
+                ],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1598,8 +1686,14 @@ public class TableOfContentsGeneratorTests
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
             {
-                File = "newtoc.md",
-                RootEntries = [],
+                File = "newtoc.md",            },
+        };
+        _journalConfiguration.Create(journalDir, config);
+
+        // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
                 Structure = new Structure
                 {
                     Topics =
@@ -1621,11 +1715,8 @@ public class TableOfContentsGeneratorTests
                         },
                     ],
                 },
-            },
-        };
-        _journalConfiguration.Create(journalDir, config);
-
-        // Act
+                RootEntries = [],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1651,18 +1742,20 @@ public class TableOfContentsGeneratorTests
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
             {
-                File = "newtoc.md",
-                RootEntries =
-                [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Newtoc", File = "NewTOC.md" }, // Different casing
-                ],
-                Structure = new Structure { Topics = [] },
-            },
+                File = "newtoc.md",            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "Newtoc", File = "NewTOC.md" }, // Different casing
+                ],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1685,18 +1778,21 @@ public class TableOfContentsGeneratorTests
             {
                 File = "toc.md",
                 IgnoreFiles = ["draft.md"], // toc.md added automatically
-                RootEntries =
-                [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "TOC", File = "toc.md" },
-                    new() { Name = "Draft", File = "draft.md" },
-                ],
-                Structure = new Structure { Topics = [] },
             },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [
+                    new() { Name = "Introduction", File = "1b-Intro.md" },
+                    new() { Name = "TOC", File = "toc.md" },
+                    new() { Name = "Draft", File = "draft.md" },
+                ],
+            });
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert

@@ -67,8 +67,6 @@ public class RemoveEntryServiceTests : ServiceTestBase
                     TableOfContents = new TableOfContents
                     {
                         File = "1a-TableOfContents.md",
-                        Structure = new Structure { Topics = [] },
-                        RootEntries = [],
                     },
                 }
             );
@@ -261,8 +259,6 @@ public class RemoveEntryServiceTests : ServiceTestBase
                     TableOfContents = new TableOfContents
                     {
                         File = "my-toc.md",
-                        Structure = new Structure { Topics = [] },
-                        RootEntries = [],
                     },
                 }
             );

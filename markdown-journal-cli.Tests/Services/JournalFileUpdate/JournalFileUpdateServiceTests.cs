@@ -234,8 +234,6 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
                         TableOfContents = new TableOfContents
                         {
                             File = "toc.md",
-                            RootEntries = Array.Empty<Entries>(),
-                            Structure = new Structure { Topics = Array.Empty<Topic>() },
                             IgnoreFiles = new[] { TestFile, "other_file.md" },
                         },
                     };
@@ -280,8 +278,6 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
                         TableOfContents = new TableOfContents
                         {
                             File = "toc.md",
-                            RootEntries = Array.Empty<Entries>(),
-                            Structure = new Structure { Topics = Array.Empty<Topic>() },
                             IgnoreFiles = null,
                         },
                     };
@@ -803,8 +799,6 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
                         TableOfContents = new TableOfContents
                         {
                             File = "toc.md",
-                            RootEntries = Array.Empty<Entries>(),
-                            Structure = new Structure { Topics = Array.Empty<Topic>() },
                             IgnoreFiles = new[] { currentFile },
                         },
                     };

@@ -58,30 +58,42 @@ public class AddTableOfContentsRollbackTests : IDisposable
             DateFormat = "MM/dd/yyyy",
             TitleSpaceSeparator = "_",
             HeadingSeparator = "-",
+            MetadataDirName = ".mdjournal",
+            TrackingFileName = ".journalindex",
+            TocStructureFileName = ".journaltoc",
         };
 
         var settingsOptions = Options.Create(_journalSettings);
         var hashService = new TestHashService();
         var fileTracking = new FileTracking(_fileSystem, settingsOptions, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(_fileSystem, settingsOptions);
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             settingsOptions,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         _tableOfContentsService = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             settingsOptions,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
 
-        // Set up a journal with .journalrc (no TOC file yet) — use camelCase JSON matching model's [JsonPropertyName]
+        // Set up a journal with .journalrc and empty .mdjournal/.journaltoc
         _fileSystem.CreateDirectory(JournalPath);
         _fileSystem.CreateFile(
             JournalPath,
             ".journalrc",
-            """{"journalName":"Test","tableOfContents":{"file":"1a-TableOfContents.md","extensions":[".md"],"structure":{"topics":[]},"rootEntries":[]}}"""
+            """{"journalName":"Test","tableOfContents":{"file":"1a-TableOfContents.md","extensions":[".md"]}}"""
+        );
+        _fileSystem.CreateDirectory($"{JournalPath}/.mdjournal");
+        _fileSystem.CreateFile(
+            $"{JournalPath}/.mdjournal",
+            ".journaltoc",
+            """{"Structure":{"Topics":[]},"RootEntries":[]}"""
         );
         _fileSystem.ResetCallCounts();
     }

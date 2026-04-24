@@ -31,11 +31,13 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
     {
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);
         var tocParser = new TableOfContentsMarkdownParser();
@@ -45,13 +47,15 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
             fileTracking,
             entryFormatter,
             journalConfiguration,
-            JournalSettings
+            JournalSettings,
+            tocStructureRepository
         );
         var tocService = new TableOfContentsService(
             FileSystem,
             journalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
         var buffer = new InMemoryFileBuffer(FileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();

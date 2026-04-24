@@ -14,7 +14,8 @@ public class TableOfContentsService(
     IFileSystem fileSystem,
     IJournalConfiguration journalConfiguration,
     IOptions<JournalSettings> journalSettings,
-    ILogger<TableOfContentsService> logger
+    ILogger<TableOfContentsService> logger,
+    IJournalTocStructureRepository tocStructureRepository
 ) : ITableOfContentsService
 {
     private readonly IFileSystem _fileSystem =
@@ -24,6 +25,11 @@ public class TableOfContentsService(
     private readonly ILogger<TableOfContentsService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IJournalTocStructureRepository _tocStructureRepository =
+        tocStructureRepository ?? throw new ArgumentNullException(nameof(tocStructureRepository));
+
+    private string GetMetadataDir(string journalDirectory) =>
+        Path.Combine(journalDirectory, _journalSettings.MetadataDirName);
 
     /// <inheritdoc />
     public void UpdateTableOfContents(
@@ -51,6 +57,8 @@ public class TableOfContentsService(
                 $"Could not read journal configuration from {journalDirectory}"
             );
 
+        var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalDirectory));
+
         var tocFile = config.TableOfContents.File;
         var tocFilePath = _fileSystem.CombinePaths(journalDirectory, tocFile);
         if (_fileSystem.FileExists(tocFilePath))
@@ -60,7 +68,6 @@ public class TableOfContentsService(
                 existingContent
             );
 
-            // Use existing dates if new ones aren't provided
             if (createdDate == null && existingCreated != null)
             {
                 _logger.LogDebug("Preserving existing created date from TOC");
@@ -69,7 +76,7 @@ public class TableOfContentsService(
             lastEditedDate ??= existingEdited;
         }
 
-        var tocContent = GenerateTableOfContents(config, createdDate, lastEditedDate);
+        var tocContent = GenerateTableOfContents(config, tocStructure, createdDate, lastEditedDate);
 
         _fileSystem.UpdateFile(journalDirectory, tocFile, tocContent);
         _logger.LogDebug("Table of contents updated at '{TocFilePath}'", tocFilePath);
@@ -92,6 +99,8 @@ public class TableOfContentsService(
                 $"Could not read journal configuration from {journalDirectory}"
             );
 
+        var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalDirectory));
+
         var tocFile = config.TableOfContents.File;
         var tocFilePath = _fileSystem.CombinePaths(journalDirectory, tocFile);
 
@@ -113,7 +122,7 @@ public class TableOfContentsService(
             journalDirectory
         );
 
-        return GenerateTableOfContents(config, createdDate, lastEditedDate);
+        return GenerateTableOfContents(config, tocStructure, createdDate, lastEditedDate);
     }
 
     /// <inheritdoc />
@@ -127,6 +136,8 @@ public class TableOfContentsService(
             );
         }
         ArgumentNullException.ThrowIfNull(projectedConfig);
+
+        var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalDirectory));
 
         var tocFile = projectedConfig.TableOfContents.File;
         var tocFilePath = _fileSystem.CombinePaths(journalDirectory, tocFile);
@@ -149,11 +160,58 @@ public class TableOfContentsService(
             journalDirectory
         );
 
-        return GenerateTableOfContents(projectedConfig, createdDate, lastEditedDate);
+        return GenerateTableOfContents(projectedConfig, tocStructure, createdDate, lastEditedDate);
+    }
+
+    /// <inheritdoc />
+    public string PreviewTableOfContents(
+        string journalDirectory,
+        JournalConfig projectedConfig,
+        JournalTocStructure projectedTocStructure
+    )
+    {
+        if (string.IsNullOrWhiteSpace(journalDirectory))
+        {
+            throw new ArgumentException(
+                "Journal directory cannot be null or whitespace.",
+                nameof(journalDirectory)
+            );
+        }
+        ArgumentNullException.ThrowIfNull(projectedConfig);
+        ArgumentNullException.ThrowIfNull(projectedTocStructure);
+
+        var tocFile = projectedConfig.TableOfContents.File;
+        var tocFilePath = _fileSystem.CombinePaths(journalDirectory, tocFile);
+
+        DateTime? createdDate = null;
+        DateTime? lastEditedDate = null;
+
+        if (_fileSystem.FileExists(tocFilePath))
+        {
+            var existingContent = _fileSystem.GetFileContent(tocFilePath);
+            var (existingCreated, existingEdited) = MarkdownMetadataParser.ParseDates(
+                existingContent
+            );
+            createdDate = existingCreated;
+            lastEditedDate = existingEdited;
+        }
+
+        _logger.LogDebug(
+            "Previewing table of contents with projected config+structure for journal at '{JournalDirectory}' (no writes)",
+            journalDirectory
+        );
+
+        return GenerateTableOfContents(
+            projectedConfig,
+            projectedTocStructure,
+            createdDate,
+            lastEditedDate
+        );
     }
 
     private string GenerateTableOfContents(
         JournalConfig config,
+        JournalTocStructure tocStructure,
         DateTime? createdDate,
         DateTime? lastEditedDate
     )
@@ -187,11 +245,11 @@ public class TableOfContentsService(
 
         // Add root entries (filter out ignored files)
         if (
-            config.TableOfContents.RootEntries != null
-            && config.TableOfContents.RootEntries.Length > 0
+            tocStructure.RootEntries != null
+            && tocStructure.RootEntries.Length > 0
         )
         {
-            foreach (var entry in config.TableOfContents.RootEntries)
+            foreach (var entry in tocStructure.RootEntries)
             {
                 if (!IsFileIgnored(entry.File, ignoreFilesWithToc))
                 {
@@ -202,13 +260,13 @@ public class TableOfContentsService(
 
         // Add topics
         if (
-            config.TableOfContents.Structure?.Topics != null
-            && config.TableOfContents.Structure.Topics.Length > 0
+            tocStructure.Structure?.Topics != null
+            && tocStructure.Structure.Topics.Length > 0
         )
         {
-            foreach (var topic in config.TableOfContents.Structure.Topics)
+            foreach (var topic in tocStructure.Structure.Topics)
             {
-                GenerateTopicSection(sb, topic, 0, ignoreFilesWithToc); // Start with no indentation
+                GenerateTopicSection(sb, topic, 0, ignoreFilesWithToc);
             }
         }
 

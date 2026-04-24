@@ -42,7 +42,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
             _mockMarkdownLinkRewriter.Object,
             NoOpCoordinator,
             NoOpReporter,
-            NullLogger<JournalUpdateService>()
+            NullLogger<JournalUpdateService>(),
+            MockTocStructureRepository.Object
         );
 
     /// <summary>
@@ -57,10 +58,6 @@ public class JournalUpdateServiceTests : ServiceTestBase
             {
                 File = tocFile,
                 Extensions = [".md"],
-                Structure = new Structure { Topics = [] },
-                RootEntries = (rootEntries ?? [])
-                    .Select(f => new Entries { Name = Path.GetFileNameWithoutExtension(f), File = f })
-                    .ToArray(),
             },
         };
 
@@ -80,7 +77,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -99,7 +97,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -118,7 +117,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -137,7 +137,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -156,7 +157,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -175,7 +177,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 null!,
                 NoOpReporter,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -194,7 +197,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
                 Mock.Of<IMarkdownLinkRewriter>(),
                 NoOpCoordinator,
                 null!,
-                NullLogger<JournalUpdateService>()
+                NullLogger<JournalUpdateService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -725,8 +729,6 @@ public class JournalUpdateServiceTests : ServiceTestBase
                     {
                         File = null!, // force the null branch so the fallback name is used
                         Extensions = [".md"],
-                        Structure = new Structure { Topics = [] },
-                        RootEntries = [],
                     },
                 }
             );
@@ -1004,11 +1006,11 @@ public class JournalUpdateServiceTests : ServiceTestBase
         // TOC file does not exist yet on disk
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
-        // Preview returns the root entry file names of the projected config
+        // Preview returns the root entry file names of the projected toc structure
         MockTableOfContentsService
-            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>()))
-            .Returns((string _, JournalConfig c) =>
-                string.Join("\n", c.TableOfContents.RootEntries.Select(e => e.File)));
+            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>(), It.IsAny<JournalTocStructure>()))
+            .Returns((string _, JournalConfig _, JournalTocStructure s) =>
+                string.Join("\n", s.RootEntries.Select(e => e.File)));
 
         var trackingChanges = new ChangeDetectionResult { AddedFiles = ["new-entry.md"] };
         // configChanges is non-null so projection is triggered
@@ -1053,11 +1055,20 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
-        // Preview returns root entry file names of the projected config
+        // Set up toc structure so "going-away.md" is recognized as a registered entry
+        MockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = [] },
+                RootEntries = [new Entries { Name = "going-away", File = "going-away.md" }],
+            });
+
+        // Preview returns root entry file names of the projected toc structure
         MockTableOfContentsService
-            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>()))
-            .Returns((string _, JournalConfig c) =>
-                string.Join("\n", c.TableOfContents.RootEntries.Select(e => e.File)));
+            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>(), It.IsAny<JournalTocStructure>()))
+            .Returns((string _, JournalConfig _, JournalTocStructure s) =>
+                string.Join("\n", s.RootEntries.Select(e => e.File)));
 
         var trackingChanges = new ChangeDetectionResult { DeletedFiles = ["going-away.md"] };
         var naiveConfigChanges = new JournalConfigSyncResult();
@@ -1093,9 +1104,9 @@ public class JournalUpdateServiceTests : ServiceTestBase
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
         MockTableOfContentsService
-            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>()))
-            .Returns((string _, JournalConfig c) =>
-                string.Join("\n", c.TableOfContents.RootEntries.Select(e => e.File)));
+            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>(), It.IsAny<JournalTocStructure>()))
+            .Returns((string _, JournalConfig _, JournalTocStructure s) =>
+                string.Join("\n", s.RootEntries.Select(e => e.File)));
 
         var configChanges = new JournalConfigSyncResult { FilesToAdd = ["unregistered.md"] };
         var sut = CreateSut();

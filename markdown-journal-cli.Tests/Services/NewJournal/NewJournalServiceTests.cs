@@ -53,7 +53,8 @@ public class NewJournalServiceTests : ServiceTestBase
             _journalSettings,
             NoOpCoordinator,
             NoOpReporter,
-            NullLogger<NewJournalService>()
+            NullLogger<NewJournalService>(),
+            MockTocStructureRepository.Object
         );
     }
 
@@ -71,7 +72,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<NewJournalService>()
+                NullLogger<NewJournalService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -88,7 +90,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<NewJournalService>()
+                NullLogger<NewJournalService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -105,7 +108,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<NewJournalService>()
+                NullLogger<NewJournalService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -122,7 +126,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 NoOpCoordinator,
                 NoOpReporter,
-                NullLogger<NewJournalService>()
+                NullLogger<NewJournalService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -139,7 +144,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 NoOpCoordinator,
                 NoOpReporter,
-                null!
+                null!,
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -156,7 +162,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 null!,
                 NoOpReporter,
-                NullLogger<NewJournalService>()
+                NullLogger<NewJournalService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -173,7 +180,8 @@ public class NewJournalServiceTests : ServiceTestBase
                 _journalSettings,
                 NoOpCoordinator,
                 null!,
-                NullLogger<NewJournalService>()
+                NullLogger<NewJournalService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -415,29 +423,29 @@ public class NewJournalServiceTests : ServiceTestBase
     [Fact]
     public void Initialize_Should_SetExactlyThreeRootEntriesInConfiguration()
     {
-        JournalConfig? capturedConfig = null;
-        MockJournalConfiguration
-            .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
-            .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
+        JournalTocStructure? capturedStructure = null;
+        MockTocStructureRepository
+            .Setup(r => r.Save(It.IsAny<JournalTocStructure>(), It.IsAny<string>()))
+            .Callback<JournalTocStructure, string>((s, _) => capturedStructure = s);
 
         _service.Initialize(JournalDirectory, JournalName);
 
-        capturedConfig.ShouldNotBeNull();
-        capturedConfig.TableOfContents.RootEntries.Length.ShouldBe(3);
+        capturedStructure.ShouldNotBeNull();
+        capturedStructure!.RootEntries.Length.ShouldBe(3);
     }
 
     [Fact]
     public void Initialize_Should_EnsureAllRootEntriesHaveMdExtension()
     {
-        JournalConfig? capturedConfig = null;
-        MockJournalConfiguration
-            .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
-            .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
+        JournalTocStructure? capturedStructure = null;
+        MockTocStructureRepository
+            .Setup(r => r.Save(It.IsAny<JournalTocStructure>(), It.IsAny<string>()))
+            .Callback<JournalTocStructure, string>((s, _) => capturedStructure = s);
 
         _service.Initialize(JournalDirectory, JournalName);
 
-        capturedConfig.ShouldNotBeNull();
-        foreach (var entry in capturedConfig.TableOfContents.RootEntries)
+        capturedStructure.ShouldNotBeNull();
+        foreach (var entry in capturedStructure!.RootEntries)
         {
             entry.File.ShouldEndWith(".md");
         }

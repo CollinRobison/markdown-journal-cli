@@ -729,7 +729,8 @@ public class NewCommandTests : CommandTestBase
             customSettings,
             NoOpFileTransactionCoordinator.Instance,
             NoOpRollbackReporter.Instance,
-            NullLogger<NewJournalService>.Instance
+            NullLogger<NewJournalService>.Instance,
+            markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object
         );
 
         var services = new ServiceCollection();
@@ -842,6 +843,8 @@ public class NewCommandTests : CommandTestBase
     private class FaultyTestFileSystem : IFileSystem
     {
         public bool DirectoryExists(string path) => false;
+
+        public bool IsDirectory(string path) => false;
 
         public bool FileExists(string path) => false;
 
@@ -1233,6 +1236,8 @@ public class NewCommandTests : CommandTestBase
     private class FileCreationFailureFileSystem : IFileSystem
     {
         public bool DirectoryExists(string path) => false;
+
+        public bool IsDirectory(string path) => false;
 
         public bool FileExists(string path) => false;
 

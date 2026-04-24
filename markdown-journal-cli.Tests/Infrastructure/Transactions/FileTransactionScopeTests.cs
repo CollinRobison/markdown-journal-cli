@@ -484,6 +484,8 @@ public class FileTransactionScopeTests : IDisposable
 
         public bool DirectoryExists(string path) => _inner.DirectoryExists(path);
 
+        public bool IsDirectory(string path) => _inner.IsDirectory(path);
+
         public bool FileExists(string path) => _inner.FileExists(path);
 
         public void CreateDirectory(string path) => _inner.CreateDirectory(path);
@@ -532,6 +534,8 @@ public class FileTransactionScopeTests : IDisposable
         private readonly TestFileSystem _inner = inner;
 
         public bool DirectoryExists(string path) => _inner.DirectoryExists(path);
+
+        public bool IsDirectory(string path) => _inner.IsDirectory(path);
 
         public bool FileExists(string path) => _inner.FileExists(path);
 

@@ -37,21 +37,27 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
                 DefaultJournalName = "TestJournal",
                 TableOfContentsFileName = "TOC",
                 TableOfContentsTitle = "Table of Contents",
+                MetadataDirName = ".mdjournal",
+                TrackingFileName = ".journalindex",
+                TocStructureFileName = ".journaltoc",
             }
         );
 
         // Use real services backed by base-class FileSystem
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, _tocJournalSettings);
         _journalConfiguration = new JournalConfiguration(
             FileSystem,
             _tocJournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            Mock.Of<IFileTracking>()
+            Mock.Of<IFileTracking>(),
+            tocStructureRepository
         );
         _tocGenerator = new TableOfContentsService(
             FileSystem,
             _journalConfiguration,
             _tocJournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
 
         _console = new TestConsole();
@@ -246,7 +252,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
 
     private void InitializeTestJournal()
     {
-        // Create .journalrc file with proper structure
+        // Create .journalrc file (structure/rootEntries now in .journaltoc)
         var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = JsonSerializer.Serialize(
             new
@@ -257,18 +263,24 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
                     file = "TOC.md",
                     extensions = new[] { ".md" },
                     ignoreFiles = Array.Empty<string>(),
-                    structure = new { topics = Array.Empty<object>() },
-                    rootEntries = Array.Empty<object>(),
                 },
             },
             new JsonSerializerOptions { WriteIndented = true }
         );
         File.WriteAllText(journalrcPath, journalrcContent);
+
+        // Create .mdjournal metadata directory and empty .journaltoc
+        var metadataDir = Path.Combine(JournalPath, ".mdjournal");
+        Directory.CreateDirectory(metadataDir);
+        File.WriteAllText(
+            Path.Combine(metadataDir, ".journaltoc"),
+            """{"Structure":{"Topics":[]},"RootEntries":[]}"""
+        );
     }
 
     private void InitializeTestJournalWithDifferentTocName(string oldTocName)
     {
-        // Create .journalrc file with different TOC name
+        // Create .journalrc file with different TOC name (structure/rootEntries now in .journaltoc)
         var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = JsonSerializer.Serialize(
             new
@@ -279,18 +291,24 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
                     file = $"{oldTocName}.md",
                     extensions = new[] { ".md" },
                     ignoreFiles = Array.Empty<string>(),
-                    structure = new { topics = Array.Empty<object>() },
-                    rootEntries = Array.Empty<object>(),
                 },
             },
             new JsonSerializerOptions { WriteIndented = true }
         );
         File.WriteAllText(journalrcPath, journalrcContent);
+
+        // Create .mdjournal metadata directory and empty .journaltoc
+        var metadataDir = Path.Combine(JournalPath, ".mdjournal");
+        Directory.CreateDirectory(metadataDir);
+        File.WriteAllText(
+            Path.Combine(metadataDir, ".journaltoc"),
+            """{"Structure":{"Topics":[]},"RootEntries":[]}"""
+        );
     }
 
     private void InitializeTestJournalWithEntries()
     {
-        // Create .journalrc file with entries
+        // Create .journalrc file (entries now in .journaltoc)
         var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = JsonSerializer.Serialize(
             new
@@ -301,17 +319,19 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
                     file = "TOC.md",
                     extensions = new[] { ".md" },
                     ignoreFiles = Array.Empty<string>(),
-                    structure = new { topics = Array.Empty<object>() },
-                    rootEntries = new[]
-                    {
-                        new { name = "Entry1", file = "entry1.md" },
-                        new { name = "Entry2", file = "entry2.md" },
-                    },
                 },
             },
             new JsonSerializerOptions { WriteIndented = true }
         );
         File.WriteAllText(journalrcPath, journalrcContent);
+
+        // Create .mdjournal metadata directory with root entries in .journaltoc
+        var metadataDir = Path.Combine(JournalPath, ".mdjournal");
+        Directory.CreateDirectory(metadataDir);
+        File.WriteAllText(
+            Path.Combine(metadataDir, ".journaltoc"),
+            """{"Structure":{"Topics":[]},"RootEntries":[{"Name":"Entry1","File":"entry1.md"},{"Name":"Entry2","File":"entry2.md"}]}"""
+        );
 
         // Create the actual entry files
         File.WriteAllText(Path.Combine(JournalPath, "entry1.md"), "# Entry1\nContent");

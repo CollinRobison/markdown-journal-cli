@@ -34,18 +34,21 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
 
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);
         var tocService = new TableOfContentsService(
             FileSystem,
             journalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
         var linkRewriter = new MarkdownLinkRewriter(FileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
         var buffer = new InMemoryFileBuffer(FileSystem);
@@ -66,7 +69,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
             linkRewriter,
             coordinator,
             rollbackReporter,
-            NullLogger<JournalUpdateService>.Instance
+            NullLogger<JournalUpdateService>.Instance,
+            tocStructureRepository
         );
         var dryRunRenderer = new DryRunRenderer(_console, journalConfiguration, JournalSettings);
 

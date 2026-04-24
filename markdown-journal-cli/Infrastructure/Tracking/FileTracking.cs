@@ -15,12 +15,20 @@ public class FileTracking(
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
-    private readonly string _indexFileName = $".{journalSettings.Value.AppName}";
     private readonly IHashService _hashService = hashService;
+
+    private string GetIndexPath(string journalDir)
+    {
+        return Path.Combine(
+            journalDir,
+            _journalSettings.MetadataDirName,
+            _journalSettings.TrackingFileName
+        );
+    }
 
     public JournalIndex LoadIndex(string path)
     {
-        string indexPath = $"{path}/{_indexFileName}";
+        string indexPath = GetIndexPath(path);
         if (!_fileSystem.FileExists(indexPath))
         {
             return new JournalIndex();
@@ -32,7 +40,8 @@ public class FileTracking(
     public void SaveIndex(JournalIndex index, string path)
     {
         var json = JsonSerializer.Serialize(index, opts);
-        _fileSystem.UpdateFile(path, _indexFileName, json);
+        var metadataDir = Path.Combine(path, _journalSettings.MetadataDirName);
+        _fileSystem.UpdateFile(metadataDir, _journalSettings.TrackingFileName, json);
     }
 
     /// <summary>
@@ -42,11 +51,12 @@ public class FileTracking(
     /// <returns>all markdown files in the journal directory (excluding metadata directory).</returns>
     private HashSet<string> GetCurrentMarkdownFiles(string path)
     {
+        var metadataDir = Path.Combine(path, _journalSettings.MetadataDirName) + Path.DirectorySeparatorChar;
         return
         [
             .. _fileSystem
                 .GetFiles(path, $"*{FileConstants.MarkdownExtension}", SearchOption.AllDirectories)
-                .Where(f => !f.Contains(_indexFileName))
+                .Where(f => !f.StartsWith(metadataDir, StringComparison.OrdinalIgnoreCase))
                 .Select(f => Path.GetRelativePath(path, f)),
         ];
     }

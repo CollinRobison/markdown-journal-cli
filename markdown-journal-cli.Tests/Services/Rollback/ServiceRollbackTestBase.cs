@@ -22,7 +22,7 @@ public abstract class ServiceRollbackTestBase : IDisposable
 {
     protected const string JournalPath = "/test/journal";
     protected const string JournalrcPath = "/test/journal/.journalrc";
-    protected const string TrackingPath = "/test/journal/.md-journal";
+    protected const string TrackingPath = "/test/journal/.mdjournal/.journalindex";
     protected const string TocPath = "/test/journal/1a-TableOfContents.md";
 
     protected readonly FaultInjectingFileSystem FileSystem;
@@ -37,6 +37,7 @@ public abstract class ServiceRollbackTestBase : IDisposable
     protected readonly EntryFormatterService EntryFormatter;
     protected readonly TestConsole RollbackConsole;
     protected readonly RollbackReporter RollbackReporter;
+    protected readonly JournalTocStructureRepository TocStructureRepository;
 
     protected ServiceRollbackTestBase()
     {
@@ -67,22 +68,28 @@ public abstract class ServiceRollbackTestBase : IDisposable
                 DateFormat = "MM/dd/yyyy",
                 TitleSpaceSeparator = "_",
                 HeadingSeparator = "-",
+                MetadataDirName = ".mdjournal",
+                TrackingFileName = ".journalindex",
+                TocStructureFileName = ".journaltoc",
             }
         );
 
         var hashService = new TestHashService();
         FileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        TocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         JournalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            FileTracking
+            FileTracking,
+            TocStructureRepository
         );
         TableOfContentsService = new TableOfContentsService(
             FileSystem,
             JournalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            TocStructureRepository
         );
         EntryFormatter = new EntryFormatterService(JournalSettings);
 
@@ -92,6 +99,11 @@ public abstract class ServiceRollbackTestBase : IDisposable
     protected void SetupJournal()
     {
         FileSystem.CreateDirectory(JournalPath);
+        // Create .mdjournal metadata directory with .journaltoc
+        var metadataDir = $"{JournalPath}/.mdjournal";
+        FileSystem.CreateDirectory(metadataDir);
+        FileSystem.CreateFile(metadataDir, ".journaltoc", """{"Structure":{"Topics":[]},"RootEntries":[]}""");
+
         var config = new JournalConfig
         {
             JournalName = "Test Journal",
@@ -99,8 +111,6 @@ public abstract class ServiceRollbackTestBase : IDisposable
             {
                 File = "1a-TableOfContents.md",
                 Extensions = [".md"],
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         JournalConfiguration.Create(JournalPath, config);

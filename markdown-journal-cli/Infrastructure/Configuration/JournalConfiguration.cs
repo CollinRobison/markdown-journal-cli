@@ -73,7 +73,8 @@ public class JournalConfiguration(
     IFileSystem fileSystem,
     IOptions<JournalSettings> journalSettings,
     ILogger<JournalConfiguration> logger,
-    IFileTracking fileTracking
+    IFileTracking fileTracking,
+    IJournalTocStructureRepository tocStructureRepository
 ) : IJournalConfiguration
 {
     private readonly IFileSystem _fileSystem = fileSystem;
@@ -81,6 +82,13 @@ public class JournalConfiguration(
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
     private readonly IFileTracking _fileTracking = fileTracking;
+    private readonly IJournalTocStructureRepository _tocStructureRepository = tocStructureRepository;
+
+    private string GetMetadataDir(string directory)
+    {
+        var (_, actualDirectory) = GetJournalrcPaths(directory);
+        return Path.Combine(actualDirectory, _journalSettings.MetadataDirName);
+    }
 
     public void Create(string directory, JournalConfig config)
     {
@@ -177,7 +185,7 @@ public class JournalConfiguration(
             && !string.Equals(oldTocFile, newTocFile, StringComparison.OrdinalIgnoreCase)
         )
         {
-            RemoveEntryFromConfig(existingConfig, newTocFile);
+            RemoveEntryFromTocStructure(directory, newTocFile);
         }
 
         // Save with all values (existing + updated)
@@ -237,28 +245,24 @@ public class JournalConfiguration(
 
     public void AddRootEntry(string directory, string name, string file)
     {
-        Update(
-            directory,
-            config =>
-            {
-                // Check if entry already exists
-                if (RootEntryExists(config.TableOfContents.RootEntries, file))
-                {
-                    _logger.LogDebug(
-                        "Root entry '{File}' already exists in journal configuration",
-                        file
-                    );
-                    return;
-                }
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
-                // Add to root entries array
-                var existingEntries = config.TableOfContents.RootEntries.ToList();
-                existingEntries.Add(new Entries { Name = name, File = file });
-                var naturalComparer = new NaturalStringComparer();
-                existingEntries.Sort((a, b) => naturalComparer.Compare(a.File, b.File));
-                config.TableOfContents.RootEntries = existingEntries.ToArray();
-            }
-        );
+        if (RootEntryExists(tocStructure.RootEntries, file))
+        {
+            _logger.LogDebug(
+                "Root entry '{File}' already exists in journal configuration",
+                file
+            );
+            return;
+        }
+
+        var existingEntries = tocStructure.RootEntries.ToList();
+        existingEntries.Add(new Entries { Name = name, File = file });
+        var naturalComparer = new NaturalStringComparer();
+        existingEntries.Sort((a, b) => naturalComparer.Compare(a.File, b.File));
+        tocStructure.RootEntries = existingEntries.ToArray();
+        _tocStructureRepository.Save(tocStructure, metadataDir);
     }
 
     public void AddTopicEntry(
@@ -286,22 +290,13 @@ public class JournalConfiguration(
             return;
         }
 
-        Update(
-            directory,
-            config =>
-            {
-                var topics = config.TableOfContents.Structure.Topics.ToList();
-                AddOrUpdateTopicHierarchy(
-                    topics,
-                    topicPath,
-                    entryName,
-                    file,
-                    0,
-                    sortAlphabetically
-                );
-                config.TableOfContents.Structure.Topics = topics.ToArray();
-            }
-        );
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
+
+        var topics = tocStructure.Structure.Topics.ToList();
+        AddOrUpdateTopicHierarchy(topics, topicPath, entryName, file, 0, sortAlphabetically);
+        tocStructure.Structure.Topics = topics.ToArray();
+        _tocStructureRepository.Save(tocStructure, metadataDir);
     }
 
     public void AddEntry(
@@ -376,16 +371,13 @@ public class JournalConfiguration(
 
     public bool UpdateEntryName(string directory, string file, string newEntryName)
     {
-        var config = Read(directory);
-        if (config == null)
-        {
-            return false;
-        }
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
         bool updated = false;
 
         // Search in root entries
-        foreach (var entry in config.TableOfContents.RootEntries)
+        foreach (var entry in tocStructure.RootEntries)
         {
             if (string.Equals(entry.File, file, StringComparison.OrdinalIgnoreCase))
             {
@@ -398,21 +390,12 @@ public class JournalConfiguration(
         // If not found in root entries, search in topics
         if (!updated)
         {
-            updated = UpdateEntryNameInTopics(
-                config.TableOfContents.Structure.Topics,
-                file,
-                newEntryName
-            );
+            updated = UpdateEntryNameInTopics(tocStructure.Structure.Topics, file, newEntryName);
         }
 
-        // Save the config if an update was made
         if (updated)
         {
-            var actualDirectory = GetJournalrcPaths(directory).directory;
-            var journalConfName = _journalSettings.JournalConfigFileName;
-
-            string updatedJsonString = JsonSerializer.Serialize(config, opts);
-            _fileSystem.UpdateFile(actualDirectory, journalConfName, updatedJsonString);
+            _tocStructureRepository.Save(tocStructure, metadataDir);
         }
         else
         {
@@ -424,41 +407,35 @@ public class JournalConfiguration(
 
     public bool RemoveEntry(string directory, string file)
     {
-        var config = Read(directory);
-        if (config == null)
-        {
-            return false;
-        }
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
         bool removed = false;
 
         // Try removing from root entries
-        var rootEntries = config.TableOfContents.RootEntries.ToList();
+        var rootEntries = tocStructure.RootEntries.ToList();
         var originalCount = rootEntries.Count;
         rootEntries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
         if (rootEntries.Count < originalCount)
         {
-            config.TableOfContents.RootEntries = rootEntries.ToArray();
+            tocStructure.RootEntries = rootEntries.ToArray();
             removed = true;
         }
 
         // If not found in root entries, search in topics
         if (!removed)
         {
-            var topics = config.TableOfContents.Structure.Topics.ToList();
+            var topics = tocStructure.Structure.Topics.ToList();
             removed = RemoveEntryFromTopics(topics, file);
             if (removed)
             {
-                config.TableOfContents.Structure.Topics = topics.ToArray();
+                tocStructure.Structure.Topics = topics.ToArray();
             }
         }
 
         if (removed)
         {
-            var actualDirectory = GetJournalrcPaths(directory).directory;
-            var journalConfName = _journalSettings.JournalConfigFileName;
-            string updatedJsonString = JsonSerializer.Serialize(config, opts);
-            _fileSystem.UpdateFile(actualDirectory, journalConfName, updatedJsonString);
+            _tocStructureRepository.Save(tocStructure, metadataDir);
         }
         else
         {
@@ -470,15 +447,9 @@ public class JournalConfiguration(
 
     public void RegenerateStructure(string directory, IEnumerable<string> files)
     {
-        Update(
-            directory,
-            config =>
-            {
-                // Clear existing structure but preserve JournalName, IgnoreFiles, Extensions, TOC file
-                config.TableOfContents.RootEntries = [];
-                config.TableOfContents.Structure = new Structure { Topics = [] };
-            }
-        );
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = JournalTocStructure.Empty();
+        _tocStructureRepository.Save(tocStructure, metadataDir);
 
         // Re-add all files — AddEntry handles root vs topic classification
         foreach (var file in files)
@@ -489,14 +460,11 @@ public class JournalConfiguration(
 
     public (Entries? entry, string[] topicPath) FindEntry(string directory, string fileName)
     {
-        var config = Read(directory);
-        if (config == null)
-        {
-            return (null, []);
-        }
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
         // Search in root entries first
-        foreach (var entry in config.TableOfContents.RootEntries)
+        foreach (var entry in tocStructure.RootEntries)
         {
             if (string.Equals(entry.File, fileName, StringComparison.OrdinalIgnoreCase))
             {
@@ -505,28 +473,33 @@ public class JournalConfiguration(
         }
 
         // Search in topics recursively
-        return FindInTopics(config.TableOfContents.Structure.Topics, fileName, []);
+        return FindInTopics(tocStructure.Structure.Topics, fileName, []);
     }
 
     public void UpdateFileReferences(string directory, string oldFile, string newFile)
     {
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
+
+        // Update root entries
+        foreach (var entry in tocStructure.RootEntries)
+        {
+            if (string.Equals(entry.File, oldFile, StringComparison.OrdinalIgnoreCase))
+            {
+                entry.File = newFile;
+            }
+        }
+
+        // Update topic entries recursively
+        UpdateFileInTopics(tocStructure.Structure.Topics, oldFile, newFile);
+
+        _tocStructureRepository.Save(tocStructure, metadataDir);
+
+        // Update ignore list in .journalrc
         Update(
             directory,
             config =>
             {
-                // Update root entries
-                foreach (var entry in config.TableOfContents.RootEntries)
-                {
-                    if (string.Equals(entry.File, oldFile, StringComparison.OrdinalIgnoreCase))
-                    {
-                        entry.File = newFile;
-                    }
-                }
-
-                // Update topic entries recursively
-                UpdateFileInTopics(config.TableOfContents.Structure.Topics, oldFile, newFile);
-
-                // Update ignore list
                 if (config.TableOfContents.IgnoreFiles is { Length: > 0 })
                 {
                     config.TableOfContents.IgnoreFiles = config
@@ -547,15 +520,18 @@ public class JournalConfiguration(
         if (config is null)
             return new JournalConfigSyncResult();
 
+        var metadataDir = GetMetadataDir(journalPath);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
+
         var trackedFiles = new HashSet<string>(
             _fileTracking.LoadIndex(journalPath).Files.Keys,
             StringComparer.OrdinalIgnoreCase
         );
 
         var configFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in config.TableOfContents.RootEntries)
+        foreach (var entry in tocStructure.RootEntries)
             configFiles.Add(entry.File);
-        CollectTopicEntryFiles(config.TableOfContents.Structure.Topics, configFiles);
+        CollectTopicEntryFiles(tocStructure.Structure.Topics, configFiles);
         configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
 
         _logger.LogDebug(
@@ -650,22 +626,26 @@ public class JournalConfiguration(
     }
 
     /// <summary>
-    /// Removes an entry from the config object directly (used internally, doesn't persist).
+    /// Removes a file entry from the TOC structure (root entries + topics). Used when the TOC
+    /// filename changes so that the new TOC file is not also listed as a content entry.
     /// </summary>
-    private static void RemoveEntryFromConfig(JournalConfig config, string file)
+    private void RemoveEntryFromTocStructure(string directory, string file)
     {
-        // Check root entries
-        var rootEntries = config.TableOfContents.RootEntries?.ToList() ?? new List<Entries>();
-        rootEntries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
-        config.TableOfContents.RootEntries = rootEntries.ToArray();
+        var metadataDir = GetMetadataDir(directory);
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
 
-        // Check topics (RemoveEntryFromTopics already handles cleanup of empty topics)
-        if (config.TableOfContents.Structure?.Topics != null)
+        var rootEntries = tocStructure.RootEntries?.ToList() ?? new List<Entries>();
+        rootEntries.RemoveAll(e => string.Equals(e.File, file, StringComparison.OrdinalIgnoreCase));
+        tocStructure.RootEntries = rootEntries.ToArray();
+
+        if (tocStructure.Structure?.Topics != null)
         {
-            var topics = config.TableOfContents.Structure.Topics.ToList();
+            var topics = tocStructure.Structure.Topics.ToList();
             RemoveEntryFromTopics(topics, file);
-            config.TableOfContents.Structure.Topics = topics.ToArray();
+            tocStructure.Structure.Topics = topics.ToArray();
         }
+
+        _tocStructureRepository.Save(tocStructure, metadataDir);
     }
 
     /// <summary>

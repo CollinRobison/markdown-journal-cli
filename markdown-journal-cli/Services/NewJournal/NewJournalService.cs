@@ -20,7 +20,8 @@ public sealed class NewJournalService(
     IOptions<JournalSettings> journalSettings,
     IFileTransactionCoordinator txCoordinator,
     IRollbackReporter rollbackReporter,
-    ILogger<NewJournalService> logger
+    ILogger<NewJournalService> logger,
+    IJournalTocStructureRepository tocStructureRepository
 ) : INewJournalService
 {
     private readonly IFileSystem _fileSystem =
@@ -38,6 +39,8 @@ public sealed class NewJournalService(
         txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
     private readonly IRollbackReporter _rollbackReporter =
         rollbackReporter ?? throw new ArgumentNullException(nameof(rollbackReporter));
+    private readonly IJournalTocStructureRepository _tocStructureRepository =
+        tocStructureRepository ?? throw new ArgumentNullException(nameof(tocStructureRepository));
 
     /// <inheritdoc />
     public void Initialize(string journalDirectory, string journalName)
@@ -65,6 +68,7 @@ public sealed class NewJournalService(
         );
 
         var directoryAlreadyExisted = _fileSystem.DirectoryExists(journalDirectory);
+        var metadataDir = _fileSystem.CombinePaths(journalDirectory, _journalSettings.MetadataDirName);
 
         using var tx = _txCoordinator.Begin();
         try
@@ -89,9 +93,13 @@ public sealed class NewJournalService(
                 journalDirectory,
                 _journalSettings.JournalConfigFileName
             );
-            var mdjournalAbsPath = _fileSystem.CombinePaths(
-                journalDirectory,
-                $".{_journalSettings.AppName}"
+            var trackingIndexAbsPath = _fileSystem.CombinePaths(
+                metadataDir,
+                _journalSettings.TrackingFileName
+            );
+            var tocStructureAbsPath = _fileSystem.CombinePaths(
+                metadataDir,
+                _journalSettings.TocStructureFileName
             );
 
             if (!directoryAlreadyExisted)
@@ -102,9 +110,12 @@ public sealed class NewJournalService(
             tx.TrackNew(templateAbsPath);
             tx.TrackNew(allJournalsAbsPath);
             tx.TrackNew(journalrcAbsPath);
-            tx.TrackNew(mdjournalAbsPath);
+            tx.TrackNewDirectory(metadataDir);
+            tx.TrackNew(trackingIndexAbsPath);
+            tx.TrackNew(tocStructureAbsPath);
 
             _fileSystem.CreateDirectory(journalDirectory);
+            _fileSystem.CreateDirectory(metadataDir);
 
             CreateTableOfContents(journalDirectory);
             CreateIntroduction(journalDirectory);
@@ -188,37 +199,39 @@ public sealed class NewJournalService(
 
     private void CreateJournalConfiguration(string journalDirectory, string journalName)
     {
-        Entries[] rootConfig =
-        [
-            new()
-            {
-                Name = _journalSettings.IntroductionTitle,
-                File = $"{_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension}",
-            },
-            new()
-            {
-                Name = _journalSettings.JournalEntryTemplateTitle,
-                File =
-                    $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
-            },
-            new()
-            {
-                Name = _journalSettings.AllJournalsTitle,
-                File = $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}",
-            },
-        ];
-
         JournalConfig journalrc = new()
         {
             JournalName = journalName,
-            TableOfContents = new()
-            {
-                Structure = new() { Topics = [] },
-                RootEntries = rootConfig,
-            },
+            TableOfContents = new(),
         };
 
         _journalConfiguration.Create(journalDirectory, journalrc);
+
+        // Seed initial root entries into .journaltoc
+        var metadataDir = Path.Combine(journalDirectory, _journalSettings.MetadataDirName);
+        var initialTocStructure = new JournalTocStructure
+        {
+            Structure = new() { Topics = [] },
+            RootEntries =
+            [
+                new()
+                {
+                    Name = _journalSettings.IntroductionTitle,
+                    File = $"{_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension}",
+                },
+                new()
+                {
+                    Name = _journalSettings.JournalEntryTemplateTitle,
+                    File = $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
+                },
+                new()
+                {
+                    Name = _journalSettings.AllJournalsTitle,
+                    File = $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}",
+                },
+            ],
+        };
+        _tocStructureRepository.Save(initialTocStructure, metadataDir);
     }
 
     private void CreateFileTrackingIndex(string journalDirectory)

@@ -65,8 +65,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = tocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -102,8 +100,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = oldTocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -146,8 +142,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = "TOC.md",
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -192,8 +186,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = tocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -238,8 +230,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = tocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -347,8 +337,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = tocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -388,8 +376,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = tocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -421,8 +407,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = "TOC.md",
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -470,8 +454,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = tocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
@@ -503,8 +485,6 @@ public class AddTableOfContentsCommandTests : CommandTestBase
             TableOfContents = new TableOfContents
             {
                 File = bracketTocFile,
-                Structure = new Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         MockJournalConfiguration.Setup(x => x.Read(directory)).Returns(config);
