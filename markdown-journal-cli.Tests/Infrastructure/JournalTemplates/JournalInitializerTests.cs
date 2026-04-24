@@ -21,6 +21,7 @@ public class JournalInitializerTests
     private readonly Mock<IFileTracking> _mockFileTracking;
     private readonly IOptions<JournalSettings> _journalSettings;
     private readonly NewJournalService _journalInitializer;
+    private readonly Mock<IJournalTocStructureRepository> _mockTocStructureRepository = new();
 
     public JournalInitializerTests()
     {
@@ -52,7 +53,8 @@ public class JournalInitializerTests
             _journalSettings,
             NoOpFileTransactionCoordinator.Instance,
             NoOpRollbackReporter.Instance,
-            NullLogger<NewJournalService>.Instance
+            NullLogger<NewJournalService>.Instance,
+            _mockTocStructureRepository.Object
         );
     }
 
@@ -103,19 +105,17 @@ public class JournalInitializerTests
         Assert.Single(_testJournalConfiguration.CreatedConfigurations);
         var config = _testJournalConfiguration.CreatedConfigurations[journalDirectory];
         Assert.Equal(journalName, config.JournalName);
-        Assert.Equal(3, config.TableOfContents.RootEntries.Length);
-        Assert.Contains(
-            config.TableOfContents.RootEntries,
-            re => re.Name == "Introduction" && re.File == "1b-Intro.md"
-        );
-        Assert.Contains(
-            config.TableOfContents.RootEntries,
-            re => re.Name == "Journal Entry Template" && re.File == "1c-Journal-Entry-Template.md"
-        );
-        Assert.Contains(
-            config.TableOfContents.RootEntries,
-            re => re.Name == "All My Journals" && re.File == "1h-All-My-Journals.md"
-        );
+
+        // Root entries are now saved to the TOC structure repository, not to the config file
+        _mockTocStructureRepository.Verify(
+            r => r.Save(
+                It.Is<JournalTocStructure>(s =>
+                    s.RootEntries.Length == 3 &&
+                    s.RootEntries.Any(re => re.Name == "Introduction" && re.File == "1b-Intro.md") &&
+                    s.RootEntries.Any(re => re.Name == "Journal Entry Template" && re.File == "1c-Journal-Entry-Template.md") &&
+                    s.RootEntries.Any(re => re.Name == "All My Journals" && re.File == "1h-All-My-Journals.md")),
+                It.IsAny<string>()),
+            Times.Once);
     }
 
     [Fact]
@@ -219,7 +219,8 @@ public class JournalInitializerTests
                 _journalSettings,
                 NoOpFileTransactionCoordinator.Instance,
                 NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NullLogger<NewJournalService>.Instance,
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
         Assert.Equal("fileSystem", exception.ParamName);
@@ -238,7 +239,8 @@ public class JournalInitializerTests
                 _journalSettings,
                 NoOpFileTransactionCoordinator.Instance,
                 NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NullLogger<NewJournalService>.Instance,
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
         Assert.Equal("templateManager", exception.ParamName);
@@ -257,7 +259,8 @@ public class JournalInitializerTests
                 _journalSettings,
                 NoOpFileTransactionCoordinator.Instance,
                 NoOpRollbackReporter.Instance,
-                NullLogger<NewJournalService>.Instance
+                NullLogger<NewJournalService>.Instance,
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
         Assert.Equal("journalConfiguration", exception.ParamName);

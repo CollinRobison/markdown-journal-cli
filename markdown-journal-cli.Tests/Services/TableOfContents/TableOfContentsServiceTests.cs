@@ -33,7 +33,8 @@ public class TableOfContentsServiceTests : ServiceTestBase
             MockFileSystem.Object,
             MockJournalConfiguration.Object,
             JournalSettings,
-            NullLogger<TableOfContentsService>()
+            NullLogger<TableOfContentsService>(),
+            MockTocStructureRepository.Object
         );
     }
 
@@ -50,10 +51,19 @@ public class TableOfContentsServiceTests : ServiceTestBase
             {
                 File = TocFile,
                 IgnoreFiles = ignoreFiles,
-                Structure = new Structure { Topics = topics ?? [] },
-                RootEntries = rootEntries ?? [],
             },
         };
+    }
+
+    /// <summary>Sets up the mock TOC structure repository to return the given entries/topics.</summary>
+    private void SetupTocStructure(Entries[]? rootEntries = null, Topic[]? topics = null)
+    {
+        MockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = topics ?? [] },
+                RootEntries = rootEntries ?? [],
+            });
     }
 
     #region Constructor Validation
@@ -66,7 +76,8 @@ public class TableOfContentsServiceTests : ServiceTestBase
                 null!,
                 MockJournalConfiguration.Object,
                 JournalSettings,
-                NullLogger<TableOfContentsService>()
+                NullLogger<TableOfContentsService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -79,7 +90,8 @@ public class TableOfContentsServiceTests : ServiceTestBase
                 MockFileSystem.Object,
                 null!,
                 JournalSettings,
-                NullLogger<TableOfContentsService>()
+                NullLogger<TableOfContentsService>(),
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -92,7 +104,8 @@ public class TableOfContentsServiceTests : ServiceTestBase
                 MockFileSystem.Object,
                 MockJournalConfiguration.Object,
                 JournalSettings,
-                null!
+                null!,
+                Mock.Of<IJournalTocStructureRepository>()
             )
         );
     }
@@ -311,6 +324,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(rootEntries: entries);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -335,6 +349,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(rootEntries: entries);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -359,6 +374,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(rootEntries: entries);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -382,6 +398,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(rootEntries: entries);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -409,6 +426,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -430,7 +448,8 @@ public class TableOfContentsServiceTests : ServiceTestBase
             MockFileSystem.Object,
             MockJournalConfiguration.Object,
             settings,
-            NullLogger<TableOfContentsService>()
+            NullLogger<TableOfContentsService>(),
+            MockTocStructureRepository.Object
         );
 
         var topic = new Topic
@@ -447,6 +466,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -470,6 +490,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -493,6 +514,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -516,6 +538,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -544,6 +567,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -579,6 +603,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -608,6 +633,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, content) => captured = content);
 
+        SetupTocStructure(topics: [topic]);
         _service.UpdateTableOfContents(JournalDirectory);
 
         captured.ShouldNotBeNull();
@@ -632,6 +658,7 @@ public class TableOfContentsServicePreviewTests
 
     private readonly Mock<IFileSystem> _mockFileSystem;
     private readonly Mock<IJournalConfiguration> _mockJournalConfiguration;
+    private readonly Mock<IJournalTocStructureRepository> _mockTocStructureRepository = new();
 
     public TableOfContentsServicePreviewTests()
     {
@@ -647,6 +674,7 @@ public class TableOfContentsServicePreviewTests
             }
         );
 
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>())).Returns(JournalTocStructure.Empty());
         _mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
         _mockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns(BuildConfig());
 
@@ -654,7 +682,8 @@ public class TableOfContentsServicePreviewTests
             _mockFileSystem.Object,
             _mockJournalConfiguration.Object,
             _journalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            _mockTocStructureRepository.Object
         );
     }
 
@@ -668,14 +697,23 @@ public class TableOfContentsServicePreviewTests
             TableOfContents = new TableOfContents
             {
                 File = TocFile,
-                Structure = new Structure { Topics = topics ?? [] },
-                RootEntries = rootEntries ?? [],
             },
         };
+
+    private void SetupTocStructure(Entries[]? rootEntries = null, Topic[]? topics = null)
+    {
+        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(new JournalTocStructure
+            {
+                Structure = new Structure { Topics = topics ?? [] },
+                RootEntries = rootEntries ?? [],
+            });
+    }
 
     [Fact]
     public void PreviewTableOfContents_Should_ReturnGeneratedContentWithoutWritingToDisk()
     {
+        SetupTocStructure(rootEntries: [new Entries { Name = "My Entry", File = "my-entry.md" }]);
         _mockJournalConfiguration
             .Setup(jc => jc.Read(JournalDirectory))
             .Returns(
@@ -736,6 +774,7 @@ public class TableOfContentsServicePreviewTests
             .Setup(fs => fs.UpdateFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string>((_, _, c) => writtenContent = c);
 
+        SetupTocStructure(rootEntries: entries);
         _service.UpdateTableOfContents(JournalDirectory);
         var previewContent = _service.PreviewTableOfContents(JournalDirectory);
 
@@ -758,7 +797,8 @@ public class TableOfContentsServicePreviewTests
     [Fact]
     public void PreviewTableOfContents_Should_GenerateOutputWithoutReadingJournalrc_When_ProjectedConfigProvided()
     {
-        // Arrange — projected config has different entries than what's on disk in .journalrc
+        // Arrange — structure with projected entries is loaded from the repository, not .journalrc
+        SetupTocStructure(rootEntries: [new Entries { Name = "Projected Entry", File = "projected-entry.md" }]);
         var projectedConfig = BuildConfig(
             rootEntries: [new Entries { Name = "Projected Entry", File = "projected-entry.md" }]
         );
@@ -771,7 +811,7 @@ public class TableOfContentsServicePreviewTests
         // Act
         var content = _service.PreviewTableOfContents(JournalDirectory, projectedConfig);
 
-        // Assert — output is driven entirely by projectedConfig
+        // Assert — output is driven by the repository (structure is not in .journalrc)
         content.ShouldContain("projected-entry.md");
 
         // The projected-config overload must NOT call IJournalConfiguration.Read()
