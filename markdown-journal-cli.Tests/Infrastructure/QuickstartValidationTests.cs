@@ -80,6 +80,7 @@ public class QuickstartValidationTests
         sut.MockTemplateManager.ShouldNotBeNull();
         sut.MockTableOfContentsService.ShouldNotBeNull();
         sut.MockEntryFormatterService.ShouldNotBeNull();
+        sut.MockTocStructureRepository.ShouldNotBeNull();
         sut.JournalSettings.ShouldNotBeNull();
         sut.NoOpCoordinator.ShouldNotBeNull();
         sut.NoOpReporter.ShouldNotBeNull();
@@ -135,6 +136,32 @@ public class QuickstartValidationTests
     }
 
     [Fact]
+    public void JournalIntegrationTestBase_Should_CreateMetadataDirWithFiles_When_InitializeJournalCalled()
+    {
+        using var sut = new ConcreteIntegrationTestBase();
+
+        sut.InitializeJournal();
+
+        var metadataDir = System.IO.Path.Combine(sut.JournalPath, ".mdjournal");
+        System.IO.Directory.Exists(metadataDir).ShouldBeTrue();
+        System.IO.File.Exists(System.IO.Path.Combine(metadataDir, ".journalindex")).ShouldBeTrue();
+        System.IO.File.Exists(System.IO.Path.Combine(metadataDir, ".journaltoc")).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void JournalIntegrationTestBase_Should_WriteNoStructureOrRootEntriesToJournalrc_When_InitializeJournalCalled()
+    {
+        using var sut = new ConcreteIntegrationTestBase();
+
+        sut.InitializeJournal();
+
+        var journalrcPath = System.IO.Path.Combine(sut.JournalPath, ".journalrc");
+        var json = System.IO.File.ReadAllText(journalrcPath);
+        json.ShouldNotContain("\"structure\"");
+        json.ShouldNotContain("\"rootEntries\"");
+    }
+
+    [Fact]
     public void ServiceRollbackTestBase_Should_ProvideTestFileSystem_When_Instantiated()
     {
         using var sut = new ConcreteRollbackTestBase();
@@ -165,6 +192,7 @@ public class QuickstartValidationTests
         public new Mock<markdown_journal_cli.Infrastructure.JournalTemplates.ITemplateManager> MockTemplateManager => base.MockTemplateManager;
         public new Mock<ITableOfContentsService> MockTableOfContentsService => base.MockTableOfContentsService;
         public new Mock<IEntryFormatterService> MockEntryFormatterService => base.MockEntryFormatterService;
+        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalTocStructureRepository> MockTocStructureRepository => base.MockTocStructureRepository;
         public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings => base.JournalSettings;
         public new IFileTransactionCoordinator NoOpCoordinator => base.NoOpCoordinator;
         public new IRollbackReporter NoOpReporter => base.NoOpReporter;
@@ -179,6 +207,7 @@ public class QuickstartValidationTests
         public new string JournalPath => base.JournalPath;
         public new markdown_journal_cli.Infrastructure.FileSystem.IFileSystem FileSystem => base.FileSystem;
         public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings => base.JournalSettings;
+        public new void InitializeJournal() => base.InitializeJournal();
     }
 
     private sealed class ConcreteRollbackTestBase : ServiceRollbackTestBase

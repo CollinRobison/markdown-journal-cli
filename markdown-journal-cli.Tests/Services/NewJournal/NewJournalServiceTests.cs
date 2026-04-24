@@ -220,6 +220,72 @@ public class NewJournalServiceTests : ServiceTestBase
         MockFileSystem.Verify(fs => fs.CreateDirectory(JournalDirectory), Times.Once);
     }
 
+    [Fact]
+    public void Initialize_Should_CreateMetadataDirectory()
+    {
+        var metadataDir = Path.Combine(JournalDirectory, ".mdjournal");
+
+        _service.Initialize(JournalDirectory, JournalName);
+
+        MockFileSystem.Verify(fs => fs.CreateDirectory(metadataDir), Times.Once);
+    }
+
+    #endregion
+
+    #region Metadata Directory Layout
+
+    [Fact]
+    public void Initialize_Should_SaveTocStructureToMetadataDirectory()
+    {
+        var metadataDir = Path.Combine(JournalDirectory, ".mdjournal");
+
+        _service.Initialize(JournalDirectory, JournalName);
+
+        MockTocStructureRepository.Verify(
+            r => r.Save(It.IsAny<JournalTocStructure>(), metadataDir),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void Initialize_Should_NotIncludeStructureInJournalrcConfig()
+    {
+        JournalConfig? capturedConfig = null;
+        MockJournalConfiguration
+            .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
+            .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
+
+        _service.Initialize(JournalDirectory, JournalName);
+
+        capturedConfig.ShouldNotBeNull();
+        var json = System.Text.Json.JsonSerializer.Serialize(capturedConfig);
+        json.ShouldNotContain("\"structure\"");
+        json.ShouldNotContain("\"rootEntries\"");
+    }
+
+    [Fact]
+    public void Initialize_Should_NotIncludeRootEntriesInJournalrcConfig()
+    {
+        JournalConfig? capturedConfig = null;
+        MockJournalConfiguration
+            .Setup(jc => jc.Create(It.IsAny<string>(), It.IsAny<JournalConfig>()))
+            .Callback<string, JournalConfig>((_, config) => capturedConfig = config);
+
+        _service.Initialize(JournalDirectory, JournalName);
+
+        capturedConfig.ShouldNotBeNull();
+        // Structure and rootEntries fields live in .journaltoc, not .journalrc
+        capturedConfig.TableOfContents.ShouldNotBeNull();
+        capturedConfig.TableOfContents.ShouldBeOfType<TableOfContents>()
+            .GetType().GetProperties()
+            .Select(p => p.Name)
+            .ShouldNotContain("Structure");
+        capturedConfig.TableOfContents.ShouldBeOfType<TableOfContents>()
+            .GetType().GetProperties()
+            .Select(p => p.Name)
+            .ShouldNotContain("RootEntries");
+    }
+
     #endregion
 
     #region File Creation
