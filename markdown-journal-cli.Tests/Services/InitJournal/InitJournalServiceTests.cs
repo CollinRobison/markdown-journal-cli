@@ -69,11 +69,78 @@ public class InitJournalServiceTests : ServiceTestBase
     #region Directory behaviour
 
     [Fact]
-    public void Initialize_Should_NotCreateDirectory()
+    public void Initialize_Should_CreateMetadataDirectory()
     {
+        var metadataDir = Path.Combine(JournalDirectory, ".mdjournal");
+
         _service.Initialize(JournalDirectory, JournalName, null);
 
-        MockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Never);
+        MockFileSystem.Verify(f => f.CreateDirectory(metadataDir), Times.Once);
+    }
+
+    #endregion
+
+    #region Metadata Directory Layout
+
+    [Fact]
+    public void Initialize_Should_LoadTrackingIndex_Into_JournalDirectory()
+    {
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        // LoadIndex wires up the tracking index path (.mdjournal/.journalindex)
+        MockFileTracking.Verify(ft => ft.LoadIndex(JournalDirectory), Times.Once);
+    }
+
+    [Fact]
+    public void Initialize_Should_UpdateTrackingIndex_TwiceForJournalDirectory()
+    {
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        // UpdateIndex is called twice: once after LoadIndex, once after TOC creation
+        MockFileTracking.Verify(ft => ft.UpdateIndex(JournalDirectory), Times.Exactly(2));
+    }
+
+    [Fact]
+    public void Initialize_Should_CallConfigGenerator_ToCreate_JournalrcAndTocStructure()
+    {
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        // GenerateFromTrackingIndex creates both .journalrc and .mdjournal/.journaltoc
+        _mockJournalConfigGenerator.Verify(
+            g => g.GenerateFromTrackingIndex(JournalDirectory, It.IsAny<string>(), JournalName),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void Initialize_Should_CreateMetadataDirectoryBeforeOtherOperations()
+    {
+        // Verify that when metadata dir doesn't exist it is created exactly once
+        var metadataDir = Path.Combine(JournalDirectory, ".mdjournal");
+        MockFileSystem.Setup(f => f.DirectoryExists(metadataDir)).Returns(false);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        MockFileSystem.Verify(f => f.CreateDirectory(metadataDir), Times.Once);
+    }
+
+    [Fact]
+    public void Initialize_Should_NotCreateMetadataDirectory_When_ItAlreadyExists()
+    {
+        var metadataDir = Path.Combine(JournalDirectory, ".mdjournal");
+        MockFileSystem.Setup(f => f.DirectoryExists(metadataDir)).Returns(true);
+        MockFileSystem.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
+
+        _service.Initialize(JournalDirectory, JournalName, null);
+
+        MockFileSystem.Verify(f => f.CreateDirectory(metadataDir), Times.Never);
     }
 
     #endregion

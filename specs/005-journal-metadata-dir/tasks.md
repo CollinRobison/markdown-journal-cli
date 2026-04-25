@@ -115,9 +115,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T034 [US2] Update `InitJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields. Also add `protected override bool SkipMetadataValidation => true;` to `InitCommand` — the metadata directory is being created by this command and will not exist on entry. Files: `markdown-journal-cli/Services/InitJournal/InitJournalService.cs`, `markdown-journal-cli/Commands/Init/InitCommand.cs` *(InitJournalService is done; InitCommand is missing `SkipMetadataValidation` override — blocked on T016)*
-- [ ] T035 [US2] Update `InitJournal` service tests to assert: metadata directory exists, `.journalindex` and `.journaltoc` exist inside it, and `.journalrc` JSON has no `structure` or `rootEntries` keys in `markdown-journal-cli.Tests/Services/InitJournal/InitJournalServiceTests.cs`
-- [ ] T036 [US2] Add integration test verifying that when `.mdjournal/` exists as a directory but required files are missing, any subsequent command prints a clear error listing the missing files and returns exit code 1 in `markdown-journal-cli.Tests/Commands/Init/InitCommandIntegrationTests.cs`
+- [x] T034 [US2] Update `InitJournalService` to call `EnsureDirectoryExists` for the metadata directory, write `.journalindex` and `.journaltoc` into it inside a `FileTransactionScope`, and write `.journalrc` without structure fields. Also add `protected override bool SkipMetadataValidation => true;` to `InitCommand` — the metadata directory is being created by this command and will not exist on entry. Files: `markdown-journal-cli/Services/InitJournal/InitJournalService.cs`, `markdown-journal-cli/Commands/Init/InitCommand.cs`
+- [x] T035 [US2] Update `InitJournal` service tests to assert: metadata directory exists, `.journalindex` and `.journaltoc` exist inside it, and `.journalrc` JSON has no `structure` or `rootEntries` keys in `markdown-journal-cli.Tests/Services/InitJournal/InitJournalServiceTests.cs`
+- [x] T036 [US2] Add integration test verifying that when `.mdjournal/` exists as a directory but required files are missing, any subsequent command prints a clear error listing the missing files and returns exit code 1 in `markdown-journal-cli.Tests/Commands/Init/InitCommandIntegrationTests.cs`
 
 **Checkpoint**: `mdjournal init` creates journals in the new layout. User Story 2 is independently testable.
 

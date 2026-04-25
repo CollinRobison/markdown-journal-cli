@@ -28,6 +28,12 @@ public sealed class InitCommand(
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
+    /// <summary>
+    /// Skips metadata directory validation because InitCommand creates the journal
+    /// from scratch — the .mdjournal directory does not exist yet when this command runs.
+    /// </summary>
+    protected override bool SkipMetadataValidation => true;
+
     protected override int ExecuteCore(CommandContext context, InitSettings settings)
     {
         var filePath = settings.FilePath ?? ".";

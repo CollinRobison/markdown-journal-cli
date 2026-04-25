@@ -102,7 +102,7 @@ public abstract class ServiceRollbackTestBase : IDisposable
         // Create .mdjournal metadata directory with .journaltoc
         var metadataDir = $"{JournalPath}/.mdjournal";
         FileSystem.CreateDirectory(metadataDir);
-        FileSystem.CreateFile(metadataDir, ".journaltoc", """{"Structure":{"Topics":[]},"RootEntries":[]}""");
+        FileSystem.CreateFile(metadataDir, ".journaltoc", """{"structure":{"topics":[]},"rootEntries":[]}""");
 
         var config = new JournalConfig
         {

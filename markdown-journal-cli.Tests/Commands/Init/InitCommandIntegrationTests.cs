@@ -14,6 +14,8 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Infrastructure.Validation;
 
 namespace markdown_journal_cli.Tests.Commands.Init;
 
@@ -112,7 +114,11 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
 
         // Assert — core journal files exist on disk
         File.Exists(Path.Combine(JournalPath, ".journalrc")).ShouldBeTrue();
-        File.Exists(Path.Combine(JournalPath, $".{JournalSettings.Value.AppName}")).ShouldBeTrue();
+        // Metadata directory and required files should exist under .mdjournal/
+        var metadataDir = Path.Combine(JournalPath, JournalSettings.Value.MetadataDirName);
+        Directory.Exists(metadataDir).ShouldBeTrue();
+        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TrackingFileName)).ShouldBeTrue();
+        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TocStructureFileName)).ShouldBeTrue();
         File.Exists(Path.Combine(JournalPath, "1a-TableOfContents.md")).ShouldBeTrue();
     }
 
@@ -140,5 +146,70 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
         // Assert
         result.ExitCode.ShouldBe(1);
         result.Output.ShouldContain("Error");
+    }
+
+    [Fact]
+    public void Execute_Should_ReturnExitCode1_And_ListMissingFiles_When_MetadataDirExistsButFilesAreMissing()
+    {
+        // Arrange — create a journal directory with .mdjournal/ dir but no .journalindex or .journaltoc
+        var incompleteJournalDir = Path.Combine(JournalRoot, "IncompleteJournal");
+        Directory.CreateDirectory(incompleteJournalDir);
+        // Write .journalrc so it looks like an initialized journal
+        File.WriteAllText(
+            Path.Combine(incompleteJournalDir, ".journalrc"),
+            """{"journalName":"IncompleteJournal","tableOfContents":{"file":"1a-TableOfContents.md","extensions":[".md"],"ignoreFiles":[]}}"""
+        );
+        // Create .mdjournal/ directory but omit .journalindex and .journaltoc
+        Directory.CreateDirectory(Path.Combine(incompleteJournalDir, JournalSettings.Value.MetadataDirName));
+
+        // Set up a minimal command app using a stub command wired with the validator
+        var validator = new JournalValidator(FileSystem, JournalSettings);
+        var console = new TestConsole();
+        var services = new ServiceCollection();
+        services.AddSingleton<IAnsiConsole>(console);
+        services.AddSingleton<IJournalValidator>(validator);
+
+        var registrar = new TypeRegistrar();
+        foreach (var sd in services)
+        {
+            if (sd.ImplementationInstance != null)
+                registrar.RegisterInstance(sd.ServiceType, sd.ImplementationInstance);
+            else if (sd.ImplementationType != null)
+                registrar.Register(sd.ServiceType, sd.ImplementationType);
+        }
+
+        var stubApp = new CommandAppTester(registrar);
+        stubApp.Configure(cfg =>
+        {
+            cfg.SetApplicationName("mdjournal");
+            cfg.AddCommand<StubValidatedCommand>("stub");
+        });
+
+        // Act — run a command that validates the metadata directory
+        var result = stubApp.Run(["stub", incompleteJournalDir]);
+
+        // Assert — exit code 1 and error lists both missing files
+        result.ExitCode.ShouldBe(1);
+        result.Output.ShouldContain("Error");
+        result.Output.ShouldContain(JournalSettings.Value.TrackingFileName);
+        result.Output.ShouldContain(JournalSettings.Value.TocStructureFileName);
+    }
+
+    /// <summary>
+    /// Minimal command stub for testing <see cref="JournalCommand{TSettings}"/> metadata validation.
+    /// Uses the validator constructor so validation is active; always returns 0 on success.
+    /// </summary>
+    private sealed class StubValidatedCommand(IJournalValidator validator, IAnsiConsole console)
+        : JournalCommand<StubValidatedCommand.Settings>(validator, console)
+    {
+        public sealed class Settings : CommandSettings
+        {
+            [CommandArgument(0, "[path]")]
+            public string? JournalPath { get; set; }
+        }
+
+        protected override string? GetJournalDirectory(Settings settings) => settings.JournalPath;
+
+        protected override int ExecuteCore(CommandContext context, Settings settings) => 0;
     }
 }
