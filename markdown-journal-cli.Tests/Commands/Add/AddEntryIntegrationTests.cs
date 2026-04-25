@@ -163,16 +163,23 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         entryContent.ShouldContain("Created:");
         entryContent.ShouldContain("Last Edited:");
 
-        // Verify .journalrc was updated
+        // Verify .journalrc remains config-only in split metadata layout
         var journalrcPath = Path.Combine(JournalPath, ".journalrc");
         var journalrcContent = File.ReadAllText(journalrcPath);
-        journalrcContent.ShouldContain("IntegrationTest");
-        journalrcContent.ShouldContain("Tech");
+        journalrcContent.ShouldContain("tableOfContents");
+        journalrcContent.ShouldNotContain("IntegrationTest");
+        journalrcContent.ShouldNotContain("Tech");
 
         // Verify tracking index was updated
         var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
         var trackingContent = File.ReadAllText(trackingPath);
         trackingContent.ShouldContain("Tech-IntegrationTest.md");
+
+        // Verify TOC structure metadata was updated
+        var tocStructurePath = Path.Combine(JournalPath, ".mdjournal", ".journaltoc");
+        var tocStructureContent = File.ReadAllText(tocStructurePath);
+        tocStructureContent.ShouldContain("IntegrationTest");
+        tocStructureContent.ShouldContain("Tech-IntegrationTest.md");
 
         // Verify table of contents was updated
         var tocPath = Path.Combine(JournalPath, "1a-TableOfContents.md");
@@ -198,11 +205,16 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         File.Exists(Path.Combine(JournalPath, "CommonHeading-Entry2.md")).ShouldBeTrue();
         File.Exists(Path.Combine(JournalPath, "CommonHeading-Entry3.md")).ShouldBeTrue();
 
-        // Verify journalrc has all entries under the same heading
-        var journalrcContent = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
-        journalrcContent.ShouldContain("Entry1");
-        journalrcContent.ShouldContain("Entry2");
-        journalrcContent.ShouldContain("Entry3");
+        // Verify split metadata was updated for all entries
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        trackingContent.ShouldContain("CommonHeading-Entry1.md");
+        trackingContent.ShouldContain("CommonHeading-Entry2.md");
+        trackingContent.ShouldContain("CommonHeading-Entry3.md");
+
+        var tocStructureContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        tocStructureContent.ShouldContain("Entry1");
+        tocStructureContent.ShouldContain("Entry2");
+        tocStructureContent.ShouldContain("Entry3");
     }
 
     [Fact]
@@ -221,13 +233,13 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         var expectedFile = Path.Combine(JournalPath, "Category-Sub1-Sub2-Sub3-ComplexEntry.md");
         File.Exists(expectedFile).ShouldBeTrue();
 
-        // Verify journalrc has correct hierarchy
-        var journalrcContent = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
-        journalrcContent.ShouldContain("Category");
-        journalrcContent.ShouldContain("Sub1");
-        journalrcContent.ShouldContain("Sub2");
-        journalrcContent.ShouldContain("Sub3");
-        journalrcContent.ShouldContain("ComplexEntry");
+        // Verify split metadata has correct hierarchy and entry
+        var tocStructureContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        tocStructureContent.ShouldContain("Category");
+        tocStructureContent.ShouldContain("Sub1");
+        tocStructureContent.ShouldContain("Sub2");
+        tocStructureContent.ShouldContain("Sub3");
+        tocStructureContent.ShouldContain("ComplexEntry");
     }
 
     [Fact]

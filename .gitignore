@@ -66,10 +66,12 @@ nunit-*.xml
 
 # macOS
 .DS_Store
+Thumbs.db
 
 # Test coverage
 coverage/
 TestResults/
+packages/
 
 # Local secrets
 secrets.json

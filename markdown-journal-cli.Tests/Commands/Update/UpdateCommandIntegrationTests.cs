@@ -138,6 +138,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         // Arrange — record initial TOC content
         var tocPath = Path.Combine(JournalPath, "1a-TableOfContents.md");
         var initialContent = File.ReadAllText(tocPath);
+        var tocStructurePath = Path.Combine(JournalPath, ".mdjournal", ".journaltoc");
 
         // Act
         var result = _app.Run(["update", "--path", JournalPath, "journal", "--toc"]);
@@ -146,6 +147,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         var updatedContent = File.ReadAllText(tocPath);
         updatedContent.ShouldContain("Alpha");
+        var tocStructureAfter = File.ReadAllText(tocStructurePath);
+        tocStructureAfter.ShouldContain("Alpha.md");
     }
 
     [Fact]
@@ -174,7 +177,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
     public void UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag()
     {
         // Arrange — corrupt the tracking hash so --sync has work to do
-        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
+        var tocStructurePath = Path.Combine(JournalPath, ".mdjournal", ".journaltoc");
         File.WriteAllText(trackingPath, "{}");
 
         // Act
@@ -184,6 +188,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         var trackingContent = File.ReadAllText(trackingPath);
         trackingContent.ShouldNotBe("{}");
+        var tocStructureAfter = File.ReadAllText(tocStructurePath);
+        tocStructureAfter.ShouldContain("Alpha.md");
         result.Output.ShouldContain("--sync active");
     }
 

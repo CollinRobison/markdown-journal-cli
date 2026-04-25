@@ -99,9 +99,9 @@
 - [x] T028 [US3] Update all command handlers under `markdown-journal-cli/Commands/Remove/` to pass the metadata directory path correctly to their underlying services *(depends on T024)*
 - [x] T029 [US3] Update all existing service unit tests that set up journal state to use the new `.mdjournal/` metadata directory layout in `markdown-journal-cli.Tests/Services/`
 - [x] T030 [US3] Update `JournalIntegrationTestBase` to create journals in the new metadata directory layout so all integration tests start from a valid new-layout journal in `markdown-journal-cli.Tests/Infrastructure/JournalIntegrationTestBase.cs`
-- [ ] T031 [US3] Update or add tests in `markdown-journal-cli.Tests/Commands/Add/AddEntryIntegrationTests.cs` to verify `add entry` updates `.mdjournal/.journalindex` and `.mdjournal/.journaltoc`
-- [ ] T032 [US3] Update or add tests in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs` to verify `update journal` reads and writes split files from `.mdjournal/`
-- [ ] T033 [US3] Update or add tests in `markdown-journal-cli.Tests/Commands/Remove/RemoveEntryCommandIntegrationTests.cs` to verify `remove entry` updates all metadata files inside `.mdjournal/`
+- [x] T031 [US3] Update or add tests in `markdown-journal-cli.Tests/Commands/Add/AddEntryIntegrationTests.cs` to verify `add entry` updates `.mdjournal/.journalindex` and `.mdjournal/.journaltoc`
+- [x] T032 [US3] Update or add tests in `markdown-journal-cli.Tests/Commands/Update/UpdateCommandIntegrationTests.cs` to verify `update journal` reads and writes split files from `.mdjournal/`
+- [x] T033 [US3] Update or add tests in `markdown-journal-cli.Tests/Commands/Remove/RemoveEntryCommandIntegrationTests.cs` to verify `remove entry` updates all metadata files inside `.mdjournal/`
 
 **Checkpoint**: All existing commands work correctly with the new layout. No regression from original behavior.
 
