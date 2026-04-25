@@ -11,6 +11,7 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Services.AddToc;
 using markdown_journal_cli.Services.RemoveEntry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -63,6 +64,7 @@ public static class Program
         host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
         host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();
         host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();
+        host.Services.AddSingleton<IAddTocService, AddTocService>();
 
         // Rollback infrastructure
         host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackStrategy>();

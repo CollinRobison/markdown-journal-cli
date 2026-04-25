@@ -131,12 +131,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T037 [P] [US4] Create `IAddTocService` interface with `AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false)` and `AddTocResult` enum (`Created`, `PartiallyCreated`, `AlreadyExists`) in `markdown-journal-cli/Services/AddToc/IAddTocService.cs`
-- [ ] T038 [US4] Implement `AddTocService` with dual-artifact creation logic: check existence of each artifact independently, create missing ones, wrap all writes in `FileTransactionScope`, and return the appropriate `AddTocResult` in `markdown-journal-cli/Services/AddToc/AddTocService.cs`
-- [ ] T039 [US4] Update `AddTableOfContentsCommand` to add `--structure-only` and `--md-only` command settings, delegate to `IAddTocService.Execute`, warn via `IAnsiConsole` when `AlreadyExists`, and return exit code 1 in that case in `markdown-journal-cli/Commands/Add/AddTableOfContentsCommand.cs`
-- [ ] T040 [US4] Register `IAddTocService → AddTocService` with the DI container in `markdown-journal-cli/Program.cs`
-- [ ] T041 [US4] Add unit tests for `AddTocService` covering: both artifacts created, only structure created (`structureOnly: true`), only markdown created (`mdOnly: true`), both already exist (returns `AlreadyExists`), one already exists and the other is created (returns `PartiallyCreated`) in `markdown-journal-cli.Tests/Services/AddToc/AddTocServiceTests.cs`
-- [ ] T042 [US4] Add integration tests for `add toc` command: no-flags both-created, `--structure-only`, `--md-only`, both-already-exist returns exit code 1 in `markdown-journal-cli.Tests/Commands/Add/AddTableOfContentsIntegrationTests.cs`
+- [x] T037 [P] [US4] Create `IAddTocService` interface with `AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false)` and `AddTocResult` enum (`Created`, `PartiallyCreated`, `AlreadyExists`) in `markdown-journal-cli/Services/AddToc/IAddTocService.cs`
+- [x] T038 [US4] Implement `AddTocService` with dual-artifact creation logic: check existence of each artifact independently, create missing ones, wrap all writes in `FileTransactionScope`, and return the appropriate `AddTocResult` in `markdown-journal-cli/Services/AddToc/AddTocService.cs`
+- [x] T039 [US4] Update `AddTableOfContentsCommand` to add `--structure-only` and `--md-only` command settings, delegate to `IAddTocService.Execute`, warn via `IAnsiConsole` when `AlreadyExists`, and return exit code 1 in that case in `markdown-journal-cli/Commands/Add/AddTableOfContentsCommand.cs`
+- [x] T040 [US4] Register `IAddTocService → AddTocService` with the DI container in `markdown-journal-cli/Program.cs`
+- [x] T041 [US4] Add unit tests for `AddTocService` covering: both artifacts created, only structure created (`structureOnly: true`), only markdown created (`mdOnly: true`), both already exist (returns `AlreadyExists`), one already exists and the other is created (returns `PartiallyCreated`) in `markdown-journal-cli.Tests/Services/AddToc/AddTocServiceTests.cs`
+- [x] T042 [US4] Add integration tests for `add toc` command: no-flags both-created, `--structure-only`, `--md-only`, both-already-exist returns exit code 1 in `markdown-journal-cli.Tests/Commands/Add/AddTableOfContentsIntegrationTests.cs`
 
 **Checkpoint**: `add toc` command handles all artifact-creation combinations correctly. User Story 4 is independently testable.
 

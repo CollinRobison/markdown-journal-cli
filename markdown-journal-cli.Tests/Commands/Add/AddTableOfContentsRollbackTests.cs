@@ -4,6 +4,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Services.AddToc;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using markdown_journal_cli.Tests.Infrastructure.Tracking;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,13 +15,13 @@ using Spectre.Console.Testing;
 namespace markdown_journal_cli.Tests.Commands.Add;
 
 /// <summary>
-/// Fault-injection rollback tests for the <see cref="AddTableOfContents"/> command.
+/// Fault-injection rollback tests for the <see cref="AddTableOfContents"/> command via
+/// <see cref="AddTocService"/>. Verifies that partial writes are rolled back on failure.
 /// </summary>
 public class AddTableOfContentsRollbackTests : IDisposable
 {
     private const string JournalPath = "/test/journal";
-    private const string JournalrcPath = "/test/journal/.journalrc";
-    private const string TocPath = "/test/journal/1a-TableOfContents.md";
+    private const string TocMdPath = "/test/journal/1a-TableOfContents.md";
 
     private readonly FaultInjectingFileSystem _fileSystem;
     private readonly FileTransactionCoordinator _coordinator;
@@ -29,6 +30,7 @@ public class AddTableOfContentsRollbackTests : IDisposable
     private readonly JournalConfiguration _journalConfiguration;
     private readonly TableOfContentsService _tableOfContentsService;
     private readonly RollbackReporter _rollbackReporter;
+    private readonly JournalTocStructureRepository _tocStructureRepository;
 
     public AddTableOfContentsRollbackTests()
     {
@@ -66,23 +68,23 @@ public class AddTableOfContentsRollbackTests : IDisposable
         var settingsOptions = Options.Create(_journalSettings);
         var hashService = new TestHashService();
         var fileTracking = new FileTracking(_fileSystem, settingsOptions, hashService);
-        var tocStructureRepository = new JournalTocStructureRepository(_fileSystem, settingsOptions);
+        _tocStructureRepository = new JournalTocStructureRepository(_fileSystem, settingsOptions);
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             settingsOptions,
             NullLogger<JournalConfiguration>.Instance,
             fileTracking,
-            tocStructureRepository
+            _tocStructureRepository
         );
         _tableOfContentsService = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
             settingsOptions,
             NullLogger<TableOfContentsService>.Instance,
-            tocStructureRepository
+            _tocStructureRepository
         );
 
-        // Set up a journal with .journalrc and empty .mdjournal/.journaltoc
+        // Set up journal: .journalrc + .mdjournal/.journaltoc (no markdown TOC yet)
         _fileSystem.CreateDirectory(JournalPath);
         _fileSystem.CreateFile(
             JournalPath,
@@ -98,21 +100,25 @@ public class AddTableOfContentsRollbackTests : IDisposable
         _fileSystem.ResetCallCounts();
     }
 
-    private AddTableOfContents CreateCommand() =>
-        new AddTableOfContents(
-            _console,
+    private AddTableOfContents CreateCommand()
+    {
+        var settingsOptions = Options.Create(_journalSettings);
+        var addTocService = new AddTocService(
             _fileSystem,
             _journalConfiguration,
+            _tocStructureRepository,
             _tableOfContentsService,
-            Options.Create(_journalSettings),
             _coordinator,
-            _rollbackReporter
+            _rollbackReporter,
+            settingsOptions
         );
+        return new AddTableOfContents(_console, addTocService, _rollbackReporter);
+    }
 
     [Fact]
-    public void Should_Delete_Created_Toc_When_FileWrite_Fails()
+    public void Should_RollbackTocMd_When_TocMdWriteFails()
     {
-        // TOC does not yet exist; inject fault on UpdateFile #1 (TOC write)
+        // Markdown TOC does not exist yet; inject fault on the first UpdateFile (TOC md write)
         _fileSystem.InjectFaultOn(
             FaultInjectPoint.UpdateFile,
             1,
@@ -125,51 +131,17 @@ public class AddTableOfContentsRollbackTests : IDisposable
             new AddTableOfContentsSettings { FilePath = JournalPath }
         );
 
-        // Exit code 2 = rollback completed, fully restored
+        // Exit code 2 = rollback completed and fully restored
         result.ShouldBe(2);
 
-        // TOC should not have been created (or was deleted by rollback)
-        _fileSystem.FileExists(TocPath).ShouldBeFalse();
+        // Markdown TOC should not have been created (or was deleted by rollback)
+        _fileSystem.FileExists(TocMdPath).ShouldBeFalse();
     }
 
     [Fact]
-    public void Should_Restore_Journalrc_When_Toc_Creation_Fails_After_Config_Update()
+    public void Should_NotStartTransaction_When_BothArtifactsAlreadyExist()
     {
-        // .journalrc points to a DIFFERENT TOC file, so command will update it first
-        var altJournalrcContent =
-            """{"journalName":"Test","tableOfContents":{"file":"old-toc.md","extensions":[".md"],"structure":{"topics":[]},"rootEntries":[]}}""";
-        _fileSystem.UpdateFile(JournalPath, ".journalrc", altJournalrcContent);
-        _fileSystem.ResetCallCounts();
-
-        var journalrcBefore = _fileSystem.GetFileContent(JournalrcPath);
-
-        // UpdateFile #1 = journalrc update; UpdateFile #2 = TOC write (inject fault here)
-        _fileSystem.InjectFaultOn(
-            FaultInjectPoint.UpdateFile,
-            2,
-            new IOException("TOC write failed")
-        );
-
-        var command = CreateCommand();
-        var result = command.Execute(
-            null!,
-            new AddTableOfContentsSettings
-            {
-                FilePath = JournalPath,
-                TableOfContentsName = "1a-TableOfContents",
-            }
-        );
-
-        result.ShouldBeInRange(2, 3);
-
-        // .journalrc should be restored to what it was before the command ran
-        _fileSystem.GetFileContent(JournalrcPath).ShouldBe(journalrcBefore);
-    }
-
-    [Fact]
-    public void Should_Not_Start_Transaction_When_Toc_Already_Exists()
-    {
-        // Pre-create the TOC so the command early-returns without starting a tx
+        // Pre-create the markdown TOC so both artifacts now exist
         _fileSystem.CreateFile(JournalPath, "1a-TableOfContents.md", "# TOC");
         _fileSystem.ResetCallCounts();
 
@@ -179,7 +151,9 @@ public class AddTableOfContentsRollbackTests : IDisposable
             new AddTableOfContentsSettings { FilePath = JournalPath }
         );
 
+        // Should warn "already exists" → exit code 1
         result.ShouldBe(1);
+        // No transaction should have been started
         _coordinator.Current.ShouldBeNull();
     }
 
