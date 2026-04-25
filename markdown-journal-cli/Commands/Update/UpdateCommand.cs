@@ -53,15 +53,15 @@ public sealed class UpdateCommand(
     {
         try
         {
-            var trackingFileName = $".{_journalSettings.AppName}";
-            var trackingFilePath = _fileSystem.CombinePaths(settings.FilePath, trackingFileName);
+            var metadataDir = _fileSystem.CombinePaths(settings.FilePath, _journalSettings.MetadataDirName);
+            var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
             var journalrcPath = _fileSystem.CombinePaths(
                 settings.FilePath,
                 _journalSettings.JournalConfigFileName
             );
 
             if (!_fileSystem.FileExists(trackingFilePath))
-                throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
+                throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
 
             bool all =
                 !settings.DateFlag

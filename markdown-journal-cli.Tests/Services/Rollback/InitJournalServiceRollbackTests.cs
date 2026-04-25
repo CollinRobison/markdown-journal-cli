@@ -20,7 +20,7 @@ public class InitJournalServiceRollbackTests : ServiceRollbackTestBase
 
     public InitJournalServiceRollbackTests()
     {
-        _trackingPath = $"{InitPath}/.md-journal";
+        _trackingPath = $"{InitPath}/.mdjournal/.journalindex";
         _journalrcPath = $"{InitPath}/.journalrc";
         _tocPath = $"{InitPath}/1a-TableOfContents.md";
 
@@ -56,7 +56,7 @@ public class InitJournalServiceRollbackTests : ServiceRollbackTestBase
     [Fact]
     public void Should_Delete_Created_Mdjournal_And_Journalrc_When_Toc_Creation_Throws()
     {
-        // UpdateFile #1 = FileTracking.UpdateIndex → .md-journal
+        // UpdateFile #1 = FileTracking.UpdateIndex → .mdjournal/.journalindex
         // CreateFile #1 = JournalConfiguration.Create → .journalrc
         // UpdateFile #2 = TableOfContentsService → TOC (inject fault here)
         FileSystem.InjectFaultOn(
@@ -71,7 +71,7 @@ public class InitJournalServiceRollbackTests : ServiceRollbackTestBase
             service.Initialize(InitPath, "My Journal", null)
         );
 
-        // Rollback should delete .md-journal and .journalrc (TOC was never written)
+        // Rollback should delete .mdjournal/.journalindex and .journalrc (TOC was never written)
         FileSystem.FileExists(_trackingPath).ShouldBeFalse();
         FileSystem.FileExists(_journalrcPath).ShouldBeFalse();
     }

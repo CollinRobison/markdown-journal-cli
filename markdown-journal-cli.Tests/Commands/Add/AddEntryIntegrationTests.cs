@@ -170,7 +170,7 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         journalrcContent.ShouldContain("Tech");
 
         // Verify tracking index was updated
-        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
         var trackingContent = File.ReadAllText(trackingPath);
         trackingContent.ShouldContain("Tech-IntegrationTest.md");
 

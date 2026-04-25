@@ -17,8 +17,9 @@ public class UpdateCommandTests : CommandTestBase
 {
     private const string TestPath = "/test/journal";
 
-    // Path helpers built from JournalSettings.AppName ("md-journal") and JournalConfigFileName
-    private static readonly string TrackingFilePath = Path.Combine(TestPath, ".md-journal");
+    // Path helpers built from JournalSettings MetadataDirName (".mdjournal") and TrackingFileName (".journalindex")
+    private static readonly string MetadataDirPath = Path.Combine(TestPath, ".mdjournal");
+    private static readonly string TrackingFilePath = Path.Combine(MetadataDirPath, ".journalindex");
     private static readonly string JournalrcPath = Path.Combine(TestPath, ".journalrc");
 
     // Field initializers run BEFORE the base constructor, ensuring these are available

@@ -158,7 +158,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         var originalContent = File.ReadAllText(entryFile);
 
         // Corrupt the tracking hash so there are changes to sync
-        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
         File.WriteAllText(trackingPath, "{}");
 
         // Act
@@ -218,7 +218,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         File.ReadAllText(newFilePath).ShouldBe(contentBefore);
         // Tracking index must now reference the new file
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
         trackingContent.ShouldContain("New_Entry");
     }
 
@@ -237,7 +237,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
 
         // Assert — exit 0, deleted file no longer in tracking index
         result.ExitCode.ShouldBe(0);
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
         trackingContent.ShouldNotContain(Path.GetFileNameWithoutExtension(entryFile));
     }
 }

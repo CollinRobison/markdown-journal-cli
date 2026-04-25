@@ -68,7 +68,7 @@ public sealed class RemoveEntryService(
         // Run all guard checks (same as ValidatePreconditions) before any writes.
         var (resolvedFileName, absoluteEntryPath, fileExists) = ResolveAndValidate(journalPath, fileName, cleanRefs);
 
-        var trackingFileName = $".{_journalSettings.AppName}";
+        var metadataDir = _fileSystem.CombinePaths(journalPath, _journalSettings.MetadataDirName);
         var journalrcPath = _fileSystem.CombinePaths(
             journalPath,
             _journalSettings.JournalConfigFileName
@@ -81,7 +81,7 @@ public sealed class RemoveEntryService(
         using var tx = _txCoordinator.Begin();
         try
         {
-            var trackingAbsPath = _fileSystem.CombinePaths(journalPath, trackingFileName);
+            var trackingAbsPath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
             var tocAbsPath = _fileSystem.CombinePaths(journalPath, tocFile);
 
             if (cleanRefs)
@@ -212,16 +212,16 @@ public sealed class RemoveEntryService(
         }
 
         // 3. Validate tracking index exists
-        var trackingFileName = $".{_journalSettings.AppName}";
-        var trackingFilePath = _fileSystem.CombinePaths(journalPath, trackingFileName);
+        var metadataDir = _fileSystem.CombinePaths(journalPath, _journalSettings.MetadataDirName);
+        var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
         if (!_fileSystem.FileExists(trackingFilePath))
         {
             _logger.LogWarning(
-                "Tracking index '{TrackingFileName}' not found at '{JournalPath}'",
-                trackingFileName,
-                journalPath
+                "Tracking index '{TrackingFileName}' not found at '{MetadataDir}'",
+                _journalSettings.TrackingFileName,
+                metadataDir
             );
-            throw new TrackingIndexNotFoundException(journalPath, trackingFileName);
+            throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
         }
 
         // 4. Guard against protected files — read live TOC filename from config
@@ -234,7 +234,7 @@ public sealed class RemoveEntryService(
         var protectedFiles = new[]
         {
             _journalSettings.JournalConfigFileName,
-            trackingFileName,
+            _journalSettings.TrackingFileName,
             tocFile,
         };
 

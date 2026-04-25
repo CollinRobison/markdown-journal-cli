@@ -59,8 +59,8 @@ public sealed class JournalEntryService(
         );
 
         var journalrc = _fileSystem.CombinePaths(filePath, _journalSettings.JournalConfigFileName);
-        var trackingFileName = $".{_journalSettings.AppName}";
-        var trackingFilePath = _fileSystem.CombinePaths(filePath, trackingFileName);
+        var metadataDir = _fileSystem.CombinePaths(filePath, _journalSettings.MetadataDirName);
+        var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
 
         if (!_fileSystem.FileExists(journalrc))
         {
@@ -71,10 +71,10 @@ public sealed class JournalEntryService(
         {
             _logger.LogWarning(
                 "Tracking index '{TrackingFileName}' not found at '{FilePath}'",
-                trackingFileName,
-                filePath
+                _journalSettings.TrackingFileName,
+                metadataDir
             );
-            throw new TrackingIndexNotFoundException(filePath, trackingFileName);
+            throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
         }
 
         // title for use in table of contents and entry file
