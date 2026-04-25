@@ -295,6 +295,10 @@ public class NewCommandTests : CommandTestBase
         services.AddSingleton(mockFileTracking.Object);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
+        services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
+        services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
+        services.AddSingleton<ILogger<NewJournalService>>(NullLogger<NewJournalService>.Instance);
+        services.AddSingleton<IJournalTocStructureRepository>(markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object);
         services.AddSingleton<INewJournalService, NewJournalService>();
         services.AddSingleton<NewCommand>();
 
@@ -539,6 +543,10 @@ public class NewCommandTests : CommandTestBase
         services.AddSingleton(mockFileTracking.Object);
         var mockTableOfContentsGenerator = new Mock<ITableOfContentsService>();
         services.AddSingleton(mockTableOfContentsGenerator.Object);
+        services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
+        services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
+        services.AddSingleton<ILogger<NewJournalService>>(NullLogger<NewJournalService>.Instance);
+        services.AddSingleton<IJournalTocStructureRepository>(markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object);
         services.AddSingleton<INewJournalService, NewJournalService>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1125,6 +1133,10 @@ public class NewCommandTests : CommandTestBase
             .Setup(x => x.LoadIndex(It.IsAny<string>()))
             .Returns(new JournalIndex { Files = [] });
         services.AddSingleton(mockFileTracking.Object);
+        services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
+        services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
+        services.AddSingleton<ILogger<NewJournalService>>(NullLogger<NewJournalService>.Instance);
+        services.AddSingleton<IJournalTocStructureRepository>(markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object);
         services.AddSingleton<INewJournalService, NewJournalService>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1323,6 +1335,10 @@ public class NewCommandTests : CommandTestBase
             NoOpFileTransactionCoordinator.Instance
         );
         registrar.RegisterInstance(typeof(IRollbackReporter), NoOpRollbackReporter.Instance);
+        registrar.RegisterInstance(
+            typeof(IJournalTocStructureRepository),
+            markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object
+        );
 
         foreach (var service in services)
         {

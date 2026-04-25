@@ -683,4 +683,49 @@ public class FileSystemTests : IDisposable
     }
 
     #endregion
+
+    #region IsDirectory Tests
+
+    [Fact]
+    public void IsDirectory_Should_Return_True_For_Existing_Directory()
+    {
+        // Given
+        var dirPath = Path.Combine(_tempDirectory, "mydir");
+        Directory.CreateDirectory(dirPath);
+
+        // When
+        var result = _fileSystem.IsDirectory(dirPath);
+
+        // Then
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsDirectory_Should_Return_False_For_File_Path()
+    {
+        // Given
+        var filePath = Path.Combine(_tempDirectory, "myfile.txt");
+        File.WriteAllText(filePath, "content");
+
+        // When
+        var result = _fileSystem.IsDirectory(filePath);
+
+        // Then
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsDirectory_Should_Return_False_For_Absent_Path()
+    {
+        // Given
+        var absentPath = Path.Combine(_tempDirectory, "doesnotexist");
+
+        // When
+        var result = _fileSystem.IsDirectory(absentPath);
+
+        // Then
+        result.ShouldBeFalse();
+    }
+
+    #endregion
 }

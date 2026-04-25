@@ -98,7 +98,9 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
         var journalDir = Path.Combine(JournalRoot, "FreshJournal");
         Directory.Exists(journalDir).ShouldBeTrue();
         File.Exists(Path.Combine(journalDir, ".journalrc")).ShouldBeTrue();
-        File.Exists(Path.Combine(journalDir, $".{JournalSettings.Value.AppName}")).ShouldBeTrue();
+        var metadataDir = Path.Combine(journalDir, JournalSettings.Value.MetadataDirName);
+        Directory.Exists(metadataDir).ShouldBeTrue();
+        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TrackingFileName)).ShouldBeTrue();
         File.Exists(Path.Combine(journalDir, "1a-TableOfContents.md")).ShouldBeTrue();
     }
 

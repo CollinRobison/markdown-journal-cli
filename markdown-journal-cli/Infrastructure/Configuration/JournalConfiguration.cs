@@ -311,14 +311,21 @@ public class JournalConfiguration(
     {
         // Check if file is TOC file - skip it to avoid circular references
         var config = Read(directory);
-        if (
-            config != null
-            && !string.IsNullOrEmpty(config.TableOfContents.File)
-            && string.Equals(file, config.TableOfContents.File, StringComparison.OrdinalIgnoreCase)
-        )
+        if (config != null)
         {
-            _logger.LogDebug("Skipping TOC file '{File}' from being added as entry", file);
-            return;
+            var configTocFile = config.TableOfContents.File;
+            var defaultTocName = _journalSettings.TableOfContentsFileName;
+            var fileNameNoExt = Path.GetFileNameWithoutExtension(file);
+            bool isTocFile =
+                (!string.IsNullOrEmpty(configTocFile)
+                    && string.Equals(file, configTocFile, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrEmpty(defaultTocName)
+                    && string.Equals(fileNameNoExt, defaultTocName, StringComparison.OrdinalIgnoreCase));
+            if (isTocFile)
+            {
+                _logger.LogDebug("Skipping TOC file '{File}' from being added as entry", file);
+                return;
+            }
         }
 
         // If ignoring file, only add to ignore list and skip structure

@@ -1919,7 +1919,7 @@ public class UpdateCommandTests : CommandTestBase
         faultFs.CreateFile(
             $"{journalPath}/.mdjournal",
             ".journaltoc",
-            """{"Structure":{"Topics":[]},"RootEntries":[]}"""
+            """{"structure":{"topics":[]},"rootEntries":[]}"""
         );
         var config = new markdown_journal_cli.Infrastructure.Configuration.Models.JournalConfig
         {

@@ -107,7 +107,7 @@ injection from user-supplied content breaking terminal rendering or producing co
 | Runtime | .NET 10 — downgrade requires an explicit ADR |
 | CLI framework | Spectre.Console.Cli — all commands extend `JournalCommand<TSettings>` |
 | Testing | xUnit + Moq + Shouldly — no framework substitutions |
-| Serialization | System.Text.Json for `.journalrc` and `.mdjournal` |
+| Serialization | System.Text.Json for `.journalrc`, `.journalindex`, and `.journaltoc` (inside `.mdjournal/` metadata directory) |
 | File hashing | SHA256 via `HashService` — alternative algorithms require an ADR |
 
 New runtime dependencies MUST be evaluated for security advisories, maintenance status, and license
@@ -175,4 +175,4 @@ This constitution supersedes all other development guidance. When documents conf
 
 All PRs MUST include a constitution compliance review. Non-compliant code MUST NOT be merged.
 
-**Version**: 1.0.0 | **Ratified**: 2025-08-05 | **Last Amended**: 2026-04-05
+**Version**: 1.0.1 | **Ratified**: 2025-08-05 | **Last Amended**: 2026-04-24

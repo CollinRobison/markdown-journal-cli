@@ -148,26 +148,26 @@
 
 ### New Infrastructure Unit Tests
 
-- [ ] T043 [P] Add `IsDirectory` unit tests to `markdown-journal-cli.Tests/Infrastructure/FileSystem/FileSystemTests.cs` — assert true for a real directory, false for a file, false for an absent path
-- [ ] T044 [P] Add `JournalTocStructureRepository` unit tests (Load returns empty structure when file absent; Load reads existing file correctly; Save round-trip produces identical deserialized output) in `markdown-journal-cli.Tests/Infrastructure/Configuration/JournalTocStructureRepositoryTests.cs`
-- [ ] T045 [P] Add `JournalValidator` unit tests (valid layout returns empty list; missing `.mdjournal/` directory; missing `.journalindex`; missing `.journaltoc`; both index and toc missing) in `markdown-journal-cli.Tests/Infrastructure/Validation/JournalValidatorTests.cs`
+- [x] T043 [P] Add `IsDirectory` unit tests to `markdown-journal-cli.Tests/Infrastructure/FileSystem/FileSystemTests.cs` — assert true for a real directory, false for a file, false for an absent path
+- [x] T044 [P] Add `JournalTocStructureRepository` unit tests (Load returns empty structure when file absent; Load reads existing file correctly; Save round-trip produces identical deserialized output) in `markdown-journal-cli.Tests/Infrastructure/Configuration/JournalTocStructureRepositoryTests.cs`
+- [x] T045 [P] Add `JournalValidator` unit tests (valid layout returns empty list; missing `.mdjournal/` directory; missing `.journalindex`; missing `.journaltoc`; both index and toc missing) in `markdown-journal-cli.Tests/Infrastructure/Validation/JournalValidatorTests.cs`
 
 ### Documentation
 
-- [ ] T046 [P] Update `docs/ARCHITECTURE.md` — update the journal directory tree to show `.mdjournal/` as a directory containing `.journalindex` and `.journaltoc`, and update component descriptions to match the new layout
-- [ ] T047 [P] Update `README.md` — update the journal layout section to show the `.mdjournal/` directory structure; explicitly note that the directory is dot-prefixed and therefore hidden in standard `ls` output on macOS/Linux (SC-004)
-- [ ] T048 [P] Update `docs/DEVELOPMENT.md` — update "Adding a Service" (and related sections) to describe the metadata directory pattern and the new `IJournalTocStructureRepository` / `IJournalValidator` infrastructure
-- [ ] T049a Update `docs/mdjournal_file_infrastructure.drawio` — add `.mdjournal/` as a directory node containing `.journalindex` and `.journaltoc`; relabel or remove the old root-level `.mdjournal` file node. Must be completed before T049.
-- [ ] T049 Update the architecture diagram PNG embedded in `docs/ARCHITECTURE.md` by regenerating it from the updated `docs/mdjournal_file_infrastructure.drawio` *(depends on T049a)*
+- [x] T046 [P] Update `docs/ARCHITECTURE.md` — update the journal directory tree to show `.mdjournal/` as a directory containing `.journalindex` and `.journaltoc`, and update component descriptions to match the new layout
+- [x] T047 [P] Update `README.md` — update the journal layout section to show the `.mdjournal/` directory structure; explicitly note that the directory is dot-prefixed and therefore hidden in standard `ls` output on macOS/Linux (SC-004)
+- [x] T048 [P] Update `docs/DEVELOPMENT.md` — update "Adding a Service" (and related sections) to describe the metadata directory pattern and the new `IJournalTocStructureRepository` / `IJournalValidator` infrastructure
+- [x] T049a Update `docs/mdjournal_file_infrastructure.drawio` — add `.mdjournal/` as a directory node containing `.journalindex` and `.journaltoc`; relabel or remove the old root-level `.mdjournal` file node. Must be completed before T049.
+- [x] T049 Update the architecture diagram PNG embedded in `docs/ARCHITECTURE.md` by regenerating it from the updated `docs/mdjournal_file_infrastructure.drawio` *(depends on T049a)*
 
 ### Constitution
 
-- [ ] T050 Update the `Serialization` row in `.specify/memory/constitution.md` from `System.Text.Json for .journalrc and .mdjournal` to `System.Text.Json for .journalrc, .journalindex, and .journaltoc (inside .mdjournal/ metadata directory)`; bump the version field from `1.0.0` to `1.0.1`; update the "Last Amended" date. Run this last after all other Polish tasks (T046–T049) are complete.
+- [x] T050 Update the `Serialization` row in `.specify/memory/constitution.md` from `System.Text.Json for .journalrc and .mdjournal` to `System.Text.Json for .journalrc, .journalindex, and .journaltoc (inside .mdjournal/ metadata directory)`; bump the version field from `1.0.0` to `1.0.1`; update the "Last Amended" date. Run this last after all other Polish tasks (T046–T049) are complete.
 
 ### Final Validation
 
-- [ ] T051 Run `dotnet build` + `dotnet test` and confirm all tests pass — no test may be deleted solely to avoid updating it (SC-001)
-- [ ] T052 Confirm `QuickstartValidationTests` passes end-to-end against the new layout in `markdown-journal-cli.Tests/Infrastructure/QuickstartValidationTests.cs`
+- [x] T051 Run `dotnet build` + `dotnet test` and confirm all tests pass (even ones that look unrelated) — no test may be deleted solely to avoid updating it (SC-001)
+- [x] T052 Confirm `QuickstartValidationTests` passes end-to-end against the new layout in `markdown-journal-cli.Tests/Infrastructure/QuickstartValidationTests.cs`
 
 ---
 

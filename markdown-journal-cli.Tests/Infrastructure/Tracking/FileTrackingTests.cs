@@ -88,7 +88,8 @@ public class FileTrackingTests : IDisposable
     public void LoadIndex_Should_Handle_Malformed_Json_Gracefully()
     {
         // Given
-        _fileSystem.CreateFile(_testPath, _indexFileName, "invalid json");
+        var metadataDir = Path.Combine(_testPath, ".mdjournal");
+        _fileSystem.CreateFile(metadataDir, ".journalindex", "invalid json");
 
         // When / Then
         Should.Throw<System.Text.Json.JsonException>(() => _fileTracking.LoadIndex(_testPath));
@@ -119,7 +120,7 @@ public class FileTrackingTests : IDisposable
         _fileTracking.SaveIndex(index, _testPath);
 
         // Then
-        var indexPath = Path.Combine(_testPath, _indexFileName);
+        var indexPath = Path.Combine(_testPath, ".mdjournal", ".journalindex");
         _fileSystem.FileExists(indexPath).ShouldBeTrue();
 
         var savedContent = _fileSystem.GetFileContent(indexPath);
@@ -149,7 +150,7 @@ public class FileTrackingTests : IDisposable
         _fileTracking.SaveIndex(index, _testPath);
 
         // Then
-        var indexPath = Path.Combine(_testPath, _indexFileName);
+        var indexPath = Path.Combine(_testPath, ".mdjournal", ".journalindex");
         var content = _fileSystem.GetFileContent(indexPath);
         content.ShouldContain("  "); // Should have indentation
     }

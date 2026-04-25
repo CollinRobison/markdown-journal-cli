@@ -61,6 +61,8 @@ markdown-journal-cli/
 │   │   │   ├── JournalConfiguration.cs
 │   │   │   ├── IJournalConfigGenerator.cs
 │   │   │   ├── JournalConfigGenerator.cs
+│   │   │   ├── IJournalTocStructureRepository.cs  # Load/Save .journaltoc from .mdjournal/
+│   │   │   ├── JournalTocStructureRepository.cs   # JSON read/write implementation
 │   │   │   ├── ITableOfContentsMarkdownParser.cs
 │   │   │   ├── TableOfContentsMarkdownParser.cs
 │   │   │   └── Models/            # Configuration data models
@@ -88,13 +90,16 @@ markdown-journal-cli/
 │   │   │   ├── NoOpTransactionInfrastructure.cs # No-op impls for tests/dry-run
 │   │   │   ├── RollbackCompletedException.cs    # Thrown after rollback; carries RollbackResult
 │   │   │   └── Models/                          # RollbackEntry, RollbackEntryKind, RollbackResult, RollbackFailure
-│   │   └── Tracking/             # File change detection
-│   │       ├── IFileTracking.cs
-│   │       ├── FileTracking.cs
-│   │       ├── IHashService.cs
-│   │       ├── HashService.cs
-│   │       └── Models/
-│   │           └── UpdateDryRunReport.cs  # Dry-run report aggregate + TocDiffResult + TocRenameDryRunResult
+│   │   ├── Tracking/             # File change detection
+│   │   │   ├── IFileTracking.cs
+│   │   │   ├── FileTracking.cs    # Resolves tracking path from .mdjournal/.journalindex
+│   │   │   ├── IHashService.cs
+│   │   │   ├── HashService.cs
+│   │   │   └── Models/
+│   │   │       └── UpdateDryRunReport.cs  # Dry-run report aggregate + TocDiffResult + TocRenameDryRunResult
+│   │   └── Validation/           # Journal layout validation
+│   │       ├── IJournalValidator.cs       # ValidateMetadataDirectory contract
+│   │       └── JournalValidator.cs        # Checks .mdjournal/, .journalindex, .journaltoc
 │   ├── JournalTemplates/          # Template and initialization services
 │   │   ├── Templates/            # Template implementations
 │   │   ├── IJournalInitializer.cs # Journal creation orchestration
@@ -325,6 +330,21 @@ public class YourService : IYourService
 registrar.Register(typeof(IYourService), typeof(YourService));
 ```
 
+### Metadata Directory Pattern
+
+All services that read or write internal metadata (tracking index or TOC structure) MUST resolve file paths from the `.mdjournal/` metadata directory rather than the journal root directly.
+
+```csharp
+// Correct — resolve from metadata directory
+var metadataDir = Path.Combine(journalDir, settings.MetadataDirName);
+var trackingPath = Path.Combine(metadataDir, settings.TrackingFileName);   // .mdjournal/.journalindex
+var tocPath      = Path.Combine(metadataDir, settings.TocStructureFileName); // .mdjournal/.journaltoc
+```
+
+Services that need to read/write the TOC structure MUST use `IJournalTocStructureRepository.Load(metadataDir)` / `Save(structure, metadataDir)` rather than embedding structure data in `.journalrc`.
+
+Services and commands that operate on an existing journal MUST validate the metadata directory layout via `IJournalValidator.ValidateMetadataDirectory(journalDir)` before performing any writes. The `JournalCommand<TSettings>` base class calls the validator automatically; override `SkipMetadataValidation => true` only in commands that *create* the metadata directory (i.e., `new` and `init`).
+
 ### 3. Error Handling
 
 #### Adding New Exception Types
@@ -439,7 +459,9 @@ public sealed class NewCommandIntegrationTests : JournalIntegrationTestBase
 
         result.ExitCode.ShouldBe(0);
         File.Exists(Path.Combine(JournalPath, ".journalrc")).ShouldBeTrue();
-        File.Exists(Path.Combine(JournalPath, ".mdjournal")).ShouldBeTrue();
+        Directory.Exists(Path.Combine(JournalPath, ".mdjournal")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, ".mdjournal", ".journalindex")).ShouldBeTrue();
+        File.Exists(Path.Combine(JournalPath, ".mdjournal", ".journaltoc")).ShouldBeTrue();
     }
 }
 ```
