@@ -548,6 +548,10 @@ public class JournalConfiguration(
         );
 
         var tocFile = config.TableOfContents.File;
+        var ignoreFiles = new HashSet<string>(
+            config.TableOfContents.IgnoreFiles ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
 
         var filesToAdd = trackedFiles
             .Where(f =>
@@ -556,7 +560,9 @@ public class JournalConfiguration(
             )
             .ToList();
 
-        var filesToRemove = configFiles.Where(f => !trackedFiles.Contains(f)).ToList();
+        var filesToRemove = configFiles
+            .Where(f => !trackedFiles.Contains(f) && !ignoreFiles.Contains(f))
+            .ToList();
 
         return new JournalConfigSyncResult
         {

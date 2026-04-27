@@ -187,6 +187,10 @@ public sealed class JournalUpdateService(
         configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
 
         var tocFile = config.TableOfContents.File;
+        var ignoreFiles = new HashSet<string>(
+            config.TableOfContents.IgnoreFiles ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
 
         var filesToAdd = projectedFiles
             .Where(f =>
@@ -195,7 +199,9 @@ public sealed class JournalUpdateService(
             )
             .ToList();
 
-        var filesToRemove = configFiles.Where(f => !projectedFiles.Contains(f)).ToList();
+        var filesToRemove = configFiles
+            .Where(f => !projectedFiles.Contains(f) && !ignoreFiles.Contains(f))
+            .ToList();
 
         return new JournalConfigSyncResult
         {
