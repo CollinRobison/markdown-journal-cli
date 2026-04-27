@@ -1,4 +1,5 @@
 using markdown_journal_cli.Infrastructure.Configuration.Models;
+using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services.AddToc;
 using markdown_journal_cli.Tests.Infrastructure;
@@ -32,11 +33,15 @@ public class AddTocServiceTests : ServiceTestBase
         // Default: .journalrc exists and can be read
         MockJournalConfiguration.Setup(c => c.Read(JournalDir)).Returns(DefaultConfig);
 
+        // Default: no tracked entries (empty index)
+        MockFileTracking.Setup(t => t.LoadIndex(JournalDir)).Returns(new JournalIndex());
+
         _service = new AddTocService(
             MockFileSystem.Object,
             MockJournalConfiguration.Object,
             MockTocStructureRepository.Object,
             MockTableOfContentsService.Object,
+            MockFileTracking.Object,
             NoOpCoordinator,
             NoOpReporter,
             JournalSettings
@@ -54,6 +59,7 @@ public class AddTocServiceTests : ServiceTestBase
                 MockJournalConfiguration.Object,
                 MockTocStructureRepository.Object,
                 MockTableOfContentsService.Object,
+                MockFileTracking.Object,
                 NoOpCoordinator,
                 NoOpReporter,
                 JournalSettings
@@ -70,6 +76,7 @@ public class AddTocServiceTests : ServiceTestBase
                 null!,
                 MockTocStructureRepository.Object,
                 MockTableOfContentsService.Object,
+                MockFileTracking.Object,
                 NoOpCoordinator,
                 NoOpReporter,
                 JournalSettings
@@ -86,6 +93,7 @@ public class AddTocServiceTests : ServiceTestBase
                 MockJournalConfiguration.Object,
                 null!,
                 MockTableOfContentsService.Object,
+                MockFileTracking.Object,
                 NoOpCoordinator,
                 NoOpReporter,
                 JournalSettings
@@ -101,6 +109,24 @@ public class AddTocServiceTests : ServiceTestBase
                 MockFileSystem.Object,
                 MockJournalConfiguration.Object,
                 MockTocStructureRepository.Object,
+                null!,
+                MockFileTracking.Object,
+                NoOpCoordinator,
+                NoOpReporter,
+                JournalSettings
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_ThrowsArgumentNullException_WhenFileTrackingIsNull()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            new AddTocService(
+                MockFileSystem.Object,
+                MockJournalConfiguration.Object,
+                MockTocStructureRepository.Object,
+                MockTableOfContentsService.Object,
                 null!,
                 NoOpCoordinator,
                 NoOpReporter,
@@ -118,6 +144,7 @@ public class AddTocServiceTests : ServiceTestBase
                 MockJournalConfiguration.Object,
                 MockTocStructureRepository.Object,
                 MockTableOfContentsService.Object,
+                MockFileTracking.Object,
                 null!,
                 NoOpReporter,
                 JournalSettings
@@ -134,6 +161,7 @@ public class AddTocServiceTests : ServiceTestBase
                 MockJournalConfiguration.Object,
                 MockTocStructureRepository.Object,
                 MockTableOfContentsService.Object,
+                MockFileTracking.Object,
                 NoOpCoordinator,
                 null!,
                 JournalSettings

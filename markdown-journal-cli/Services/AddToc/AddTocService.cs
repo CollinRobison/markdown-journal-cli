@@ -1,6 +1,7 @@
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
+using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,7 @@ public sealed class AddTocService(
     IJournalConfiguration journalConfiguration,
     IJournalTocStructureRepository tocStructureRepository,
     ITableOfContentsService tableOfContentsService,
+    IFileTracking fileTracking,
     IFileTransactionCoordinator txCoordinator,
     IRollbackReporter rollbackReporter,
     IOptions<JournalSettings> journalSettings
@@ -28,6 +30,8 @@ public sealed class AddTocService(
         tocStructureRepository ?? throw new ArgumentNullException(nameof(tocStructureRepository));
     private readonly ITableOfContentsService _tableOfContentsService =
         tableOfContentsService ?? throw new ArgumentNullException(nameof(tableOfContentsService));
+    private readonly IFileTracking _fileTracking =
+        fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
     private readonly IFileTransactionCoordinator _txCoordinator =
         txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
     private readonly IRollbackReporter _rollbackReporter =
@@ -76,6 +80,15 @@ public sealed class AddTocService(
             {
                 tx.TrackNew(tocStructurePath);
                 _tocStructureRepository.Save(JournalTocStructure.Empty(), metadataDir);
+
+                // Seed the structure from entries already in the tracking index so that
+                // the .journaltoc and the generated markdown TOC reflect existing journal entries.
+                var index = _fileTracking.LoadIndex(journalDir);
+                foreach (var file in index.Files.Keys
+                    .Where(f => f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)))
+                {
+                    _journalConfiguration.AddEntry(journalDir, string.Empty, file);
+                }
             }
 
             if (wantsMd && !mdExists)

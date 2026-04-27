@@ -31,6 +31,7 @@ public class AddTableOfContentsRollbackTests : IDisposable
     private readonly TableOfContentsService _tableOfContentsService;
     private readonly RollbackReporter _rollbackReporter;
     private readonly JournalTocStructureRepository _tocStructureRepository;
+    private readonly FileTracking _fileTracking;
 
     public AddTableOfContentsRollbackTests()
     {
@@ -67,13 +68,13 @@ public class AddTableOfContentsRollbackTests : IDisposable
 
         var settingsOptions = Options.Create(_journalSettings);
         var hashService = new TestHashService();
-        var fileTracking = new FileTracking(_fileSystem, settingsOptions, hashService);
+        _fileTracking = new FileTracking(_fileSystem, settingsOptions, hashService);
         _tocStructureRepository = new JournalTocStructureRepository(_fileSystem, settingsOptions);
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             settingsOptions,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
+            _fileTracking,
             _tocStructureRepository
         );
         _tableOfContentsService = new TableOfContentsService(
@@ -108,6 +109,7 @@ public class AddTableOfContentsRollbackTests : IDisposable
             _journalConfiguration,
             _tocStructureRepository,
             _tableOfContentsService,
+            _fileTracking,
             _coordinator,
             _rollbackReporter,
             settingsOptions

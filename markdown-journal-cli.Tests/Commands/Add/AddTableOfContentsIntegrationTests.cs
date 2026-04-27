@@ -78,6 +78,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
             journalConfiguration,
             tocStructureRepository,
             tocService,
+            fileTracking,
             coordinator,
             rollbackReporter,
             JournalSettings
