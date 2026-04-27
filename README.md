@@ -235,7 +235,7 @@ mdjournal add config --path ~/Documents/MyJournal --toc TableOfContents --name "
 ```
 
 ### `add toc` - Create Table of Contents
-Creates a Table of Contents file for an existing journal if it does not already exist.
+Creates the `.mdjournal/.journaltoc` structure file and the markdown Table of Contents file for an existing journal. Both artifacts are created by default; use `--structure-only` or `--md-only` to target a single artifact.
 
 **Syntax:**
 ```bash
@@ -245,11 +245,27 @@ mdjournal add toc [options]
 **Options:**
 - `-p|--path <path>` - Path to the journal directory (default: current directory)
 - `-n|--name|--toc|--tableofcontents <name>` - TOC file name (without `.md`)
+- `--structure-only` - Create only `.mdjournal/.journaltoc`; leave the markdown TOC file untouched. Mutually exclusive with `--md-only`.
+- `--md-only` - Create only the markdown TOC file; leave `.mdjournal/.journaltoc` untouched. Mutually exclusive with `--structure-only`.
+
+**Behavior:**
+- **No flags**: Creates both `.mdjournal/.journaltoc` and the markdown TOC file. Skips any artifact that already exists with a warning.
+- **Both already exist**: Returns exit code `1` with a warning; no files are modified.
+- **One already exists**: Creates the missing artifact and returns exit code `0`.
 
 **Examples:**
 ```bash
+# Create both artifacts
 mdjournal add toc --path ~/Documents/MyJournal
+
+# Create both artifacts with a custom TOC filename
 mdjournal add toc --path ~/Documents/MyJournal --name TableOfContents
+
+# Create only the .journaltoc structure file
+mdjournal add toc --path ~/Documents/MyJournal --structure-only
+
+# Create only the markdown TOC file
+mdjournal add toc --path ~/Documents/MyJournal --md-only
 ```
 
 ### `add tracking` - Create File Tracking Index
@@ -467,7 +483,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ **`remove entry` command** — delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead inline links (`--clean-refs`); `rm` alias supported
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **1076 passing unit tests** covering core functionality
+- ✅ **1130 passing unit tests** covering core functionality
 - ✅ **`--dry-run` / `--check` flag** on `update journal` — previews all changes (tracking, config, TOC, rename-toc) without any writes, with Spectre.Console color-coded tables
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
@@ -481,6 +497,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Entry formatting with customizable separators
 - ✅ Nested topic hierarchy support
 - ✅ **Rollback system** — all write commands are wrapped in a file transaction; if any step fails mid-operation, all changes are automatically reversed and exit code `2` (fully rolled back) or `3` (partial rollback) is returned
+- ✅ **Metadata directory layout** — internal tracking and TOC structure split into `.mdjournal/.journalindex` (SHA256 hashes) and `.mdjournal/.journaltoc` (topic hierarchy JSON); `.journalrc` retains only user-configurable settings (file list, ignore list, TOC filename). All commands validate the metadata directory before writing; `new` and `init` create it on first run.
 
 **Planned Features:**
 - ⏳ `--version` flag **(finish before moving on)**

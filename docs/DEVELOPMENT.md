@@ -210,6 +210,8 @@ markdown-journal-cli/
 │       │   └── NewJournalServiceTests.cs
 │       ├── RemoveEntry/
 │       │   └── RemoveEntryServiceTests.cs     # remove entry service tests
+│       ├── AddToc/
+│       │   └── AddTocServiceTests.cs          # dual-artifact; structureOnly; mdOnly; AlreadyExists
 │       ├── Rollback/
 │       │   ├── ServiceRollbackTestBase.cs               # shared helpers for rollback tests
 │       │   ├── InitJournalServiceRollbackTests.cs
@@ -728,6 +730,10 @@ host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackSt
 host.Services.AddSingleton<IFileTransactionCoordinator, FileTransactionCoordinator>();
 host.Services.AddSingleton<IRollbackReporter, RollbackReporter>();
 
+// Metadata directory infrastructure
+host.Services.AddSingleton<IJournalTocStructureRepository, JournalTocStructureRepository>();
+host.Services.AddSingleton<IJournalValidator, JournalValidator>();
+
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
 host.Services.AddSingleton<INewJournalService, NewJournalService>();
@@ -743,6 +749,7 @@ host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
 host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();          // ← dry-run rendering
+host.Services.AddSingleton<IAddTocService, AddTocService>();            // ← add toc command
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -896,8 +903,10 @@ public void NewCommand_Should_Handle_InitializationFailure()
 - ✅ **`remove entry` command** — delete an entry file, remove config/tracking records, regenerate TOC; `--clean-refs` strips dead inline links across the journal; `rm` alias supported
 - ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting and link stripping
 - ✅ Exception handling architecture
-- ✅ Testing framework setup (941 tests passing)
+- ✅ Testing framework setup (1130 tests passing)
 - ✅ Configuration system with generation from multiple sources
+- ✅ **Metadata directory layout** — `.mdjournal/` contains `.journalindex` (tracking) and `.journaltoc` (TOC structure); `.journalrc` retains only user settings. `IJournalTocStructureRepository` handles `.journaltoc` JSON read/write; `IJournalValidator` enforces the layout before writes; `new` and `init` both create the metadata directory on first run.
+- ✅ **`add toc` dual-artifact** — creates `.mdjournal/.journaltoc` and/or the markdown TOC file; `--structure-only` and `--md-only` flags allow targeting each artifact independently
 - ✅ TOC markdown parser for config generation
 - ✅ File change detection with SHA256 hashing
 - ✅ Automatic metadata date updates
