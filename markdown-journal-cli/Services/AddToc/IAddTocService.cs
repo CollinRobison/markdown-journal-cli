@@ -29,10 +29,11 @@ public interface IAddTocService
     /// <param name="journalDir">Absolute path to the journal root directory.</param>
     /// <param name="structureOnly">When <c>true</c>, only <c>.journaltoc</c> is created.</param>
     /// <param name="mdOnly">When <c>true</c>, only the markdown TOC file is created.</param>
+    /// <param name="tocName">Optional override for the markdown TOC filename (without <c>.md</c>). When <c>null</c>, the name from <c>.journalrc</c> is used.</param>
     /// <returns>
     /// <see cref="AddTocResult.Created"/> — all requested artifacts were created.
     /// <see cref="AddTocResult.PartiallyCreated"/> — one artifact already existed; the other was created.
     /// <see cref="AddTocResult.AlreadyExists"/> — all requested artifacts already existed.
     /// </returns>
-    AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false);
+    AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false, string? tocName = null);
 }

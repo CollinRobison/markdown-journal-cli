@@ -32,12 +32,21 @@ public sealed class AddTableOfContents(
             return 1;
         }
 
+        if (settings.TableOfContentsName is not null && settings.StructureOnly)
+        {
+            _console.MarkupLine(
+                "[red]Error:[/] --name cannot be used with --structure-only because no markdown file is created."
+            );
+            return 1;
+        }
+
         try
         {
             var result = _addTocService.Execute(
                 settings.FilePath,
                 structureOnly: settings.StructureOnly,
-                mdOnly: settings.MdOnly
+                mdOnly: settings.MdOnly,
+                tocName: settings.TableOfContentsName
             );
 
             switch (result)

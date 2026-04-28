@@ -39,7 +39,7 @@ public sealed class AddTocService(
     private readonly JournalSettings _settings = journalSettings.Value;
 
     /// <inheritdoc />
-    public AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false)
+    public AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false, string? tocName = null)
     {
         if (string.IsNullOrWhiteSpace(journalDir))
             throw new ArgumentException(
@@ -56,7 +56,10 @@ public sealed class AddTocService(
                 $"Could not read journal configuration from {journalDir}"
             );
 
-        var tocMdPath = _fileSystem.CombinePaths(journalDir, config.TableOfContents.File);
+        var tocFileName = tocName is not null
+            ? tocName + FileConstants.MarkdownExtension
+            : config.TableOfContents.File;
+        var tocMdPath = _fileSystem.CombinePaths(journalDir, tocFileName);
 
         bool structureExists = _fileSystem.FileExists(tocStructurePath);
         bool mdExists = _fileSystem.FileExists(tocMdPath);
@@ -93,6 +96,15 @@ public sealed class AddTocService(
 
             if (wantsMd && !mdExists)
             {
+                // When a custom name was requested, update .journalrc to reflect it before
+                // writing the TOC file — UpdateTableOfContents reads the filename from config.
+                if (tocName is not null)
+                {
+                    var journalrcPath = _fileSystem.CombinePaths(journalDir, _settings.JournalConfigFileName);
+                    tx.Track(journalrcPath);
+                    _journalConfiguration.Update(journalDir, c => c.TableOfContents.File = tocFileName);
+                }
+
                 tx.TrackNew(tocMdPath);
                 _tableOfContentsService.UpdateTableOfContents(
                     journalDir,

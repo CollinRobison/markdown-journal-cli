@@ -37,13 +37,15 @@ public class AddTableOfContentsCommandTests : CommandTestBase
 
     private static AddTableOfContentsSettings DefaultSettings(
         bool structureOnly = false,
-        bool mdOnly = false
+        bool mdOnly = false,
+        string? tocName = null
     ) =>
         new AddTableOfContentsSettings
         {
             FilePath = JournalDir,
             StructureOnly = structureOnly,
             MdOnly = mdOnly,
+            TableOfContentsName = tocName,
         };
 
     #region Result Mapping
@@ -52,7 +54,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsZero_AndSuccessMessage_WhenServiceReturnsCreated()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(JournalDir, false, false))
+            .Setup(s => s.Execute(JournalDir, false, false, null))
             .Returns(AddTocResult.Created);
 
         var result = CreateCommand().Execute(null!, DefaultSettings());
@@ -65,7 +67,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsZero_AndSuccessMessage_WhenServiceReturnsPartiallyCreated()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(JournalDir, false, false))
+            .Setup(s => s.Execute(JournalDir, false, false, null))
             .Returns(AddTocResult.PartiallyCreated);
 
         var result = CreateCommand().Execute(null!, DefaultSettings());
@@ -78,7 +80,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsOne_AndWarningMessage_WhenServiceReturnsAlreadyExists()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(JournalDir, false, false))
+            .Setup(s => s.Execute(JournalDir, false, false, null))
             .Returns(AddTocResult.AlreadyExists);
 
         var result = CreateCommand().Execute(null!, DefaultSettings());
@@ -95,26 +97,39 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_PassesStructureOnly_ToService_WhenFlagIsSet()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(JournalDir, true, false))
+            .Setup(s => s.Execute(JournalDir, true, false, null))
             .Returns(AddTocResult.Created);
 
         var result = CreateCommand().Execute(null!, DefaultSettings(structureOnly: true));
 
         result.ShouldBe(0);
-        _mockAddTocService.Verify(s => s.Execute(JournalDir, true, false), Times.Once);
+        _mockAddTocService.Verify(s => s.Execute(JournalDir, true, false, null), Times.Once);
     }
 
     [Fact]
     public void Execute_PassesMdOnly_ToService_WhenFlagIsSet()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(JournalDir, false, true))
+            .Setup(s => s.Execute(JournalDir, false, true, null))
             .Returns(AddTocResult.Created);
 
         var result = CreateCommand().Execute(null!, DefaultSettings(mdOnly: true));
 
         result.ShouldBe(0);
-        _mockAddTocService.Verify(s => s.Execute(JournalDir, false, true), Times.Once);
+        _mockAddTocService.Verify(s => s.Execute(JournalDir, false, true, null), Times.Once);
+    }
+
+    [Fact]
+    public void Execute_PassesTocName_ToService_WhenNameIsSet()
+    {
+        _mockAddTocService
+            .Setup(s => s.Execute(JournalDir, false, false, "MyCustomToc"))
+            .Returns(AddTocResult.Created);
+
+        var result = CreateCommand().Execute(null!, DefaultSettings(tocName: "MyCustomToc"));
+
+        result.ShouldBe(0);
+        _mockAddTocService.Verify(s => s.Execute(JournalDir, false, false, "MyCustomToc"), Times.Once);
     }
 
     [Fact]
@@ -126,7 +141,21 @@ public class AddTableOfContentsCommandTests : CommandTestBase
         _console.Output.ShouldContain("Error");
         // Service should NOT be called when flags are mutually exclusive
         _mockAddTocService.Verify(
-            s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()),
+            s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public void Execute_ReturnsOne_AndErrorMessage_WhenNameAndStructureOnlyAreSet()
+    {
+        var result = CreateCommand().Execute(null!, DefaultSettings(structureOnly: true, tocName: "MyToc"));
+
+        result.ShouldBe(1);
+        _console.Output.ShouldContain("Error");
+        // Service should NOT be called when --name and --structure-only conflict
+        _mockAddTocService.Verify(
+            s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Never
         );
     }
@@ -139,7 +168,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsOne_AndErrorMessage_WhenServiceThrows()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Setup(s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()))
             .Throws(new InvalidOperationException("Config not found"));
 
         var result = CreateCommand().Execute(null!, DefaultSettings());
@@ -152,7 +181,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsTwo_WhenServiceThrowsFullyRestoredRollbackCompletedException()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Setup(s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()))
             .Throws(new RollbackCompletedException(
                 new RollbackResult([], []),
                 new IOException("simulated fault")
