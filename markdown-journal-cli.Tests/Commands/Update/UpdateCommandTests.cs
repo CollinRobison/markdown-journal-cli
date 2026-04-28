@@ -17,8 +17,9 @@ public class UpdateCommandTests : CommandTestBase
 {
     private const string TestPath = "/test/journal";
 
-    // Path helpers built from JournalSettings.AppName ("md-journal") and JournalConfigFileName
-    private static readonly string TrackingFilePath = Path.Combine(TestPath, ".md-journal");
+    // Path helpers built from JournalSettings MetadataDirName (".mdjournal") and TrackingFileName (".journalindex")
+    private static readonly string MetadataDirPath = Path.Combine(TestPath, ".mdjournal");
+    private static readonly string TrackingFilePath = Path.Combine(MetadataDirPath, ".journalindex");
     private static readonly string JournalrcPath = Path.Combine(TestPath, ".journalrc");
 
     // Field initializers run BEFORE the base constructor, ensuring these are available
@@ -67,7 +68,8 @@ public class UpdateCommandTests : CommandTestBase
             MockJournalConfiguration.Object,
             NullLogger<UpdateCommand>.Instance,
             _mockDryRunRenderer.Object,
-            NoOpFileTransactionCoordinator.Instance
+            NoOpFileTransactionCoordinator.Instance,
+            MockJournalValidator.Object
         );
 
     private static CommandContext CreateCommandContext() =>
@@ -1868,6 +1870,9 @@ public class UpdateCommandTests : CommandTestBase
                 DateFormat = "MM/dd/yyyy",
                 TitleSpaceSeparator = "_",
                 HeadingSeparator = "-",
+                MetadataDirName = ".mdjournal",
+                TrackingFileName = ".journalindex",
+                TocStructureFileName = ".journaltoc",
             }
         );
 
@@ -1875,12 +1880,16 @@ public class UpdateCommandTests : CommandTestBase
         var fileTracking = new markdown_journal_cli.Infrastructure.Tracking.FileTracking(
             faultFs, journalSettings, hashService
         );
+        var tocStructureRepository = new markdown_journal_cli.Infrastructure.Configuration.JournalTocStructureRepository(
+            faultFs, journalSettings
+        );
         var journalConfig = new markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration(
-            faultFs, journalSettings, Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration>.Instance, fileTracking
+            faultFs, journalSettings, Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration>.Instance, fileTracking, tocStructureRepository
         );
         var tocService = new markdown_journal_cli.Services.TableOfContentsService(
             faultFs, journalConfig, journalSettings,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.TableOfContentsService>.Instance
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.TableOfContentsService>.Instance,
+            tocStructureRepository
         );
         var buffer = new markdown_journal_cli.Infrastructure.FileSystem.InMemoryFileBuffer(faultFs);
         var deletionStrategy = new markdown_journal_cli.Infrastructure.Transactions.InMemoryDeletionRollbackStrategy();
@@ -1899,13 +1908,20 @@ public class UpdateCommandTests : CommandTestBase
         var journalUpdateService = new markdown_journal_cli.Services.JournalUpdateService(
             console, faultFs, journalConfig, fileTracking, tocService,
             journalSettings, linkRewriter, coordinator, rollbackReporter,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.JournalUpdateService>.Instance
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<markdown_journal_cli.Services.JournalUpdateService>.Instance,
+            tocStructureRepository
         );
         var dryRunRenderer = new markdown_journal_cli.Commands.Update.DryRunRenderer(console, journalConfig, journalSettings);
 
         // Seed the journal
         const string journalPath = "/test/journal";
         faultFs.CreateDirectory(journalPath);
+        faultFs.CreateDirectory($"{journalPath}/.mdjournal");
+        faultFs.CreateFile(
+            $"{journalPath}/.mdjournal",
+            ".journaltoc",
+            """{"structure":{"topics":[]},"rootEntries":[]}"""
+        );
         var config = new markdown_journal_cli.Infrastructure.Configuration.Models.JournalConfig
         {
             JournalName = "Test Journal",
@@ -1913,8 +1929,6 @@ public class UpdateCommandTests : CommandTestBase
             {
                 File = "1a-TableOfContents.md",
                 Extensions = [".md"],
-                Structure = new markdown_journal_cli.Infrastructure.Configuration.Models.Structure { Topics = [] },
-                RootEntries = [],
             },
         };
         journalConfig.Create(journalPath, config);
@@ -1924,7 +1938,7 @@ public class UpdateCommandTests : CommandTestBase
         // Corrupt the tracking index so there are changes to sync
         faultFs.ResetCallCounts();
         // Write directly to simulate a stale tracking index (bypasses fault counting)
-        faultFs.SetFileContent(System.IO.Path.Combine(journalPath, ".md-journal"), "{}");
+        faultFs.SetFileContent(System.IO.Path.Combine(journalPath, ".mdjournal", ".journalindex"), "{}");
         // Inject a fault on the 2nd UpdateFile call (simulating TOC write failure)
         faultFs.InjectFaultOn(
             markdown_journal_cli.Tests.Infrastructure.FileSystem.FaultInjectPoint.UpdateFile,
@@ -1936,7 +1950,8 @@ public class UpdateCommandTests : CommandTestBase
             console, faultFs, journalUpdateService, fileTracking,
             journalSettings, journalConfig,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<UpdateCommand>.Instance,
-            dryRunRenderer, coordinator
+            dryRunRenderer, coordinator,
+            new markdown_journal_cli.Infrastructure.Validation.JournalValidator(faultFs, journalSettings)
         );
         var settings = new UpdateJournalSettings { FilePath = journalPath, Sync = true };
 

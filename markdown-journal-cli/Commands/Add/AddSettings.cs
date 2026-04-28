@@ -101,6 +101,18 @@ public class AddTableOfContentsSettings : AddSettings
         "The name of the table of contents file (without .md extension). If not specified, uses the default name."
     )]
     public string? TableOfContentsName { get; set; }
+
+    [CommandOption("--structure-only")]
+    [Description(
+        "Only create the .journaltoc structure file inside .mdjournal/. Mutually exclusive with --md-only."
+    )]
+    public bool StructureOnly { get; set; }
+
+    [CommandOption("--md-only")]
+    [Description(
+        "Only create the markdown Table of Contents file. Mutually exclusive with --structure-only."
+    )]
+    public bool MdOnly { get; set; }
 }
 
 public class AddJournalrcSettings : AddSettings

@@ -22,7 +22,8 @@ public class JournalEntryServiceTests : ServiceTestBase
 
     private const string JournalPath = "/test/journal";
     private const string JournalrcPath = "/test/journal/.journalrc";
-    private const string TrackingPath = "/test/journal/.md-journal";
+    private const string MetadataDirPath = "/test/journal/.mdjournal";
+    private const string TrackingPath = "/test/journal/.mdjournal/.journalindex";
 
     public JournalEntryServiceTests()
     {

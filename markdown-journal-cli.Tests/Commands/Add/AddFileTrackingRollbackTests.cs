@@ -20,7 +20,8 @@ public class AddFileTrackingRollbackTests : IDisposable
 {
     private const string JournalPath = "/test/add-tracking";
     private const string JournalrcPath = "/test/add-tracking/.journalrc";
-    private readonly string _trackingFilePath = "/test/add-tracking/.md-journal";
+    private readonly string _metadataDirPath = "/test/add-tracking/.mdjournal";
+    private readonly string _trackingFilePath = "/test/add-tracking/.mdjournal/.journalindex";
 
     private readonly FaultInjectingFileSystem _fileSystem;
     private readonly FileTransactionCoordinator _coordinator;
@@ -78,7 +79,7 @@ public class AddFileTrackingRollbackTests : IDisposable
     [Fact]
     public void Should_Delete_Created_Tracking_File_When_UpdateIndex_Throws()
     {
-        // UpdateFile #1 is FileTracking.UpdateIndex → .md-journal write; inject fault
+        // UpdateFile #1 is FileTracking.UpdateIndex → .mdjournal/.journalindex write; inject fault
         _fileSystem.InjectFaultOn(
             FaultInjectPoint.UpdateFile,
             1,
@@ -99,7 +100,8 @@ public class AddFileTrackingRollbackTests : IDisposable
     public void Should_Not_Start_Transaction_When_Tracking_File_Already_Exists()
     {
         // Pre-create the tracking file so the command returns early without a tx
-        _fileSystem.CreateFile(JournalPath, ".md-journal", "{}");
+        _fileSystem.CreateDirectory(_metadataDirPath);
+        _fileSystem.CreateFile(_metadataDirPath, ".journalindex", "{}");
         _fileSystem.ResetCallCounts();
 
         var command = CreateCommand();

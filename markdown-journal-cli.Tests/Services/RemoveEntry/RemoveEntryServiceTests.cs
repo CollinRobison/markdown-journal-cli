@@ -24,7 +24,8 @@ public class RemoveEntryServiceTests : ServiceTestBase
 {
     private const string JournalPath = "/test/journal";
     private const string JournalrcPath = "/test/journal/.journalrc";
-    private const string TrackingPath = "/test/journal/.md-journal";
+    private const string MetadataDirPath = "/test/journal/.mdjournal";
+    private const string TrackingPath = "/test/journal/.mdjournal/.journalindex";
     private const string EntryFileName = "my_entry.md";
     private const string EntryFilePath = "/test/journal/my_entry.md";
 
@@ -67,8 +68,6 @@ public class RemoveEntryServiceTests : ServiceTestBase
                     TableOfContents = new TableOfContents
                     {
                         File = "1a-TableOfContents.md",
-                        Structure = new Structure { Topics = [] },
-                        RootEntries = [],
                     },
                 }
             );
@@ -220,7 +219,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     {
         // Act & Assert
         Should.Throw<ProtectedJournalFileException>(() =>
-            _service.RemoveEntry(JournalPath, ".md-journal", cleanRefs: false)
+            _service.RemoveEntry(JournalPath, ".journalindex", cleanRefs: false)
         );
         MockFileSystem.Verify(fs => fs.DeleteFile(It.IsAny<string>()), Times.Never);
     }
@@ -261,8 +260,6 @@ public class RemoveEntryServiceTests : ServiceTestBase
                     TableOfContents = new TableOfContents
                     {
                         File = "my-toc.md",
-                        Structure = new Structure { Topics = [] },
-                        RootEntries = [],
                     },
                 }
             );

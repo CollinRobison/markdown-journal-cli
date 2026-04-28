@@ -13,12 +13,6 @@ public class TableOfContents
 
     [JsonPropertyName("ignoreFiles")]
     public string[]? IgnoreFiles { get; set; }
-
-    [JsonPropertyName("structure")]
-    public required Structure Structure { get; set; }
-
-    [JsonPropertyName("rootEntries")]
-    public required Entries[] RootEntries { get; set; }
 }
 
 public class Topic
@@ -47,3 +41,4 @@ public class Entries
     [JsonPropertyName("file")]
     public required string File { get; set; }
 }
+

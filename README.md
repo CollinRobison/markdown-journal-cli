@@ -17,23 +17,25 @@ mdjournal init MyNotes --path ~/Documents/Notes
 
 ## �️ How It Works
 
-When you create a journal, `mdjournal` manages three things in your journal folder:
+When you create a journal, `mdjournal` manages four things in your journal folder:
 
-| File                 | What it is                                                                                                                                           |
+| File / Directory     | What it is                                                                                                                                           |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Your `.md` files** | Your actual journal entries — plain markdown files you write in any editor                                                                           |
-| **`.journalrc`**     | A config file that knows the name of your journal, it's settings, how your entries are organized into topics, and which files to exclude from the Table of Contents |
-| **`.mdjournal`**     | A tracking file that stores a fingerprint (hash) of every entry so the tool can detect what's been added, changed, or deleted since the last update  |
+| **`.journalrc`**     | A config file that knows the name of your journal, its settings, the TOC file name, and which files to exclude from the Table of Contents |
+| **`.mdjournal/`**    | A hidden metadata directory (dot-prefixed, so it won't appear in a plain `ls` on macOS/Linux — use `ls -a` to see it). Contains two files: `.journalindex` and `.journaltoc` |
+| **`.mdjournal/.journalindex`** | A tracking file that stores a fingerprint (hash) of every entry so the tool can detect what's been added, changed, or deleted since the last update |
+| **`.mdjournal/.journaltoc`**   | A JSON file that stores the topic hierarchy and root entries (the TOC structure) |
 
 Running `mdjournal update journal` ties everything together:
-1. Compares your files against `.mdjournal` to find what changed
+1. Compares your files against `.mdjournal/.journalindex` to find what changed
 2. Stamps a "Last Edited" date into any modified entries
 3. Syncs `.journalrc` so new files are registered and deleted ones are removed
-4. Regenerates the Table of Contents from `.journalrc`
+4. Reads the topic structure from `.mdjournal/.journaltoc` and regenerates the Table of Contents
 
 Use `--sync` instead when you want to resync tracking/config/TOC after a git pull or merge without touching "Last Edited" dates on your entries.
 
-You never need to edit `.journalrc` or `.mdjournal` by hand — the CLI keeps them in sync.
+You never need to edit `.journalrc`, `.mdjournal/.journalindex`, or `.mdjournal/.journaltoc` by hand — the CLI keeps them in sync.
 
 ## �📋 Table of Contents
 
@@ -233,7 +235,7 @@ mdjournal add config --path ~/Documents/MyJournal --toc TableOfContents --name "
 ```
 
 ### `add toc` - Create Table of Contents
-Creates a Table of Contents file for an existing journal if it does not already exist.
+Creates the `.mdjournal/.journaltoc` structure file and the markdown Table of Contents file for an existing journal. Both artifacts are created by default; use `--structure-only` or `--md-only` to target a single artifact.
 
 **Syntax:**
 ```bash
@@ -243,11 +245,27 @@ mdjournal add toc [options]
 **Options:**
 - `-p|--path <path>` - Path to the journal directory (default: current directory)
 - `-n|--name|--toc|--tableofcontents <name>` - TOC file name (without `.md`)
+- `--structure-only` - Create only `.mdjournal/.journaltoc`; leave the markdown TOC file untouched. Mutually exclusive with `--md-only`.
+- `--md-only` - Create only the markdown TOC file; leave `.mdjournal/.journaltoc` untouched. Mutually exclusive with `--structure-only`.
+
+**Behavior:**
+- **No flags**: Creates both `.mdjournal/.journaltoc` and the markdown TOC file. Skips any artifact that already exists with a warning.
+- **Both already exist**: Returns exit code `1` with a warning; no files are modified.
+- **One already exists**: Creates the missing artifact and returns exit code `0`.
 
 **Examples:**
 ```bash
+# Create both artifacts
 mdjournal add toc --path ~/Documents/MyJournal
+
+# Create both artifacts with a custom TOC filename
 mdjournal add toc --path ~/Documents/MyJournal --name TableOfContents
+
+# Create only the .journaltoc structure file
+mdjournal add toc --path ~/Documents/MyJournal --structure-only
+
+# Create only the markdown TOC file
+mdjournal add toc --path ~/Documents/MyJournal --md-only
 ```
 
 ### `add tracking` - Create File Tracking Index
@@ -465,7 +483,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **`update entry` command** for renaming entries, updating TOC titles, moving headings, and managing ignore status
 - ✅ **`remove entry` command** — delete an entry, remove its config/tracking records, regenerate TOC, and optionally strip dead inline links (`--clean-refs`); `rm` alias supported
 - ✅ Exception handling with custom exception hierarchy
-- ✅ **1076 passing unit tests** covering core functionality
+- ✅ **1130 passing unit tests** covering core functionality
 - ✅ **`--dry-run` / `--check` flag** on `update journal` — previews all changes (tracking, config, TOC, rename-toc) without any writes, with Spectre.Console color-coded tables
 - ✅ Service-oriented architecture with dependency injection
 - ✅ Configuration system with `.journalrc` files
@@ -479,6 +497,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ Entry formatting with customizable separators
 - ✅ Nested topic hierarchy support
 - ✅ **Rollback system** — all write commands are wrapped in a file transaction; if any step fails mid-operation, all changes are automatically reversed and exit code `2` (fully rolled back) or `3` (partial rollback) is returned
+- ✅ **Metadata directory layout** — internal tracking and TOC structure split into `.mdjournal/.journalindex` (SHA256 hashes) and `.mdjournal/.journaltoc` (topic hierarchy JSON); `.journalrc` retains only user-configurable settings (file list, ignore list, TOC filename). All commands validate the metadata directory before writing; `new` and `init` create it on first run.
 
 **Planned Features:**
 - ⏳ `--version` flag **(finish before moving on)**
@@ -489,9 +508,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
-- ⏳ Look into making the .journalrc only handle journal settings and breaking off the toc structure into its own file. 
-  - ⏳ look into putting .mdjournal and the toc structure file into their own directory so they are less likely to get edited by the user. 
-    - (maybe make the directory .mdjournal -> rename current tracking file from .mdjournal to .entrytracking and toc structure to .journaltoc)
+
 - ⏳ should the business logic be in an sdk that way devs can extend this if it ever becomes useful for others?
 - ⏳ Make custom agents, prompts, and skills fot copilot, claude, opencode, etc. and a command to add them into a project
 

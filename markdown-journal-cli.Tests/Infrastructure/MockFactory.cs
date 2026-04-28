@@ -1,7 +1,9 @@
 using markdown_journal_cli.Infrastructure.Configuration;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -56,6 +58,25 @@ public static class MockFactory
         new();
 
     /// <summary>
+    /// Creates a mock IJournalValidator that returns an empty list (valid) by default.
+    /// </summary>
+    public static Mock<IJournalValidator> CreateJournalValidator()
+    {
+        var mock = new Mock<IJournalValidator>();
+        mock.Setup(v => v.ValidateMetadataDirectory(It.IsAny<string>()))
+            .Returns(new List<string>());
+        return mock;
+    }
+
+    /// <summary>Creates a mock IJournalTocStructureRepository that returns JournalTocStructure.Empty() by default.</summary>
+    public static Mock<IJournalTocStructureRepository> CreateTocStructureRepository()
+    {
+        var mock = new Mock<IJournalTocStructureRepository>();
+        mock.Setup(r => r.Load(It.IsAny<string>())).Returns(JournalTocStructure.Empty());
+        return mock;
+    }
+
+    /// <summary>
     /// Creates an IOptions&lt;JournalSettings&gt; with default test values.
     /// </summary>
     /// <param name="journalPath">Journal path stored in settings (used by some services).</param>
@@ -81,6 +102,9 @@ public static class MockFactory
                 TitleSpaceSeparator = "_",
                 HeadingSeparator = "-",
                 DateFormat = "MM/dd/yyyy",
+                MetadataDirName = ".mdjournal",
+                TrackingFileName = ".journalindex",
+                TocStructureFileName = ".journaltoc",
             }
         );
 }

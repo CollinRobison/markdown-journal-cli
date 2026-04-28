@@ -22,7 +22,8 @@ public sealed class JournalUpdateService(
     IMarkdownLinkRewriter markdownLinkRewriter,
     IFileTransactionCoordinator txCoordinator,
     IRollbackReporter rollbackReporter,
-    ILogger<JournalUpdateService> logger
+    ILogger<JournalUpdateService> logger,
+    IJournalTocStructureRepository tocStructureRepository
 ) : IJournalUpdateService
 {
     private readonly IAnsiConsole _console =
@@ -44,6 +45,11 @@ public sealed class JournalUpdateService(
     private readonly ILogger<JournalUpdateService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly JournalSettings _journalSettings = journalSettings.Value;
+    private readonly IJournalTocStructureRepository _tocStructureRepository =
+        tocStructureRepository ?? throw new ArgumentNullException(nameof(tocStructureRepository));
+
+    private string GetMetadataDir(string journalPath) =>
+        Path.Combine(journalPath, _journalSettings.MetadataDirName);
 
     public UpdateDryRunReport BuildDryRunReport(
         string journalPath,
@@ -85,12 +91,14 @@ public sealed class JournalUpdateService(
             string previewContent;
             if (config is not null && effectiveConfigChanges is not null)
             {
-                // Apply the effective config drift to an in-memory config clone so the TOC
+                // Apply the effective config drift to an in-memory clone so the TOC
                 // preview reflects what the TOC would look like after config sync is applied.
-                var projectedConfig = ProjectConfig(config, effectiveConfigChanges);
+                var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalPath));
+                var (projectedConfig, projectedTocStructure) = ProjectConfig(config, tocStructure, effectiveConfigChanges);
                 previewContent = _tableOfContentsService.PreviewTableOfContents(
                     journalPath,
-                    projectedConfig
+                    projectedConfig,
+                    projectedTocStructure
                 );
             }
             else
@@ -161,6 +169,8 @@ public sealed class JournalUpdateService(
         if (config is null)
             return new JournalConfigSyncResult();
 
+        var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalPath));
+
         // Project: committed tracking index + pending adds - pending deletes
         var projectedFiles = new HashSet<string>(
             _fileTracking.LoadIndex(journalPath).Files.Keys,
@@ -169,14 +179,18 @@ public sealed class JournalUpdateService(
         projectedFiles.UnionWith(pendingTracking.AddedFiles);
         projectedFiles.ExceptWith(pendingTracking.DeletedFiles);
 
-        // All files currently registered in .journalrc
+        // All files currently registered in the TOC structure
         var configFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in config.TableOfContents.RootEntries)
+        foreach (var entry in tocStructure.RootEntries)
             configFiles.Add(entry.File);
-        CollectConfigEntryFiles(config.TableOfContents.Structure.Topics, configFiles);
+        CollectConfigEntryFiles(tocStructure.Structure.Topics, configFiles);
         configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
 
         var tocFile = config.TableOfContents.File;
+        var ignoreFiles = new HashSet<string>(
+            config.TableOfContents.IgnoreFiles ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
 
         var filesToAdd = projectedFiles
             .Where(f =>
@@ -185,7 +199,9 @@ public sealed class JournalUpdateService(
             )
             .ToList();
 
-        var filesToRemove = configFiles.Where(f => !projectedFiles.Contains(f)).ToList();
+        var filesToRemove = configFiles
+            .Where(f => !projectedFiles.Contains(f) && !ignoreFiles.Contains(f))
+            .ToList();
 
         return new JournalConfigSyncResult
         {
@@ -206,21 +222,21 @@ public sealed class JournalUpdateService(
     }
 
     /// <summary>
-    /// Returns an in-memory clone of <paramref name="original"/> with the given config drift applied:
-    /// files in <see cref="JournalConfigSyncResult.FilesToAdd"/> are appended as root entries and
-    /// files in <see cref="JournalConfigSyncResult.FilesToRemove"/> are stripped from root entries
-    /// and all topic entries. No disk I/O occurs.
+    /// Returns an in-memory clone of <paramref name="original"/> and <paramref name="originalTocStructure"/>
+    /// with the given config drift applied.
+    /// No disk I/O occurs.
     /// </summary>
-    private static JournalConfig ProjectConfig(
+    private static (JournalConfig config, JournalTocStructure tocStructure) ProjectConfig(
         JournalConfig original,
+        JournalTocStructure originalTocStructure,
         JournalConfigSyncResult configSync
     )
     {
         var tocFile = original.TableOfContents.File;
 
         // Remove deleted files from root entries
-        var rootEntries = original
-            .TableOfContents.RootEntries.Where(e =>
+        var rootEntries = originalTocStructure
+            .RootEntries.Where(e =>
                 !configSync.FilesToRemove.Any(f =>
                     string.Equals(f, e.File, StringComparison.OrdinalIgnoreCase)
                 )
@@ -242,12 +258,9 @@ public sealed class JournalUpdateService(
         }
 
         // Remove deleted files from topic structure recursively
-        var topics = ProjectTopics(
-            original.TableOfContents.Structure.Topics,
-            configSync.FilesToRemove
-        );
+        var topics = ProjectTopics(originalTocStructure.Structure.Topics, configSync.FilesToRemove);
 
-        return new JournalConfig
+        var projectedConfig = new JournalConfig
         {
             JournalName = original.JournalName,
             TableOfContents = new TableOfContents
@@ -255,10 +268,16 @@ public sealed class JournalUpdateService(
                 File = original.TableOfContents.File,
                 Extensions = original.TableOfContents.Extensions,
                 IgnoreFiles = original.TableOfContents.IgnoreFiles,
-                Structure = new Structure { Topics = topics },
-                RootEntries = rootEntries.ToArray(),
             },
         };
+
+        var projectedTocStructure = new JournalTocStructure
+        {
+            RootEntries = rootEntries.ToArray(),
+            Structure = new Structure { Topics = topics },
+        };
+
+        return (projectedConfig, projectedTocStructure);
     }
 
     private static Topic[] ProjectTopics(Topic[] topics, IReadOnlyList<string> filesToRemove) =>
@@ -357,8 +376,8 @@ public sealed class JournalUpdateService(
                 tx.TrackNew(tocAbsPath);
 
             var trackingPath = _fileSystem.CombinePaths(
-                journalPath,
-                $".{_journalSettings.AppName}"
+                GetMetadataDir(journalPath),
+                _journalSettings.TrackingFileName
             );
             if (_fileSystem.FileExists(trackingPath))
                 tx.Track(trackingPath);
@@ -394,8 +413,8 @@ public sealed class JournalUpdateService(
         try
         {
             var trackingPath = _fileSystem.CombinePaths(
-                journalPath,
-                $".{_journalSettings.AppName}"
+                GetMetadataDir(journalPath),
+                _journalSettings.TrackingFileName
             );
             if (_fileSystem.FileExists(trackingPath))
                 tx.Track(trackingPath);
@@ -509,8 +528,8 @@ public sealed class JournalUpdateService(
                 _journalSettings.JournalConfigFileName
             );
             var trackingPath = _fileSystem.CombinePaths(
-                journalPath,
-                $".{_journalSettings.AppName}"
+                GetMetadataDir(journalPath),
+                _journalSettings.TrackingFileName
             );
             if (_fileSystem.FileExists(journalrcPath))
                 tx.Track(journalrcPath);

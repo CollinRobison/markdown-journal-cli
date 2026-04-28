@@ -17,11 +17,14 @@ This document provides detailed technical information about the Markdown Journal
                     │  Core Services Layer                    │
                     │  • IJournalConfiguration               │
                     │  • IJournalConfigGenerator            │
+                    │  • IJournalTocStructureRepository     │
+                    │  • IJournalValidator                  │
                     │  • ITableOfContentsGenerator          │
                     │  • ITableOfContentsService            │
                     │  • ITableOfContentsMarkdownParser     │
                     │  • IFileTracking / IHashService       │
                     │  • IEntryFormatterService             │
+                    │  • IAddTocService                     │
                     │  • IFileSystem                        │
                     │  • IInMemoryFileBuffer                │
                     │  • IMarkdownLinkRewriter              │
@@ -54,26 +57,29 @@ Program.cs
 
 ### File Infrastructure
 
-Two metadata files (`.journalrc` and `.mdjournal`) are kept in sync with the journal directory's markdown files via a continuous loop when `mdjournal update journal` runs:
+Three metadata artifacts (`.journalrc`, `.mdjournal/.journalindex`, and `.mdjournal/.journaltoc`) are kept in sync with the journal directory's markdown files via a continuous loop when `mdjournal update journal` runs:
 
 ![File infrastructure diagram](mdjournal_file_infrastructure.png)
 
 | Component | Role |
 |---|---|
-| `.journalrc` | Config file. Defines the TOC structure, topic hierarchy, custom entry display names, and the `ignoreFiles` list |
-| `.mdjournal` | Tracking file. Stores SHA256 hashes and last-checked timestamps for every tracked `.md` file |
+| `.journalrc` | Config file. Defines the TOC file name, file extensions, and the `ignoreFiles` list.|
+| `.mdjournal/` | Hidden metadata directory. Contains `.journalindex` and `.journaltoc`. |
+| `.mdjournal/.journalindex` | Tracking file. Stores SHA256 hashes and last-checked timestamps for every tracked `.md` file. |
+| `.mdjournal/.journaltoc` | TOC structure file. Stores the topic hierarchy and root entries as JSON. |
 | Journal Directory | The actual markdown entry files and generated Table of Contents on disk |
 
 **Sync loop (automatic on `update journal`):**
 
-1. **Disk → `.mdjournal`** — `FileTracking.DetectChangesWithoutUpdate()` walks the directory and compares file hashes against the stored index to identify added, modified, and deleted files.
-2. **`.mdjournal` → Journal Directory** — Last-edited metadata is stamped into modified entry files; the tracking index is updated with new hashes.
-3. **`.mdjournal` → `.journalrc`** — `JournalConfiguration.DetectConfigChanges()` diffs the tracking index keys against `.journalrc` entries and adds or removes entries to keep them in sync.
-4. **`.journalrc` → Journal Directory** — `TableOfContentsService` reads `.journalrc` and regenerates the Table of Contents markdown file.
+1. **Disk → `.mdjournal/.journalindex`** — `FileTracking.DetectChangesWithoutUpdate()` walks the directory and compares file hashes against the stored index to identify added, modified, and deleted files.
+2. **`.mdjournal/.journalindex` → Journal Directory** — Last-edited metadata is stamped into modified entry files; `.mdjournal/.journalindex` is updated with the new hashes.
+3. **`.mdjournal/.journalindex` → `.mdjournal/.journaltoc`** — `JournalConfiguration.DetectConfigChanges()` diffs the tracking index keys against the combined entry set from `.mdjournal/.journaltoc` (root entries + topic hierarchy) and `.journalrc` (`ignoreFiles`) to find files that need to be added or removed. Structural adds and removes are written to `.mdjournal/.journaltoc` via `IJournalTocStructureRepository`. Config detection runs twice in the live path: once before the early-return check, and again after tracking is committed so that same-run file additions and deletions are captured.
+4. **`.journalrc` + `.mdjournal/.journaltoc` → Journal Directory** — `TableOfContentsService` reads user settings from `.journalrc` and the topic structure from `.mdjournal/.journaltoc`, then regenerates the Table of Contents markdown file.
 
 **User-driven (explicit commands only):**
 
-- **Journal Directory → `.journalrc`** — Custom entry display names (`update entry --name`) and ignore-file flags (`update entry --ignore`) are updated via explicit commands, not the automatic sync loop.
+- **Journal Directory → `.journalrc`** — Ignore-file flags (`update entry --ignore`) are written to `.journalrc`'s `ignoreFiles` list via explicit commands.
+- **Journal Directory → `.mdjournal/.journaltoc`** — Entry heading/location changes (`update entry --headings`), display name changes (`update entry --name`/`--title`), and file renames are written to `.mdjournal/.journaltoc` via `IJournalTocStructureRepository`.
 
 ## 🔧 Dependency Injection Deep Dive
 
@@ -123,6 +129,8 @@ public sealed class TypeRegistrar : ITypeRegistrar
    - `IRollbackReporter` → `RollbackReporter` (rollback UX reporting)
    - `ITemplateManager` → `TemplateManager` (Template processing)
    - `IJournalConfiguration` → `JournalConfiguration` (Config management)
+   - `IJournalTocStructureRepository` → `JournalTocStructureRepository` (`.journaltoc` read/write)
+   - `IJournalValidator` → `JournalValidator` (metadata directory layout validation)
    - `ITableOfContentsService` → `TableOfContentsService` (TOC generation + preview)
    - `ITableOfContentsGenerator` → `TableOfContentsGenerator` (TOC generation)
    - `IFileTracking` → `FileTracking` (Change detection)
@@ -132,6 +140,7 @@ public sealed class TypeRegistrar : ITypeRegistrar
    - `IJournalUpdateService` → `JournalUpdateService` (Journal sync + dry-run report)
    - `IMarkdownLinkRewriter` → `MarkdownLinkRewriter` (Inline link rewriting)
    - `IDryRunRenderer` → `DryRunRenderer` (Dry-run terminal output)
+   - `IAddTocService` → `AddTocService` (Dual-artifact TOC creation)
 3. **Building** - `registrar.Build()` creates `IServiceProvider`
 4. **Resolution** - Commands receive dependencies via constructor injection
 
@@ -145,6 +154,10 @@ host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← d
 host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackStrategy>();
 host.Services.AddSingleton<IFileTransactionCoordinator, FileTransactionCoordinator>();
 host.Services.AddSingleton<IRollbackReporter, RollbackReporter>();
+
+// Metadata directory infrastructure
+host.Services.AddSingleton<IJournalTocStructureRepository, JournalTocStructureRepository>();
+host.Services.AddSingleton<IJournalValidator, JournalValidator>();
 
 host.Services.AddSingleton<ITemplateManager, TemplateManager>();
 host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
@@ -161,6 +174,7 @@ host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
 host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();          // ← dry-run rendering
+host.Services.AddSingleton<IAddTocService, AddTocService>();            // ← add toc command
 
 // Commands
 host.Services.AddSingleton<NewCommand>();
@@ -544,9 +558,14 @@ AddJournalrc
     └── IJournalConfigGenerator.GenerateFromDirectory()
 
 AddTableOfContents
-    ├── IJournalConfiguration.Read()
-    ├── IJournalConfiguration.Update() (when TOC name differs)
-    └── ITableOfContentsGenerator.UpdateTableOfContents()
+    └── IAddTocService.Execute(journalDir, structureOnly, mdOnly)
+            ├── IJournalConfiguration.Read()                          (read config for TOC file path)
+            ├── [when structureOnly=false] IFileSystem.FileExists()   (check markdown TOC existence)
+            ├── [when mdOnly=false] IFileSystem.FileExists()          (check .journaltoc existence)
+            ├── [creating .journaltoc] IJournalTocStructureRepository.Save(JournalTocStructure.Empty(), metadataDir)
+            ├── [creating markdown TOC] ITableOfContentsService.UpdateTableOfContents()
+            │       └── IFileTracking.UpdateFileInIndex()             (index newly created TOC)
+            └── returns AddTocResult (Created | PartiallyCreated | AlreadyExists)
 
 AddFileTracking
     └── IFileTracking.UpdateIndex()
@@ -834,7 +853,7 @@ markdown-journal-cli.Tests/
 │   ├── FileSystem/
 │   │   ├── FileSystemTests.cs
 │   │   ├── FaultInjectingFileSystem.cs       ← test helper: fault injection for IFileSystem
-│   │   ├── InMemoryFileBufferTests.cs    ← new: Snapshot/Stage/Commit/Restore tests
+│   │   ├── InMemoryFileBufferTests.cs    ← Snapshot/Stage/Commit/Restore tests
 │   │   ├── MarkdownLinkRewriterTests.cs  ← extended: StripLinksInDirectory tests added
 │   │   ├── MarkdownMetadataParserTests.cs
 │   │   └── TestFileSystem.cs
@@ -844,6 +863,10 @@ markdown-journal-cli.Tests/
 │   │   ├── JoinedTransactionScopeTests.cs      ← joined scope delegation tests
 │   │   ├── RollbackReporterTests.cs            ← console output tests
 │   │   └── TransactionEdgeCaseTests.cs         ← idempotency, disposed scope, etc.
+│   ├── Configuration/
+│   │   └── JournalTocStructureRepositoryTests.cs  ← Load/Save round-trip; absent file returns Empty()
+│   ├── Validation/
+│   │   └── JournalValidatorTests.cs            ← valid layout; missing dir; missing .journalindex; missing .journaltoc
 │   ├── FileTrackingTests.cs
 │   ├── HashServiceTests.cs
 │   ├── JournalConfigurationTests.cs
@@ -867,6 +890,8 @@ markdown-journal-cli.Tests/
     │   └── JournalUpdateServiceTests.cs      ← extended: RenameToc + BuildDryRunReport test cases added
     ├── NewJournal/
     │   └── NewJournalServiceTests.cs
+    ├── AddToc/
+    │   └── AddTocServiceTests.cs             ← dual-artifact creation; structureOnly; mdOnly; AlreadyExists
     ├── RemoveEntry/
     │   └── RemoveEntryServiceTests.cs        ← remove entry service tests
     ├── Rollback/

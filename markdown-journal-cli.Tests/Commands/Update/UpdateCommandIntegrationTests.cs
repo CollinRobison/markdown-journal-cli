@@ -5,6 +5,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,18 +35,21 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
 
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);
         var tocService = new TableOfContentsService(
             FileSystem,
             journalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
         var linkRewriter = new MarkdownLinkRewriter(FileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
         var buffer = new InMemoryFileBuffer(FileSystem);
@@ -66,7 +70,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
             linkRewriter,
             coordinator,
             rollbackReporter,
-            NullLogger<JournalUpdateService>.Instance
+            NullLogger<JournalUpdateService>.Instance,
+            tocStructureRepository
         );
         var dryRunRenderer = new DryRunRenderer(_console, journalConfiguration, JournalSettings);
 
@@ -97,6 +102,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         services.AddSingleton<IFileTransactionCoordinator>(coordinator);
         services.AddSingleton(JournalSettings);
         services.AddSingleton<ILogger<UpdateCommand>>(NullLogger<UpdateCommand>.Instance);
+        services.AddSingleton<IJournalValidator>(new JournalValidator(FileSystem, JournalSettings));
 
         var registrar = new TypeRegistrar();
         foreach (var sd in services)
@@ -134,6 +140,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         // Arrange — record initial TOC content
         var tocPath = Path.Combine(JournalPath, "1a-TableOfContents.md");
         var initialContent = File.ReadAllText(tocPath);
+        var tocStructurePath = Path.Combine(JournalPath, ".mdjournal", ".journaltoc");
 
         // Act
         var result = _app.Run(["update", "--path", JournalPath, "journal", "--toc"]);
@@ -142,6 +149,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         var updatedContent = File.ReadAllText(tocPath);
         updatedContent.ShouldContain("Alpha");
+        var tocStructureAfter = File.ReadAllText(tocStructurePath);
+        tocStructureAfter.ShouldContain("Alpha.md");
     }
 
     [Fact]
@@ -154,7 +163,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         var originalContent = File.ReadAllText(entryFile);
 
         // Corrupt the tracking hash so there are changes to sync
-        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
         File.WriteAllText(trackingPath, "{}");
 
         // Act
@@ -170,7 +179,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
     public void UpdateJournal_Should_UpdateTrackingAndConfig_When_SyncFlag()
     {
         // Arrange — corrupt the tracking hash so --sync has work to do
-        var trackingPath = Path.Combine(JournalPath, ".md-journal");
+        var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
+        var tocStructurePath = Path.Combine(JournalPath, ".mdjournal", ".journaltoc");
         File.WriteAllText(trackingPath, "{}");
 
         // Act
@@ -180,6 +190,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         var trackingContent = File.ReadAllText(trackingPath);
         trackingContent.ShouldNotBe("{}");
+        var tocStructureAfter = File.ReadAllText(tocStructurePath);
+        tocStructureAfter.ShouldContain("Alpha.md");
         result.Output.ShouldContain("--sync active");
     }
 
@@ -214,7 +226,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         File.ReadAllText(newFilePath).ShouldBe(contentBefore);
         // Tracking index must now reference the new file
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
         trackingContent.ShouldContain("New_Entry");
     }
 
@@ -233,7 +245,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
 
         // Assert — exit 0, deleted file no longer in tracking index
         result.ExitCode.ShouldBe(0);
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".md-journal"));
+        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
         trackingContent.ShouldNotContain(Path.GetFileNameWithoutExtension(entryFile));
     }
 }

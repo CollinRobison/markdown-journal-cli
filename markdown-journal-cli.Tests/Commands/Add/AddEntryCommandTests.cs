@@ -55,12 +55,12 @@ public class AddEntryCommandTests : CommandTestBase
 
     protected override void SetupDefaultBehaviors()
     {
-        // Default: .journalrc and .md-journal files exist
+        // Default: .journalrc and metadata directory files exist
         MockFileSystem
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(true);
         MockFileSystem
-            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".md-journal"))))
+            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".mdjournal") && s.Contains(".journalindex"))))
             .Returns(true);
 
         // Default: entry markdown files don't exist yet
@@ -278,7 +278,7 @@ body goes here.
     public void Execute_Should_ReturnError_When_TrackingIndexNotFound()
     {
         // Arrange
-        MockFileSystem.Setup(fs => fs.FileExists("./.md-journal")).Returns(false);
+        MockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".mdjournal") && s.Contains(".journalindex")))).Returns(false);
 
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);

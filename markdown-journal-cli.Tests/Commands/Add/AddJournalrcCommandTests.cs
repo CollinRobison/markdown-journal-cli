@@ -23,6 +23,7 @@ public class AddJournalrcCommandTests : CommandTestBase
     private readonly JournalConfiguration _journalConfiguration;
     private readonly JournalConfigGenerator _configGenerator;
     private readonly JournalSettings _journalSettings;
+    private readonly JournalTocStructureRepository _tocStructureRepository;
     private readonly AddJournalrc _command;
 
     public AddJournalrcCommandTests()
@@ -38,12 +39,17 @@ public class AddJournalrcCommandTests : CommandTestBase
             Options.Create(_journalSettings),
             hashService
         );
+        _tocStructureRepository = new JournalTocStructureRepository(
+            _fileSystem,
+            Options.Create(_journalSettings)
+        );
 
         _journalConfiguration = new JournalConfiguration(
             _fileSystem,
             Options.Create(_journalSettings),
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            _tocStructureRepository
         );
 
         var entryFormatter = new EntryFormatterService(Options.Create(_journalSettings));
@@ -54,7 +60,8 @@ public class AddJournalrcCommandTests : CommandTestBase
             fileTracking,
             entryFormatter,
             _journalConfiguration,
-            Options.Create(_journalSettings)
+            Options.Create(_journalSettings),
+            _tocStructureRepository
         );
 
         _command = new AddJournalrc(
@@ -183,6 +190,11 @@ public class AddJournalrcCommandTests : CommandTestBase
 }";
         _fileSystem.CreateFile(directory, $".{_journalSettings.AppName}", trackingIndexJson);
 
+        // The tracking file must be at .mdjournal/.journalindex for the new code path
+        var metadataDir = $"{directory}/{_journalSettings.MetadataDirName}";
+        _fileSystem.CreateDirectory(metadataDir);
+        _fileSystem.CreateFile(metadataDir, _journalSettings.TrackingFileName, trackingIndexJson);
+
         var settings = new AddJournalrcSettings { FilePath = directory };
         // Context not used in Execute method
 
@@ -282,8 +294,10 @@ public class AddJournalrcCommandTests : CommandTestBase
 
         var config = _journalConfiguration.Read(directory);
         config.ShouldNotBeNull();
-        Assert.Single(config.TableOfContents.RootEntries);
-        Assert.Equal(2, config.TableOfContents.Structure.Topics.Length);
+        var metadataDir = $"{directory}/{_journalSettings.MetadataDirName}";
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
+        Assert.Single(tocStructure.RootEntries);
+        Assert.Equal(2, tocStructure.Structure.Topics.Length);
     }
 
     [Fact]
@@ -317,13 +331,13 @@ public class AddJournalrcCommandTests : CommandTestBase
         var config = _journalConfiguration.Read(directory);
         config.ShouldNotBeNull();
 
+        var metadataDir = $"{directory}/{_journalSettings.MetadataDirName}";
+        var tocStructure = _tocStructureRepository.Load(metadataDir);
+
         // 1b and 1c match root entry pattern (1a-9z), but my_entry does not
         // So 2 root entries (1b-Intro and 1c-Journal-Entry-Template)
-        Assert.Equal(2, config.TableOfContents.RootEntries.Length);
-        var rootEntryNames = config
-            .TableOfContents.RootEntries.Select(e => e.Name)
-            .OrderBy(n => n)
-            .ToArray();
+        Assert.Equal(2, tocStructure.RootEntries.Length);
+        var rootEntryNames = tocStructure.RootEntries.Select(e => e.Name).OrderBy(n => n).ToArray();
         Assert.Contains("Intro", rootEntryNames);
         Assert.Contains("Journal Entry Template", rootEntryNames); // Full name extracted from 1c-Journal-Entry-Template
 
@@ -331,8 +345,8 @@ public class AddJournalrcCommandTests : CommandTestBase
         // AddEntry's ParseTopicPathFromFilename splits "my_entry" by "-" (none), returns ["my entry"]
         // ExtractEntryNameFromFilename for topic entries also returns "my entry" (the last part)
         // So we get a topic "my entry" with an entry also named "my entry"
-        Assert.Single(config.TableOfContents.Structure.Topics);
-        var topic = config.TableOfContents.Structure.Topics[0];
+        Assert.Single(tocStructure.Structure.Topics);
+        var topic = tocStructure.Structure.Topics[0];
         Assert.Equal("my entry", topic.Name); // "my_entry" -> underscore becomes space
         Assert.Single(topic.Entries); // The entry is added to this topic
         Assert.Equal("my entry", topic.Entries[0].Name); // Same name since no separator

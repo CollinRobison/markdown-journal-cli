@@ -35,11 +35,13 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
 
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
+        var tocStructureRepository = new JournalTocStructureRepository(FileSystem, JournalSettings);
         var journalConfiguration = new JournalConfiguration(
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking
+            fileTracking,
+            tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);
         var templateManager = new TemplateManager(JournalSettings);
@@ -47,7 +49,8 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             journalConfiguration,
             JournalSettings,
-            NullLogger<TableOfContentsService>.Instance
+            NullLogger<TableOfContentsService>.Instance,
+            tocStructureRepository
         );
         var linkRewriter = new MarkdownLinkRewriter(FileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
         var buffer = new InMemoryFileBuffer(FileSystem);
@@ -140,6 +143,29 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
     }
 
     [Fact]
+    public void Execute_Should_UpdateMetadataFiles_When_EntryRemoved()
+    {
+        // Arrange
+        var trackingPath = Path.Combine(JournalPath, ".mdjournal", ".journalindex");
+        var tocStructurePath = Path.Combine(JournalPath, ".mdjournal", ".journaltoc");
+
+        // Act
+        var result = _app.Run(["remove", "--path", JournalPath, "entry", "Alpha.md", "--force"]);
+
+        // Assert
+        result.ExitCode.ShouldBe(0);
+
+        File.Exists(trackingPath).ShouldBeTrue();
+        File.Exists(tocStructurePath).ShouldBeTrue();
+
+        var trackingContent = File.ReadAllText(trackingPath);
+        trackingContent.ShouldNotContain("Alpha.md");
+
+        var tocStructureContent = File.ReadAllText(tocStructurePath);
+        tocStructureContent.ShouldNotContain("Alpha.md");
+    }
+
+    [Fact]
     public void Execute_Should_ReturnExitCode1_When_EntryDoesNotExist()
     {
         // Act
@@ -206,9 +232,11 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         File.Delete(alphaPath);
         File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent");
 
-        // Verify Alpha is still in the .journalrc config before the command runs
-        var journalrcContent = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
-        journalrcContent.ShouldContain("Alpha");
+        // Verify Alpha is still represented in split metadata before cleanup
+        var trackingBefore = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        trackingBefore.ShouldContain("Alpha.md");
+        var tocStructureBefore = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        tocStructureBefore.ShouldContain("Alpha.md");
 
         // Act
         var result = _app.Run(
@@ -219,9 +247,11 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("Success:");
 
-        // Alpha should no longer appear in the config after cleanup
-        var configAfter = File.ReadAllText(Path.Combine(JournalPath, ".journalrc"));
-        configAfter.ShouldNotContain("Alpha.md");
+        // Alpha should no longer appear in metadata after cleanup
+        var trackingAfter = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        trackingAfter.ShouldNotContain("Alpha.md");
+        var tocStructureAfter = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        tocStructureAfter.ShouldNotContain("Alpha.md");
     }
 
     [Fact]

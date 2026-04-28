@@ -8,6 +8,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,8 +29,9 @@ public sealed class UpdateCommand(
     IJournalConfiguration journalConfiguration,
     ILogger<UpdateCommand> logger,
     IDryRunRenderer dryRunRenderer,
-    IFileTransactionCoordinator txCoordinator
-) : JournalCommand<UpdateJournalSettings>
+    IFileTransactionCoordinator txCoordinator,
+    IJournalValidator validator
+) : JournalCommand<UpdateJournalSettings>(validator, console)
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -49,19 +51,22 @@ public sealed class UpdateCommand(
     private readonly IFileTransactionCoordinator _txCoordinator =
         txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
 
+    protected override string? GetJournalDirectory(UpdateJournalSettings settings) =>
+        settings.FilePath;
+
     protected override int ExecuteCore(CommandContext context, UpdateJournalSettings settings)
     {
         try
         {
-            var trackingFileName = $".{_journalSettings.AppName}";
-            var trackingFilePath = _fileSystem.CombinePaths(settings.FilePath, trackingFileName);
+            var metadataDir = _fileSystem.CombinePaths(settings.FilePath, _journalSettings.MetadataDirName);
+            var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
             var journalrcPath = _fileSystem.CombinePaths(
                 settings.FilePath,
                 _journalSettings.JournalConfigFileName
             );
 
             if (!_fileSystem.FileExists(trackingFilePath))
-                throw new TrackingIndexNotFoundException(settings.FilePath, trackingFileName);
+                throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
 
             bool all =
                 !settings.DateFlag

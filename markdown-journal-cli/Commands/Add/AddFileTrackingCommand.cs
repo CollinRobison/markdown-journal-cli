@@ -38,8 +38,8 @@ public sealed class AddFileTracking(
     protected override int ExecuteCore(CommandContext context, AddFileTrackingSettings settings)
     {
         var journalrc = Path.Combine(settings.FilePath, _journalSettings.JournalConfigFileName);
-        var trackingFile = $".{_journalSettings.AppName}";
-        var trackingFilePath = Path.Combine(settings.FilePath, trackingFile);
+        var metadataDir = Path.Combine(settings.FilePath, _journalSettings.MetadataDirName);
+        var trackingFilePath = Path.Combine(metadataDir, _journalSettings.TrackingFileName);
 
         try
         {
@@ -53,7 +53,7 @@ public sealed class AddFileTracking(
             if (_fileSystem.FileExists(trackingFilePath))
             {
                 _console.MarkupLine(
-                    $"[yellow]Warning:[/] Tracking file '{trackingFile}' already exists at '{settings.FilePath}'"
+                    $"[yellow]Warning:[/] Tracking file '{_journalSettings.TrackingFileName}' already exists at '{metadataDir}'"
                 );
                 return 0;
             }
@@ -61,6 +61,9 @@ public sealed class AddFileTracking(
             using var tx = _txCoordinator.Begin();
             try
             {
+                if (!_fileSystem.DirectoryExists(metadataDir))
+                    _fileSystem.CreateDirectory(metadataDir);
+
                 tx.TrackNew(trackingFilePath);
 
                 // Create file tracking file with all md files in directory
@@ -70,7 +73,7 @@ public sealed class AddFileTracking(
                 tx.Commit();
 
                 _console.MarkupLine(
-                    $"[green]Success:[/] Created tracking file '{trackingFile}' at '{settings.FilePath}'"
+                    $"[green]Success:[/] Created tracking file '{_journalSettings.TrackingFileName}' at '{metadataDir}'"
                 );
                 return 0;
             }

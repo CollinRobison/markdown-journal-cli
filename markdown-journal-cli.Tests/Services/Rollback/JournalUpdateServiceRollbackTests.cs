@@ -37,7 +37,8 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
             linkRewriter,
             Coordinator,
             RollbackReporter,
-            NullLogger<JournalUpdateService>.Instance
+            NullLogger<JournalUpdateService>.Instance,
+            TocStructureRepository
         );
     }
 
