@@ -48,11 +48,18 @@ public abstract class JournalCommand<TSettings> : Command<TSettings>
         CancellationToken cancellationToken
     )
     {
-        if (!SkipMetadataValidation && _validator is not null && _console is not null)
+        if (!SkipMetadataValidation)
         {
             var journalDir = GetJournalDirectory(settings);
             if (journalDir is not null)
             {
+                // Commands that provide a journal directory must wire (IJournalValidator, IAnsiConsole)
+                // into the base constructor. A null validator here is a developer error.
+                if (_validator is null || _console is null)
+                    throw new InvalidOperationException(
+                        $"{GetType().Name} overrides GetJournalDirectory but was constructed without IJournalValidator/IAnsiConsole. Pass both to the JournalCommand base constructor, or set SkipMetadataValidation = true."
+                    );
+
                 var missing = _validator.ValidateMetadataDirectory(journalDir);
                 if (missing.Count > 0)
                 {

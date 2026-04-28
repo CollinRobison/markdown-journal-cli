@@ -4,6 +4,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -29,6 +30,7 @@ public abstract class CommandTestBase
     protected readonly Mock<ITemplateManager> MockTemplateManager;
     protected readonly Mock<ITableOfContentsService> MockTableOfContentsService;
     protected readonly Mock<IEntryFormatterService> MockEntryFormatterService;
+    protected readonly Mock<IJournalValidator> MockJournalValidator;
     protected readonly IOptions<JournalSettings> JournalSettings;
 
     protected CommandTestBase()
@@ -39,6 +41,7 @@ public abstract class CommandTestBase
         MockTemplateManager = MockFactory.CreateTemplateManager();
         MockTableOfContentsService = MockFactory.CreateTableOfContentsService();
         MockEntryFormatterService = MockFactory.CreateEntryFormatterService();
+        MockJournalValidator = MockFactory.CreateJournalValidator();
         JournalSettings = MockFactory.CreateJournalSettings();
 
         SetupDefaultBehaviors();
@@ -66,6 +69,7 @@ public abstract class CommandTestBase
         services.AddSingleton(MockTemplateManager.Object);
         services.AddSingleton(MockTableOfContentsService.Object);
         services.AddSingleton(MockEntryFormatterService.Object);
+        services.AddSingleton(MockJournalValidator.Object);
         services.AddSingleton(JournalSettings);
         services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
         services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);

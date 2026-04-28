@@ -3,6 +3,7 @@ using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -55,6 +56,17 @@ public static class MockFactory
     /// <summary>Creates a pre-configured mock for IEntryFormatterService.</summary>
     public static Mock<IEntryFormatterService> CreateEntryFormatterService() =>
         new();
+
+    /// <summary>
+    /// Creates a mock IJournalValidator that returns an empty list (valid) by default.
+    /// </summary>
+    public static Mock<IJournalValidator> CreateJournalValidator()
+    {
+        var mock = new Mock<IJournalValidator>();
+        mock.Setup(v => v.ValidateMetadataDirectory(It.IsAny<string>()))
+            .Returns(new List<string>());
+        return mock;
+    }
 
     /// <summary>Creates a mock IJournalTocStructureRepository that returns JournalTocStructure.Empty() by default.</summary>
     public static Mock<IJournalTocStructureRepository> CreateTocStructureRepository()

@@ -5,6 +5,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -101,6 +102,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         services.AddSingleton<IFileTransactionCoordinator>(coordinator);
         services.AddSingleton(JournalSettings);
         services.AddSingleton<ILogger<UpdateCommand>>(NullLogger<UpdateCommand>.Instance);
+        services.AddSingleton<IJournalValidator>(new JournalValidator(FileSystem, JournalSettings));
 
         var registrar = new TypeRegistrar();
         foreach (var sd in services)

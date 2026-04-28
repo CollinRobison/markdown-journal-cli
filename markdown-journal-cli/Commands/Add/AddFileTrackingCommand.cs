@@ -61,6 +61,9 @@ public sealed class AddFileTracking(
             using var tx = _txCoordinator.Begin();
             try
             {
+                if (!_fileSystem.DirectoryExists(metadataDir))
+                    _fileSystem.CreateDirectory(metadataDir);
+
                 tx.TrackNew(trackingFilePath);
 
                 // Create file tracking file with all md files in directory

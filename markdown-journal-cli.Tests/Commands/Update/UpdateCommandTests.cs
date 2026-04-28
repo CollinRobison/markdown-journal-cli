@@ -68,7 +68,8 @@ public class UpdateCommandTests : CommandTestBase
             MockJournalConfiguration.Object,
             NullLogger<UpdateCommand>.Instance,
             _mockDryRunRenderer.Object,
-            NoOpFileTransactionCoordinator.Instance
+            NoOpFileTransactionCoordinator.Instance,
+            MockJournalValidator.Object
         );
 
     private static CommandContext CreateCommandContext() =>
@@ -1949,7 +1950,8 @@ public class UpdateCommandTests : CommandTestBase
             console, faultFs, journalUpdateService, fileTracking,
             journalSettings, journalConfig,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<UpdateCommand>.Instance,
-            dryRunRenderer, coordinator
+            dryRunRenderer, coordinator,
+            new markdown_journal_cli.Infrastructure.Validation.JournalValidator(faultFs, journalSettings)
         );
         var settings = new UpdateJournalSettings { FilePath = journalPath, Sync = true };
 

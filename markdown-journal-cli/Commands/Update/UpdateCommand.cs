@@ -8,6 +8,7 @@ using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,8 +29,9 @@ public sealed class UpdateCommand(
     IJournalConfiguration journalConfiguration,
     ILogger<UpdateCommand> logger,
     IDryRunRenderer dryRunRenderer,
-    IFileTransactionCoordinator txCoordinator
-) : JournalCommand<UpdateJournalSettings>
+    IFileTransactionCoordinator txCoordinator,
+    IJournalValidator validator
+) : JournalCommand<UpdateJournalSettings>(validator, console)
 {
     private readonly IAnsiConsole _console =
         console ?? throw new ArgumentNullException(nameof(console));
@@ -48,6 +50,9 @@ public sealed class UpdateCommand(
     private readonly JournalSettings _journalSettings = journalSettings.Value;
     private readonly IFileTransactionCoordinator _txCoordinator =
         txCoordinator ?? throw new ArgumentNullException(nameof(txCoordinator));
+
+    protected override string? GetJournalDirectory(UpdateJournalSettings settings) =>
+        settings.FilePath;
 
     protected override int ExecuteCore(CommandContext context, UpdateJournalSettings settings)
     {
