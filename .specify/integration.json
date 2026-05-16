@@ -1,7 +1,15 @@
 {
-  "integration": "copilot",
-  "version": "0.7.1",
-  "scripts": {
-    "update-context": ".specify/integrations/copilot/scripts/update-context.sh"
-  }
+  "version": "0.8.11",
+  "integration_state_schema": 1,
+  "installed_integrations": [
+    "opencode"
+  ],
+  "integration_settings": {
+    "opencode": {
+      "script": "sh",
+      "invoke_separator": "."
+    }
+  },
+  "integration": "opencode",
+  "default_integration": "opencode"
 }
