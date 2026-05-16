@@ -5,6 +5,25 @@
     <RootNamespace>markdown_journal_cli</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Tool packaging -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mdjournal</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+
+    <!-- NuGet identity -->
+    <PackageId>CollinRobison.mdjournal</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Collin Robison</Authors>
+    <Description>CLI tool for creating and managing markdown journals.</Description>
+
+    <!-- Metadata -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/CollinRobison/markdown-journal-cli</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/CollinRobison/markdown-journal-cli</PackageProjectUrl>
+    <PackageTags>cli tool utility markdown journal</PackageTags>
+
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />

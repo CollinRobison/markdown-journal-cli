@@ -522,6 +522,412 @@ This template incorporates all best practices observed from the Microsoft docs a
 
 ---
 
+## 9. Native Package Managers — Homebrew, Winget, and Chocolatey
+
+These routes publish **self-contained native binaries** — the user needs no .NET runtime installed. That's the main advantage. The tradeoff is significantly more setup and ongoing maintenance compared to the NuGet global tool route.
+
+### How self-contained publishing works
+
+Instead of `dotnet pack`, you use `dotnet publish --self-contained`:
+
+```bash
+# macOS (arm64)
+dotnet publish markdown-journal-cli/markdown-journal-cli.csproj \
+  --configuration Release \
+  --runtime osx-arm64 \
+  --self-contained true \
+  --output ./publish/osx-arm64
+
+# macOS (x64)
+dotnet publish ... --runtime osx-x64 --self-contained true --output ./publish/osx-x64
+
+# Windows (x64)
+dotnet publish ... --runtime win-x64 --self-contained true --output ./publish/win-x64
+
+# Linux (x64)
+dotnet publish ... --runtime linux-x64 --self-contained true --output ./publish/linux-x64
+```
+
+You typically also set `<PublishSingleFile>true</PublishSingleFile>` in the `.csproj` (or pass it as a flag) to produce a single executable file rather than a folder of DLLs. Each platform needs its own build — you can't cross-publish one binary for all OSes from a single run.
+
+```xml
+<!-- Add to .csproj if you always want single-file output -->
+<PublishSingleFile>true</PublishSingleFile>
+```
+
+---
+
+### Option A — Homebrew (macOS / Linux)
+
+Homebrew is the standard package manager for macOS. Users install via `brew install <formula>`.
+
+**What you need to do:**
+
+1. **Build and upload platform binaries to GitHub Releases.** Homebrew formulas download from a URL (typically a GitHub Release tarball or zip). Your CI needs to produce `osx-arm64` and `osx-x64` builds and attach them to each release.
+
+2. **Create a Homebrew tap.** You can't submit arbitrary tools to the main `homebrew-core` repo (it has strict quality requirements). The practical path is a **personal tap** — a GitHub repo named `homebrew-<tapname>` (e.g., `CollinRobison/homebrew-mdjournal`).
+
+3. **Write a formula file** (`mdjournal.rb`):
+
+```ruby
+class Mdjournal < Formula
+  desc "CLI tool for managing a markdown journal"
+  homepage "https://github.com/CollinRobison/markdown-journal-cli"
+  version "0.1.0"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/CollinRobison/markdown-journal-cli/releases/download/v0.1.0/mdjournal-osx-arm64.tar.gz"
+      sha256 "REPLACE_WITH_ACTUAL_SHA256"
+    end
+    on_intel do
+      url "https://github.com/CollinRobison/markdown-journal-cli/releases/download/v0.1.0/mdjournal-osx-x64.tar.gz"
+      sha256 "REPLACE_WITH_ACTUAL_SHA256"
+    end
+  end
+
+  def install
+    bin.install "mdjournal"
+  end
+
+  test do
+    system "#{bin}/mdjournal", "--help"
+  end
+end
+```
+
+4. **Users install via:**
+
+```bash
+brew tap CollinRobison/mdjournal
+brew install mdjournal
+```
+
+**Maintenance burden:** Every release, you must rebuild all binaries, upload them to GitHub Releases, compute the new `sha256` hashes, and update the formula. The sha256 must be exact — Homebrew verifies it.
+
+---
+
+### Option B — Winget (Windows)
+
+Winget is Microsoft's built-in package manager on Windows 10/11. Users install via `winget install <id>`.
+
+**What you need to do:**
+
+1. **Build a self-contained Windows binary** and upload it to GitHub Releases (or any stable URL).
+
+2. **Create a manifest** (a set of `.yaml` files). Winget manifests have three files: version, installer, and locale.
+
+   `manifests/c/CollinRobison/mdjournal/0.1.0/CollinRobison.mdjournal.yaml` (version):
+   ```yaml
+   PackageIdentifier: CollinRobison.mdjournal
+   PackageVersion: 0.1.0
+   DefaultLocale: en-US
+   ManifestType: version
+   ManifestVersion: 1.6.0
+   ```
+
+   `...CollinRobison.mdjournal.installer.yaml`:
+   ```yaml
+   PackageIdentifier: CollinRobison.mdjournal
+   PackageVersion: 0.1.0
+   InstallerType: zip
+   Commands:
+     - mdjournal
+   Installers:
+     - Architecture: x64
+       InstallerUrl: https://github.com/CollinRobison/markdown-journal-cli/releases/download/v0.1.0/mdjournal-win-x64.zip
+       InstallerSha256: REPLACE_WITH_ACTUAL_SHA256
+   ManifestType: installer
+   ManifestVersion: 1.6.0
+   ```
+
+3. **Submit a PR to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)**. This is a public repo where all community packages live. The PR is reviewed automatically by a bot and then manually by maintainers. Turnaround is typically 1–3 days.
+
+4. **Users install via:**
+   ```bash
+   winget install CollinRobison.mdjournal
+   ```
+
+**Maintenance burden:** Every release requires a new PR to `winget-pkgs` with updated manifests. There are tools (`wingetcreate`) that automate much of this.
+
+---
+
+### Option C — Chocolatey (Windows)
+
+Chocolatey is the older Windows package manager with a large existing user base. Users install via `choco install <package>`.
+
+**What you need to do:**
+
+1. **Build a self-contained Windows binary** and upload it to GitHub Releases.
+
+2. **Create a Chocolatey package** — a folder with a `.nuspec` and a `tools/` directory:
+
+   ```
+   mdjournal/
+     mdjournal.nuspec
+     tools/
+       chocolateyInstall.ps1
+       chocolateyUninstall.ps1  (optional)
+   ```
+
+   `mdjournal.nuspec`:
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+     <metadata>
+       <id>mdjournal</id>
+       <version>0.1.0</version>
+       <title>mdjournal</title>
+       <authors>CollinRobison</authors>
+       <projectUrl>https://github.com/CollinRobison/markdown-journal-cli</projectUrl>
+       <licenseUrl>https://github.com/CollinRobison/markdown-journal-cli/blob/main/LICENSE</licenseUrl>
+       <requireLicenseAcceptance>false</requireLicenseAcceptance>
+       <description>CLI tool for managing a markdown journal.</description>
+       <tags>cli markdown journal notes</tags>
+     </metadata>
+   </package>
+   ```
+
+   `tools/chocolateyInstall.ps1`:
+   ```powershell
+   $ErrorActionPreference = 'Stop'
+
+   $packageArgs = @{
+     packageName   = $env:ChocolateyPackageName
+     unzipLocation = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+     url64bit      = 'https://github.com/CollinRobison/markdown-journal-cli/releases/download/v0.1.0/mdjournal-win-x64.zip'
+     checksum64    = 'REPLACE_WITH_ACTUAL_SHA256'
+     checksumType64= 'sha256'
+   }
+
+   Install-ChocolateyZipPackage @packageArgs
+   ```
+
+3. **Pack and push:**
+   ```bash
+   # Install Chocolatey CLI first: https://chocolatey.org/install
+   choco pack mdjournal/mdjournal.nuspec
+
+   # Submit to the community repository (requires a Chocolatey account)
+   choco push mdjournal.0.1.0.nupkg --source https://push.chocolatey.org --api-key YOUR_CHOCO_API_KEY
+   ```
+
+4. **The package goes through moderation** on https://community.chocolatey.org — automated and human review. First submission can take several days.
+
+5. **Users install via:**
+   ```bash
+   choco install mdjournal
+   ```
+
+**Maintenance burden:** Every release requires updating the `.nuspec` version, the installer URL, and the sha256 hash, then repacking and pushing. Like Winget, there are community tools that automate parts of this.
+
+---
+
+### Comparison
+
+| | Homebrew | Winget | Chocolatey |
+|---|---|---|---|
+| **Platform** | macOS + Linux | Windows | Windows |
+| **Users need .NET?** | No | No | No |
+| **Submission review** | Instant (personal tap) / months (homebrew-core) | 1–3 days PR | Several days moderation |
+| **Per-release work** | Rebuild binaries + update sha256 | New manifest PR | Repack + push |
+| **Automation possible?** | Yes (GitHub Actions + `brew bump-formula-pr`) | Yes (`wingetcreate`) | Yes (GitHub Actions) |
+| **Audience** | macOS/Linux developers | General Windows users | Windows power users |
+
+### GitHub Actions — Build All Platform Binaries
+
+This workflow produces the binaries needed for all three package managers:
+
+```yaml
+name: Build Release Binaries
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            rid: osx-arm64
+          - os: macos-latest
+            rid: osx-x64
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Publish self-contained binary
+        run: |
+          dotnet publish markdown-journal-cli/markdown-journal-cli.csproj \
+            --configuration Release \
+            --runtime ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            --output ./publish/${{ matrix.rid }}
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./publish/${{ matrix.rid }}/*
+```
+
+---
+
+## 10. GitHub Releases Direct Download (No Package Manager, No .NET Required)
+
+The simplest possible distribution route. You build self-contained single-file binaries and attach them to a GitHub Release. Users download the right file for their platform and put it somewhere on their `PATH`. No package manager, no .NET runtime, no installer.
+
+### What users do
+
+```bash
+# macOS (Apple Silicon) — download, make executable, move to PATH
+curl -L -o mdjournal \
+  https://github.com/CollinRobison/markdown-journal-cli/releases/latest/download/mdjournal-osx-arm64
+chmod +x mdjournal
+mv mdjournal /usr/local/bin/
+
+# macOS (Intel)
+curl -L -o mdjournal \
+  https://github.com/CollinRobison/markdown-journal-cli/releases/latest/download/mdjournal-osx-x64
+chmod +x mdjournal && mv mdjournal /usr/local/bin/
+
+# Windows — download mdjournal-win-x64.exe, put it anywhere on your PATH
+# (or just run it from the download folder by double-clicking / calling directly)
+
+# Linux
+curl -L -o mdjournal \
+  https://github.com/CollinRobison/markdown-journal-cli/releases/latest/download/mdjournal-linux-x64
+chmod +x mdjournal && sudo mv mdjournal /usr/local/bin/
+```
+
+You can document this in the README with a one-liner per platform. That's all users need.
+
+### What you need to do
+
+**1. Add these properties to the `.csproj`** to enable single-file output:
+
+```xml
+<PropertyGroup>
+  <!-- Trim unused code to reduce binary size (~30–60% smaller) -->
+  <PublishTrimmed>true</PublishTrimmed>
+  <!-- Bundle everything into one file -->
+  <PublishSingleFile>true</PublishSingleFile>
+</PropertyGroup>
+```
+
+> **Note on trimming:** `PublishTrimmed` can break apps that use reflection heavily. Test the trimmed binary before releasing — if things break, remove `PublishTrimmed` and just use `PublishSingleFile`.
+
+**2. Add a GitHub Actions workflow** (`.github/workflows/release.yml`) that builds per-platform binaries whenever you create a GitHub Release:
+
+```yaml
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            rid: osx-arm64
+            asset_name: mdjournal-osx-arm64
+          - os: macos-latest
+            rid: osx-x64
+            asset_name: mdjournal-osx-x64
+          - os: windows-latest
+            rid: win-x64
+            asset_name: mdjournal-win-x64.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            asset_name: mdjournal-linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Publish
+        shell: bash
+        run: |
+          dotnet publish markdown-journal-cli/markdown-journal-cli.csproj \
+            --configuration Release \
+            --runtime ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=true \
+            --output ./publish
+
+          # Rename the output to the asset name
+          find ./publish -maxdepth 1 -type f ! -name "*.pdb" \
+            -exec mv {} ./publish/${{ matrix.asset_name }} \;
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./publish/${{ matrix.asset_name }}
+```
+
+**3. Create a GitHub Release** (tag `v0.1.0`, mark as latest). The workflow fires automatically, builds all four binaries, and attaches them to the release. That's it.
+
+### How to update
+
+1. Bump `<Version>` in the `.csproj`, commit, push.
+2. On GitHub: **Releases → Draft a new release → Tag: v0.2.0 → Publish**.
+3. The workflow runs and uploads new binaries to that release.
+4. Users re-download the file, or you document an update one-liner.
+
+### Tradeoffs vs. package managers
+
+| | Direct Download | Homebrew / Winget / Choco |
+|---|---|---|
+| **Setup effort** | Low — one workflow file | High — formula/manifest + submission process |
+| **User experience** | Manual PATH setup | `brew install mdjournal` just works |
+| **Auto-updates** | Users must re-download manually | `brew upgrade`, `winget upgrade`, `choco upgrade` |
+| **Discovery** | Only via your repo/README | Searchable in the package manager |
+| **Good for** | Early releases, developer tools, power users | Broad consumer distribution |
+
+This is the right starting point before investing in package manager submissions. Many popular developer tools (like `gh` CLI before Homebrew submission, or various Rust tools) start with this model.
+
+### Uninstalling
+
+Because installation is just "copy a file to a directory", uninstalling is just deleting that file:
+
+```bash
+# macOS / Linux
+rm /usr/local/bin/mdjournal
+
+# Windows (PowerShell) — replace the path with wherever you put it
+Remove-Item "$env:USERPROFILE\bin\mdjournal.exe"
+
+# Windows (Command Prompt)
+del "%USERPROFILE%\bin\mdjournal.exe"
+```
+
+There is no registry entry, no installer database, and no package manager state to clean up. The binary is the entire installation.
+
+---
+
 ## Key Repositories Summary
 
 | Repository | Purpose | Key Files | NuGet Package |
