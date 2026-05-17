@@ -500,11 +500,13 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ✅ **Metadata directory layout** — internal tracking and TOC structure split into `.mdjournal/.journalindex` (SHA256 hashes) and `.mdjournal/.journaltoc` (topic hierarchy JSON); `.journalrc` retains only user-configurable settings (file list, ignore list, TOC filename). All commands validate the metadata directory before writing; `new` and `init` create it on first run.
 
 **Planned Features:**
+- ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
 - ⏳ `--version` flag **(finish before moving on)**
 - ⏳ Global tool installation **(finish before moving on)**
-- ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
-- ⏳ make the repo collaborator ready and make public. **(finish before moving on)**
 - ⏳ clean up docs (finish before moving on)**
+- ⏳ make the repo collaborator ready and make public. **(finish before moving on)**
+  - Make sure repo rules are set to be safe and where I manage who pushes to main
+
 
 - ⏳ `open` command — open journal in default editor
 - ⏳ `search` command — full-text search across entries
