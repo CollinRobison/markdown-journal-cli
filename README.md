@@ -503,7 +503,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ `--version` flag **(finish before moving on)**
 - ⏳ Global tool installation **(finish before moving on)**
 - ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
-- ⏳ make the repo collaborator ready and make public with correct license. **(finish before moving on)**
+- ⏳ make the repo collaborator ready and make public. **(finish before moving on)**
 - ⏳ clean up docs (finish before moving on)**
 
 - ⏳ `open` command — open journal in default editor
@@ -517,7 +517,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 ## 📄 License
 
-TODO: Add license information
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## 🤝 Support
 
