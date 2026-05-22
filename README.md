@@ -15,7 +15,7 @@ mdjournal new WorkJournal --path ~/Documents/Journals
 mdjournal init MyNotes --path ~/Documents/Notes
 ```
 
-## �️ How It Works
+## 🗂️ How It Works
 
 When you create a journal, `mdjournal` manages four things in your journal folder:
 
@@ -37,7 +37,7 @@ Use `--sync` instead when you want to resync tracking/config/TOC after a git pul
 
 You never need to edit `.journalrc`, `.mdjournal/.journalindex`, or `.mdjournal/.journaltoc` by hand — the CLI keeps them in sync.
 
-## �📋 Table of Contents
+## 📋 Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -65,8 +65,12 @@ dotnet run --project markdown-journal-cli -- --help
 
 ### Global Installation
 ```bash
-# TODO: Add instructions for global tool installation
-# dotnet pack && dotnet tool install -g markdown-journal-cli
+dotnet tool install -g markdown-journal-cli
+```
+
+Once installed, verify with:
+```bash
+mdjournal --version
 ```
 
 ## Usage
@@ -501,8 +505,6 @@ For technical details about the project architecture, see the **[Architecture Gu
 
 **Planned Features:**
 - ⏳ pipeline to build and store built versions in repo for people to download **(finish before moving on)**
-- ⏳ `--version` flag **(finish before moving on)**
-- ⏳ Global tool installation **(finish before moving on)**
 - ⏳ clean up docs (finish before moving on)**
 - ⏳ make the repo collaborator ready and make public. **(finish before moving on)**
   - Make sure repo rules are set to be safe and where I manage who pushes to main
@@ -515,7 +517,7 @@ For technical details about the project architecture, see the **[Architecture Gu
 - ⏳ Make custom agents, prompts, and skills fot copilot, claude, opencode, etc. and a command to add them into a project
 
 **Known Limitations:**
-- Global tool installation not yet configured
+- None currently — see Planned Features above for upcoming work.
 
 ## 📄 License
 
@@ -523,7 +525,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## 🤝 Support
 
-TODO: Add support information
-- Issue tracker
-- Discussions  
-- Contact information
+- **Bug reports & feature requests**: [GitHub Issues](https://github.com/CollinRobison/markdown-journal-cli/issues)
+- **Questions & discussion**: [GitHub Discussions](https://github.com/CollinRobison/markdown-journal-cli/discussions)

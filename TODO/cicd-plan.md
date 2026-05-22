@@ -512,9 +512,9 @@ Work through these in order — each one builds on the previous.
 
 ### Phase 1 — Foundation (do before anything else)
 
-1. [ ] Finish `--version` flag (Task 1 from `pre-release-tasks.md`)
-2. [ ] Add `<PackAsTool>`, `<PackageId>`, `<ToolCommandName>mdj</ToolCommandName>` to `.csproj` (Task 2)
-3. [ ] Create `global.json` with the target .NET SDK version if not already present
+1. [x] Finish `--version` flag (Task 1 from `pre-release-tasks.md`)
+2. [x] Add `<PackAsTool>`, `<PackageId>`, `<ToolCommandName>mdj</ToolCommandName>` to `.csproj` (Task 2)
+3. [x] Create `global.json` with the target .NET SDK version if not already present
 4. [ ] Register on NuGet.org and create an API key → store as `NUGET_API_KEY` secret
 
 ### Phase 2 — CI Workflow

@@ -1,4 +1,5 @@
-﻿using markdown_journal_cli.Commands.Add;
+﻿using System.Reflection;
+using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Commands.Init;
 using markdown_journal_cli.Commands.New;
 using markdown_journal_cli.Commands.Remove;
@@ -88,6 +89,13 @@ public static class Program
         // Get settings
         var settings = builtHost.Services.GetRequiredService<IOptions<JournalSettings>>().Value;
 
+        // Read version from assembly metadata (set by <Version> in .csproj)
+        var version =
+            Assembly
+                .GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "0.0.0";
+
         // Set up dependency injection
         var registrar = new TypeRegistrar(builtHost.Services);
 
@@ -95,6 +103,7 @@ public static class Program
         app.Configure(config =>
         {
             config.SetApplicationName(settings.AppName);
+            config.SetApplicationVersion(version);
             config.ValidateExamples();
             config.AddExample("new", "TestJournal", "--path", "Source/Repos");
             config.AddExample(

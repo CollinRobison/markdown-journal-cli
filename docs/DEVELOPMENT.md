@@ -619,13 +619,110 @@ dotnet run --configuration Debug --project markdown-journal-cli -- your-command
 
 ## 📦 Release Process
 
-### TODO: Document Release Process
-- [ ] Version numbering strategy
-- [ ] Changelog maintenance
-- [ ] NuGet package creation
-- [ ] Global tool publishing
-- [ ] GitHub releases
-- [ ] Documentation updates
+### Versioning
+
+This project uses [SemVer](https://semver.org/). The version is set in `markdown-journal-cli.csproj` via the `<Version>` property and flows automatically to `AssemblyInformationalVersionAttribute`, which is what `mdjournal --version` reads at runtime.
+
+### Building and Packing
+
+```bash
+# Release build
+dotnet build --configuration Release
+
+# Run all tests before packing
+dotnet test
+
+# Pack as a NuGet global tool
+dotnet pack --configuration Release
+```
+
+The output `.nupkg` file is placed in `markdown-journal-cli/bin/Release/`.
+
+### Installing Locally for Testing
+
+#### Option A — NuGet Global Tool (requires .NET)
+
+```bash
+# Install from local package (first time)
+dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/bin/Release
+
+# Reinstall after rebuilding
+dotnet tool uninstall -g markdown-journal-cli
+dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/bin/Release
+
+# Verify
+mdjournal --version
+```
+
+#### Option B — Self-Contained Binary (no .NET required)
+
+Publishes a single executable with the .NET runtime bundled in. Use this to test the binary distribution path that end users without .NET will receive.
+
+The `.csproj` automatically applies the following size optimisations whenever `-p:PublishSingleFile=true` is passed. Normal `dotnet build` and `dotnet test` are completely unaffected.
+
+| Setting | Effect |
+|---|---|
+| `PublishReadyToRun=false` | Skips ahead-of-time compilation — reduces size; startup difference is negligible for a CLI |
+| `EnableCompressionInSingleFile=true` | Compresses bundled assemblies inside the single file |
+| `IncludeNativeLibrariesForSelfExtract=true` | Bundles native libs inside the file instead of extracting to a temp directory at startup |
+| `PublishTrimmed=true` + `TrimMode=partial` | Removes unreachable BCL code paths; reflection-heavy dependencies are fully protected via `TrimmerRootAssembly` |
+
+The following assemblies are explicitly rooted and are **never touched by the trimmer**: `Spectre.Console`, `Spectre.Console.Cli`, the full `Microsoft.Extensions.*` stack, and `System.Text.Json`. All runtime reflection behaviour is preserved.
+
+```bash
+# macOS (Apple Silicon)
+dotnet publish markdown-journal-cli -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true
+
+# macOS (Intel)
+dotnet publish markdown-journal-cli -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true
+
+# Linux (x64)
+dotnet publish markdown-journal-cli -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
+
+# Windows (x64)
+dotnet publish markdown-journal-cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+The binary is output to `markdown-journal-cli/bin/Release/net10.0/<rid>/publish/`. Run it directly to test:
+
+```bash
+# Example — macOS Apple Silicon
+./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli --version
+
+# Or copy to a directory on your PATH for convenience (the rename to mdjournal happens here)
+sudo cp ./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli /usr/local/bin/mdjournal
+mdjournal --version
+
+# To remove
+sudo rm /usr/local/bin/mdjournal
+```
+
+> **Validating a new publish:** After each publish, run every command branch end-to-end against a test journal — `new`, `init`, `add entry`, `add toc`, `add config`, `add tracking`, `update journal`, `update entry`, `remove entry` — and confirm `--help` and `--version` output correctly. Also verify the tracking index JSON round-trip (`add tracking` → `update journal`) and at least one rollback path (`remove entry` without `--force` on a file with backlinks).
+
+**Expected sizes (approximate, vary by platform):**
+
+| Target | Unoptimised | With these settings |
+|---|---|---|
+| `win-x64` | ~65–80 MB | ~25–40 MB |
+| `osx-arm64` | ~55–70 MB | ~20–35 MB |
+| `linux-x64` | ~60–75 MB | ~22–37 MB |
+
+### Publishing to NuGet.org
+
+```bash
+dotnet nuget push markdown-journal-cli/bin/Release/markdown-journal-cli.<version>.nupkg \
+  --api-key <YOUR_NUGET_API_KEY> \
+  --source https://api.nuget.org/v3/index.json
+```
+
+> **Note:** A NuGet.org API key is required. Generate one at [nuget.org/account/apikeys](https://www.nuget.org/account/apikeys) and store it securely (e.g. as a GitHub Actions secret named `NUGET_API_KEY`).
+
+### GitHub Releases
+
+1. Bump `<Version>` in `markdown-journal-cli.csproj`
+2. Run `dotnet pack --configuration Release`
+3. Create a GitHub release tagged `v<version>` and attach the `.nupkg` artifact
+4. The published NuGet package becomes available via `dotnet tool install -g markdown-journal-cli`
 
 ### Current Build Targets
 ```bash
@@ -638,49 +735,9 @@ dotnet build --configuration Release
 # Run tests
 dotnet test
 
-# TODO: Pack as global tool
-# dotnet pack --configuration Release
-# dotnet tool install -g --add-source ./nupkg markdown-journal-cli
+# Pack as global tool
+dotnet pack --configuration Release
 ```
-
-## 📋 TODO: Areas Needing Documentation
-
-The following areas need detailed documentation (you should write these based on your vision for the project):
-
-### Project Vision & Goals
-- [ ] **Project Mission Statement** - What problem does this solve?
-- [ ] **Target Users** - Who is this for?
-- [ ] **Use Cases** - What scenarios should this handle?
-- [ ] **Success Metrics** - How do we measure success?
-
-### Feature Specifications
-- [ ] **Journal Structure** - What does a journal look like on disk?
-- [ ] **Entry Format** - What markdown format/template for entries?
-- [ ] **Metadata Handling** - How do we store journal metadata?
-- [ ] **Search Requirements** - What search capabilities are needed?
-
-### User Experience Design
-- [ ] **CLI UX Principles** - What makes a good CLI experience?
-- [ ] **Error Message Guidelines** - How should errors be presented?
-- [ ] **Help Text Standards** - What information should help include?
-- [ ] **Progress Indication** - When/how to show progress?
-
-### Technical Decisions
-- [ ] **File Organization Strategy** - How should journals be structured?
-- [ ] **Configuration Approach** - How should users configure the tool?
-- [ ] **Plugin Architecture** - Should we support plugins? How?
-- [ ] **Performance Goals** - What are acceptable performance limits?
-
-### Security & Privacy
-- [ ] **Data Privacy Policy** - How do we handle user data?
-- [ ] **Security Considerations** - What security measures are needed?
-- [ ] **Encryption Strategy** - Should we support encrypted journals?
-
-### Operational Concerns
-- [ ] **Logging Strategy** - What should we log? Where?
-- [ ] **Error Reporting** - How do we handle crash reports?
-- [ ] **Telemetry** - What usage data (if any) should we collect?
-- [ ] **Backup Strategy** - How do we help users backup journals?
 
 **IJournalConfiguration Pattern**
 - **Purpose**: Manages journal configuration CRUD operations and topic hierarchy
@@ -746,6 +803,7 @@ host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>(
 host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
 host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
 host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
+host.Services.AddSingleton<IJournalFileUpdateService, JournalFileUpdateService>();
 host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
 host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
 host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();          // ← dry-run rendering
@@ -882,13 +940,29 @@ public void NewCommand_Should_Handle_InitializationFailure()
 
 ## 🤝 Contribution Guidelines
 
-### TODO: Define Contribution Process
-- [ ] Issue templates
-- [ ] Pull request templates  
-- [ ] Code review process
-- [ ] Contributor onboarding
-- [ ] Code of conduct
-- [ ] Recognition/attribution
+### Getting Started
+
+1. **Fork** the repository and create a feature branch from `main`
+2. **Follow** the [Development Workflow](#️-development-workflow) to set up your environment
+3. **Write tests** — every new command and service requires a corresponding test file mirroring the source path in `markdown-journal-cli.Tests/`
+4. **Run the full test suite** before opening a pull request: `dotnet test`
+5. **Open a pull request** against `main` with a clear description of what changed and why
+
+### Pull Request Expectations
+
+- All existing tests must pass (`dotnet test`)
+- New code must have test coverage (unit tests at minimum; integration tests for commands)
+- Commands must stay thin — no business logic; delegate to services
+- All user-facing strings must use `IAnsiConsole.MarkupLine()` — no `Console.WriteLine()`
+- User input rendered in markup must be escaped with `.EscapeMarkup()`
+- New services require an interface and singleton DI registration
+
+### Reporting Issues
+
+Use [GitHub Issues](https://github.com/CollinRobison/markdown-journal-cli/issues) to report bugs or request features. Include:
+- Steps to reproduce
+- Expected vs. actual behaviour
+- Your OS and .NET SDK version (`dotnet --version`)
 
 ### Current Status
 - ✅ Basic project structure established
