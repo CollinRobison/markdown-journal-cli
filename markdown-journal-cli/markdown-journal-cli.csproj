@@ -8,14 +8,17 @@
 
     <!-- Tool packaging -->
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>mdjournal</ToolCommandName>
+    <PackageId>CollinRobison.mdjournal</PackageId>
     <PackageOutputPath>./nupkg</PackageOutputPath>
 
     <!-- NuGet identity -->
     <PackageId>CollinRobison.mdjournal</PackageId>
-    <Version>1.0.0</Version>
+    <Version>0.1.0</Version>
     <Authors>Collin Robison</Authors>
     <Description>CLI tool for creating and managing markdown journals.</Description>
+
+    <!-- Version: suppress git SHA suffix so the version flag prints clean SemVer (e.g. 1.0.0 not 1.0.0+abc1234) -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
     <!-- Metadata -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -23,6 +26,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/CollinRobison/markdown-journal-cli</PackageProjectUrl>
     <PackageTags>cli tool utility markdown journal</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 
   </PropertyGroup>
   <ItemGroup>
@@ -35,6 +39,10 @@
     <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Include README in the NuGet package so it renders on the NuGet.org package page -->
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -42,5 +50,38 @@
   <ItemGroup>
     <Folder Include="Commands/Update/" />
     <Folder Include="Infrastructure/Tracking/Models/" />
+  </ItemGroup>
+
+  <!-- Self-contained binary size optimizations.
+       These settings are ONLY active when publishing with -p:PublishSingleFile=true.
+       Normal dotnet build / dotnet test are completely unaffected. -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <!-- Skip ahead-of-time compilation — reduces size, startup difference is negligible for a CLI -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <!-- Compress bundled assemblies inside the single file -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Bundle native libraries inside the file instead of extracting to a temp directory -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- Trim unreachable BCL code paths only — partial mode respects trim annotations -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+  </PropertyGroup>
+
+  <!-- Protect every reflection-dependent assembly from the trimmer.
+       TrimmerRootAssembly keeps the entire assembly intact — no types or methods are removed. -->
+  <ItemGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <TrimmerRootAssembly Include="Spectre.Console" />
+    <TrimmerRootAssembly Include="Spectre.Console.Cli" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.DependencyInjection" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Hosting" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Options" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Configuration" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Configuration.Binder" />
+    <TrimmerRootAssembly Include="System.Text.Json" />
   </ItemGroup>
 </Project>
