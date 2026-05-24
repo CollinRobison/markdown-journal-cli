@@ -300,7 +300,9 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 - `feat:` → minor bump (0.1.0 → 0.2.0)
 - `feat!:` or `BREAKING CHANGE:` footer → major bump (0.1.0 → 1.0.0)
 
-**To test packaging locally** (without triggering a release):
+### Testing packaging locally
+
+**NuGet tool** (validates the tool installs and `--version` reports correctly):
 
 ```bash
 dotnet pack markdown-journal-cli --configuration Release
@@ -313,4 +315,34 @@ To reinstall a rebuilt version:
 ```bash
 dotnet tool uninstall -g CollinRobison.mdjournal
 dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
+```
+
+**Self-contained binary** (validates single-file publish and trim behaviour before a real release):
+
+```bash
+# macOS (Apple Silicon)
+dotnet publish markdown-journal-cli -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true
+
+# macOS (Intel)
+dotnet publish markdown-journal-cli -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true
+
+# Linux (x64)
+dotnet publish markdown-journal-cli -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
+
+# Windows (x64)
+dotnet publish markdown-journal-cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+Output lands in `markdown-journal-cli/bin/Release/net10.0/<rid>/publish/`. Run it directly:
+
+```bash
+./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli --version
+```
+
+Optional — install to PATH as `mdjournal` for a fuller local smoke test:
+
+```bash
+sudo cp ./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli /usr/local/bin/mdjournal
+mdjournal --version
+sudo rm /usr/local/bin/mdjournal  # clean up when done
 ```
