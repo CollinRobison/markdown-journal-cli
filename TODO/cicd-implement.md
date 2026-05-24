@@ -363,3 +363,74 @@ dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.m
 - `CHANGELOG.md` — will be maintained by release-please going forward; no changes needed now
 - `SECURITY.md` / `CODE_OF_CONDUCT.md` — stable by nature
 
+
+---
+
+## ✅ Implementation Complete — Manual Steps Required
+
+Everything automatable has been committed to `ci-cd-implement`. Below are the steps you need to perform manually in the GitHub UI before merging.
+
+### 1. Workflow Permissions (required for release-please to open PRs)
+
+`Settings → Actions → General → Workflow permissions`
+→ Select **"Read and write permissions"**
+→ Check **"Allow GitHub Actions to create and approve pull requests"**
+
+### 2. Merge Strategy
+
+`Settings → General → Pull Requests`
+- ❌ Uncheck "Allow merge commits"
+- ❌ Uncheck "Allow rebase merging"
+- ✅ Check "Allow squash merging"
+- Set default commit message: **"PR title and commit details"**
+
+### 3. Branch Protection Ruleset for `main`
+
+`Settings → Branches → Add ruleset` (name it e.g. "main protection"):
+
+| Rule | Setting |
+|---|---|
+| Target branches | `main` |
+| Require PR before merging | ✅ |
+| Required approvals | 0 |
+| Dismiss stale reviews on new commits | ✅ |
+| Require status checks to pass | ✅ |
+| Require branches to be up to date before merging | ✅ |
+| Block force pushes | ✅ |
+| Restrict deletions | ✅ |
+| Require linear history | ✅ |
+
+**Required status checks** (add these exact job names after the first CI run so GitHub can discover them):
+- `build-and-test` ← ci.yml
+- `Semantic Pull Request` ← pr-title-lint.yml
+- `CodeQL` ← codeql.yml
+- `dependency-review` ← dependency-review.yml
+
+> **Tip:** Run this PR through CI first so GitHub registers the job names, then come back and add them as required checks.
+
+### 4. NuGet API Key (defer until ready to publish)
+
+`Settings → Secrets and variables → Actions → New repository secret`
+- Name: `NUGET_API_KEY`
+- Value: create at [nuget.org → Account → API Keys](https://www.nuget.org/account/apikeys), scoped to `CollinRobison.mdjournal`
+
+Then uncomment the publish step in `.github/workflows/release.yml` (the `# - name: Publish to NuGet.org` block).
+
+### 5. Run `dotnet format` locally before enabling format gate
+
+The format check is intentionally deferred. Once you've run `dotnet format` and committed the result, uncomment the format gate in `ci.yml`:
+
+```yaml
+- name: Format check
+  run: dotnet format --verify-no-changes
+```
+
+### 6. Push and open a PR
+
+```bash
+git push origin ci-cd-implement
+```
+
+Open a PR with a conventional commit title, e.g.: `ci: implement full CI/CD pipeline with release-please`
+
+The PR title lint check will validate itself on this first PR.
