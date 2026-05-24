@@ -13,7 +13,6 @@ These items must be completed before the repository goes public.
 | Status | Item |
 |--------|------|
 | ⏳ | **Build pipeline & versioned releases** — CI/CD pipeline that builds, packages, and publishes versioned artifacts to GitHub Releases so users can download pre-built binaries. |
-| ⏳ | **Documentation cleanup** — Review and polish all docs (`README`, `CONTRIBUTING`, `docs/`) to ensure they are accurate, complete, and contributor-friendly. |
 | ⏳ | **Public repo & collaborator readiness** — Configure branch protection rules on `main` (required reviews, no direct pushes), set up issue/PR templates, and make the repository public. |
 
 ---
