@@ -284,82 +284,33 @@ dotnet run --project markdown-journal-cli -- update --help
 
 ## Release Process
 
-### Versioning
+Releases are fully automated via [release-please](https://github.com/googleapis/release-please).
 
-SemVer version is set in `markdown-journal-cli/markdown-journal-cli.csproj` via `<Version>`.
+**How it works:**
 
-### Build + Test
+1. Merge PRs to `main` using conventional commit titles (`feat:`, `fix:`, etc.).
+2. `release-please` reads those commits and opens a "Release PR" that bumps
+   `<Version>` in `.csproj` and updates `CHANGELOG.md`.
+3. When you merge the Release PR, a GitHub Release is created automatically.
+4. The release triggers the build pipeline: binaries for 6 platforms are built
+   and attached to the Release, and the NuGet package is published.
 
-```bash
-dotnet build --configuration Release
-dotnet test
-```
+**Version bump rules:**
+- `fix:` → patch bump (0.1.0 → 0.1.1)
+- `feat:` → minor bump (0.1.0 → 0.2.0)
+- `feat!:` or `BREAKING CHANGE:` footer → major bump (0.1.0 → 1.0.0)
 
-### Package (NuGet Tool)
+**To test packaging locally** (without triggering a release):
 
 ```bash
 dotnet pack markdown-journal-cli --configuration Release
-```
-
-Output package path is defined in the csproj (`PackageOutputPath`, currently `./nupkg`).
-
-### Local Tool Install Test
-
-```bash
-dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/nupkg
+dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
 mdjournal --version
 ```
 
 To reinstall a rebuilt version:
 
 ```bash
-dotnet tool uninstall -g markdown-journal-cli
-dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/nupkg
+dotnet tool uninstall -g CollinRobison.mdjournal
+dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
 ```
-
-### Self-Contained Binary (No .NET Runtime Required)
-
-Build a single-file binary that includes the runtime:
-
-```bash
-# macOS (Apple Silicon)
-dotnet publish markdown-journal-cli -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true
-
-# macOS (Intel)
-dotnet publish markdown-journal-cli -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true
-
-# Linux (x64)
-dotnet publish markdown-journal-cli -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
-
-# Windows (x64)
-dotnet publish markdown-journal-cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
-Output:
-
-- `markdown-journal-cli/bin/Release/net10.0/<rid>/publish/`
-
-Run it directly:
-
-```bash
-./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli --version
-```
-
-Optional (macOS/Linux): install to PATH as `mdjournal`:
-
-```bash
-sudo cp ./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli /usr/local/bin/mdjournal
-mdjournal --version
-```
-
-Remove later if needed:
-
-```bash
-sudo rm /usr/local/bin/mdjournal
-```
-
-### Publishing Notes
-
-- Publish release notes in `CHANGELOG.md`.
-- Keep docs links and command reference in sync before release.
-- Run full test suite before pushing a release tag.

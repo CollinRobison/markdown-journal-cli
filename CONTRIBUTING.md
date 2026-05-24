@@ -87,11 +87,37 @@ Also ensure:
 
 See `docs/TESTING.md` for base classes and patterns.
 
+## Commit Message Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/).
+PR titles must follow the format because squash merges use the PR title as
+the commit message on `main`, and release-please reads those commits to
+determine the next version bump.
+
+Format: `<type>: <description>` (e.g., `feat: add export command`)
+
+| Type | Version bump | When to use |
+|---|---|---|
+| `feat` | minor | New feature or command |
+| `fix` | patch | Bug fix |
+| `docs` | none | Documentation only |
+| `test` | none | Adding or fixing tests |
+| `refactor` | none | Code change, not a fix or feature |
+| `chore` | none | Dependencies, build tooling |
+| `ci` | none | CI/CD changes |
+| `perf` | patch | Performance improvement |
+
+For breaking changes, append `!`: `feat!: rename --path flag to --directory`
+
+PR title format is enforced by CI — the PR will fail the lint check if
+the title doesn't match the convention.
+
 ## Pull Request Checklist
 
 - [ ] Branch is up to date with `main`
 - [ ] `dotnet build` passes
 - [ ] `dotnet test` passes
+- [ ] PR title follows conventional commits format (`feat:`, `fix:`, etc.)
 - [ ] Commands remain thin; logic resides in services
 - [ ] New services include interface + `Program.cs` registration
 - [ ] User-facing output uses `IAnsiConsole.MarkupLine()`

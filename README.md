@@ -3,11 +3,7 @@
 A CLI for creating and maintaining markdown journals — with file-change tracking,
 automatic table-of-contents generation, and safe transactional updates.
 
-[![NuGet](https://img.shields.io/nuget/v/markdown-journal-cli?label=NuGet)](https://www.nuget.org/packages/markdown-journal-cli) [![CI](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-> Badge notes:
-> - NuGet badge URL is ready for package ID `markdown-journal-cli` after publish.
-> - CI badge will go live once the workflow runs for the first time.
+[![NuGet](https://img.shields.io/nuget/v/CollinRobison.mdjournal?label=NuGet)](https://www.nuget.org/packages/CollinRobison.mdjournal) [![CI](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Quick Start
 
@@ -35,12 +31,12 @@ Go to the [Releases page](https://github.com/CollinRobison/markdown-journal-cli/
 <summary><strong>macOS</strong></summary>
 
 Pick the right asset:
-- **Apple Silicon:** `mdjournal-osx-arm64.tar.gz`
-- **Intel:** `mdjournal-osx-x64.tar.gz`
+- **Apple Silicon:** `mdjournal-<version>-osx-arm64.zip`
+- **Intel:** `mdjournal-<version>-osx-x64.zip`
 
 ```bash
 # Replace the filename with the one you downloaded
-tar -xzf mdjournal-osx-arm64.tar.gz
+unzip mdjournal-<version>-osx-arm64.zip
 chmod +x mdjournal
 sudo mv mdjournal /usr/local/bin/
 mdjournal --version
@@ -66,12 +62,12 @@ sudo rm /usr/local/bin/mdjournal
 <summary><strong>Linux</strong></summary>
 
 Pick the right asset:
-- **x64 (most desktops/servers):** `mdjournal-linux-x64.tar.gz`
-- **ARM64 (Raspberry Pi, etc.):** `mdjournal-linux-arm64.tar.gz`
+- **x64 (most desktops/servers):** `mdjournal-<version>-linux-x64.zip`
+- **ARM64 (Raspberry Pi, etc.):** `mdjournal-<version>-linux-arm64.zip`
 
 ```bash
 # Replace the filename with the one you downloaded
-tar -xzf mdjournal-linux-x64.tar.gz
+unzip mdjournal-<version>-linux-x64.zip
 chmod +x mdjournal
 sudo mv mdjournal /usr/local/bin/
 mdjournal --version
@@ -90,7 +86,7 @@ sudo rm /usr/local/bin/mdjournal
 <details>
 <summary><strong>Windows</strong></summary>
 
-Download `mdjournal-win-x64.zip`, then extract it.
+Download `mdjournal-<version>-win-x64.zip`, then extract it.
 
 To add `mdjournal.exe` to your PATH:
 1. Move `mdjournal.exe` to a permanent folder, e.g. `C:\Tools\`.
@@ -114,20 +110,20 @@ If a release does not yet include your platform asset, see the install options b
 ### Install via dotnet tool
 
 ```bash
-dotnet tool install -g markdown-journal-cli
+dotnet tool install -g CollinRobison.mdjournal
 mdjournal --version
 ```
 
 **Update:**
 
 ```bash
-dotnet tool update -g markdown-journal-cli
+dotnet tool update -g CollinRobison.mdjournal
 ```
 
 **Remove:**
 
 ```bash
-dotnet tool uninstall -g markdown-journal-cli
+dotnet tool uninstall -g CollinRobison.mdjournal
 ```
 
 ### Build from source
