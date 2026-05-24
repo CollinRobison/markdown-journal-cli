@@ -576,3 +576,27 @@ For macOS, unsigned binaries from the internet require `xattr -d com.apple.quara
 ### Coverage threshold
 
 Start at 80% given the existing 1130 tests. Adjust after seeing baseline numbers.
+
+### Changelog automation: starting simple with `git-cliff`
+
+Full `release-please` automation is the end goal, but it requires conventional commits to already be in place and config files wired up. Before that's ready, `git-cliff` is a good lightweight bridge:
+
+- **What it is:** A fast, configurable changelog generator that reads git history and outputs Keep a Changelog format — exactly what `CHANGELOG.md` already uses.
+- **How to use it locally:**
+  ```bash
+  # Install (macOS)
+  brew install git-cliff
+
+  # Generate unreleased changes since last tag
+  git cliff --unreleased
+
+  # Write full changelog to file
+  git cliff -o CHANGELOG.md
+  ```
+- **Why it's useful now:** Even before CI is wired up, adopting conventional commits (`feat:`, `fix:`, `docs:`, `chore:`) and running `git cliff` manually before a release gives you a generated changelog with zero GitHub Actions setup.
+- **Path forward:** Once conventional commits are established, swap in `release-please` to automate the PR + tag + release creation. `git-cliff` can still be used alongside it or replaced entirely.
+
+**Recommended progression:**
+1. Adopt conventional commit messages now (no tooling required)
+2. Use `git cliff --unreleased` locally to draft changelog entries before a release
+3. Wire up `release-please` when you're ready to fully automate the release flow
