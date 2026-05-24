@@ -21,25 +21,6 @@ Suggested categories:
 - `Fixed` for bug fixes
 - `Security` for vulnerability-related updates
 
-## [Unreleased]
-
-### Added
-
-- Open-source collaboration scaffolding:
-  - `CODE_OF_CONDUCT.md`
-  - `SECURITY.md`
-  - `.github` issue/PR templates
-  - `.github/CODEOWNERS`
-  - `.github/workflows/ci.yml` (build + test on push/PR)
-- `docs/COMMANDS.md` extracted as full command reference.
-- `docs/TESTING.md` added as dedicated testing infrastructure guide.
-
-### Changed
-
-- Simplified `README.md` to focus on quick start and top-level docs navigation.
-- Updated `docs/DEVELOPMENT.md` to align command/service patterns with current code.
-- Updated `CONTRIBUTING.md` links and guidance for the new docs layout.
-
 ## [0.1.0] - 2026-05-23
 
 ### Added
