@@ -2,16 +2,22 @@
 
 # Development Guide
 
-This guide covers everything developers need to know to contribute to the Markdown Journal CLI project.
+This guide covers local setup, architecture-aware development workflow, coding
+standards, debugging, and release steps for `markdown-journal-cli`.
 
-## 🚀 Getting Started
+For testing specifics, see `TESTING.md`.
+For contribution process and expectations, see `../CONTRIBUTING.md`.
+
+## Getting Started
 
 ### Prerequisites
-- .NET 10.0 SDK
+
+- .NET 10 SDK
 - Git
-- Your favorite C# IDE (VS Code, Visual Studio, Rider, etc.)
+- C# IDE (VS Code, Visual Studio, Rider)
 
 ### First-Time Setup
+
 ```bash
 git clone https://github.com/CollinRobison/markdown-journal-cli.git
 cd markdown-journal-cli
@@ -20,654 +26,300 @@ dotnet build
 dotnet test
 ```
 
-### Verify Installation
+### Run the CLI Locally
+
 ```bash
-dotnet run --project markdown-journal-cli -- new TestJournal
-# Should create a TestJournal directory
+dotnet run --project markdown-journal-cli -- --help
 ```
 
-## 🏗️ Project Structure
+## Project Structure
 
-```
+```text
 markdown-journal-cli/
-├── markdown-journal-cli/           # Main application
-│   ├── Commands/                  # Command implementations
-│   │   ├── Add/                   # Add commands (entry, config, toc)
-│   │   │   ├── AddEntryCommand.cs
-│   │   │   ├── AddFileTrackingCommand.cs
-│   │   │   ├── AddJournalrcCommand.cs
-│   │   │   ├── AddTableOfContentsCommand.cs
-│   │   │   └── AddSettings.cs
-│   │   ├── Init/                  # Init journal command
-│   │   │   ├── InitCommand.cs
-│   │   │   └── InitSettings.cs
-│   │   ├── New/                   # New journal command
-│   │   │   └── NewCommand.cs
-│   │   ├── Remove/                # Remove journal entry command
-│   │   │   ├── RemoveEntryCommand.cs
-│   │   │   └── RemoveSettings.cs
-│   │   ├── Update/                # Update journal/entry commands
-│   │   │   ├── DryRunRenderer.cs       # Spectre.Console dry-run output renderer
-│   │   │   ├── IDryRunRenderer.cs      # Renderer interface
-│   │   │   ├── TextDiffer.cs           # LCS-based line-level diff (internal)
-│   │   │   ├── UpdateCommand.cs
-│   │   │   ├── UpdateEntryCommand.cs
-│   │   │   └── UpdateSettings.cs
-│   ├── Exceptions/                # Custom exceptions
-│   │   └── JournalExceptions.cs
-│   ├── Infrastructure/            # Core services
-│   │   ├── Configuration/         # Journal configuration management
-│   │   │   ├── IJournalConfiguration.cs
-│   │   │   ├── JournalConfiguration.cs
-│   │   │   ├── IJournalConfigGenerator.cs
-│   │   │   ├── JournalConfigGenerator.cs
-│   │   │   ├── IJournalTocStructureRepository.cs  # Load/Save .journaltoc from .mdjournal/
-│   │   │   ├── JournalTocStructureRepository.cs   # JSON read/write implementation
-│   │   │   ├── ITableOfContentsMarkdownParser.cs
-│   │   │   ├── TableOfContentsMarkdownParser.cs
-│   │   │   └── Models/            # Configuration data models
-│   │   ├── DependencyInjection/   # DI container setup
-│   │   │   └── TypeRegistrar.cs
-│   │   ├── FileSystem/           # File system abstraction
-│   │   │   ├── IFileSystem.cs
-│   │   │   ├── FileSystem.cs
-│   │   │   ├── IInMemoryFileBuffer.cs  # In-memory staging (dry-run preview)
-│   │   │   ├── InMemoryFileBuffer.cs   # Snapshot/Stage/Commit/Restore implementation
-│   │   │   ├── IMarkdownLinkRewriter.cs   # Inline link rewriting interface
-│   │   │   ├── MarkdownLinkRewriter.cs    # Compiled-regex link rewriter implementation
-│   │   │   └── MarkdownMetadataParser.cs
-│   │   ├── Transactions/         # File transaction and rollback infrastructure
-│   │   │   ├── IFileTransactionCoordinator.cs   # Ambient scope factory
-│   │   │   ├── FileTransactionCoordinator.cs    # Thread-local ambient scope implementation
-│   │   │   ├── IFileTransactionScope.cs         # Track/Commit/Rollback contract
-│   │   │   ├── FileTransactionScope.cs          # Execute-then-compensate implementation
-│   │   │   ├── JoinedTransactionScope.cs        # Inner scope that delegates to root
-│   │   │   ├── IDeletionRollbackStrategy.cs     # Snapshot/restore for deleted files
-│   │   │   ├── InMemoryDeletionRollbackStrategy.cs
-│   │   │   ├── IRollbackReporter.cs             # Console output for rollback events
-│   │   │   ├── RollbackReporter.cs              # Spectre.Console rollback summary
-│   │   │   ├── RollbackReporterExtensions.cs    # Extension helpers
-│   │   │   ├── NoOpTransactionInfrastructure.cs # No-op impls for tests/dry-run
-│   │   │   ├── RollbackCompletedException.cs    # Thrown after rollback; carries RollbackResult
-│   │   │   └── Models/                          # RollbackEntry, RollbackEntryKind, RollbackResult, RollbackFailure
-│   │   ├── Tracking/             # File change detection
-│   │   │   ├── IFileTracking.cs
-│   │   │   ├── FileTracking.cs    # Resolves tracking path from .mdjournal/.journalindex
-│   │   │   ├── IHashService.cs
-│   │   │   ├── HashService.cs
-│   │   │   └── Models/
-│   │   │       └── UpdateDryRunReport.cs  # Dry-run report aggregate + TocDiffResult + TocRenameDryRunResult
-│   │   └── Validation/           # Journal layout validation
-│   │       ├── IJournalValidator.cs       # ValidateMetadataDirectory contract
-│   │       └── JournalValidator.cs        # Checks .mdjournal/, .journalindex, .journaltoc
-│   ├── JournalTemplates/          # Template and initialization services
-│   │   ├── Templates/            # Template implementations
-│   │   ├── IJournalInitializer.cs # Journal creation orchestration
-│   │   ├── JournalInitializer.cs
-│   │   ├── ITemplateManager.cs   # Template processing
-│   │   ├── TemplateManager.cs
-│   │   ├── ITableOfContentsGenerator.cs
-│   │   └── TableOfContentsGenerator.cs
-│   ├── Services/                  # Business logic services (each pair in its own subfolder)
-│   │   ├── EntryFormatter/
-│   │   │   ├── IEntryFormatterService.cs
-│   │   │   └── EntryFormatterService.cs
-│   │   ├── InitJournal/
-│   │   │   ├── IInitJournalService.cs      # Journal adoption orchestration
-│   │   │   └── InitJournalService.cs
-│   │   ├── JournalEntry/
-│   │   │   ├── IJournalEntryService.cs
-│   │   │   └── JournalEntryService.cs
-│   │   ├── JournalFileUpdate/
-│   │   │   ├── IJournalFileUpdateService.cs
-│   │   │   └── JournalFileUpdateService.cs
-│   │   ├── JournalUpdate/
-│   │   │   ├── IJournalUpdateService.cs    # + BuildDryRunReport method
-│   │   │   └── JournalUpdateService.cs     # + BuildDryRunReport, RenameToc; IMarkdownLinkRewriter injected
-│   │   ├── NewJournal/
-│   │   │   ├── INewJournalService.cs
-│   │   │   └── NewJournalService.cs
-│   │   ├── RemoveEntry/
-│   │   │   ├── IRemoveEntryService.cs      # Remove entry orchestration
-│   │   │   └── RemoveEntryService.cs
-│   │   └── TableOfContents/
-│   │       ├── ITableOfContentsService.cs  # + PreviewTableOfContents overloads (no disk write)
-│   │       └── TableOfContentsService.cs
-│   ├── appsettings.json          # Application configuration
-│   ├── JournalSettings.cs        # Settings model
-│   └── Program.cs                # Entry point
-├── markdown-journal-cli.Tests/    # Test project
-│   ├── Commands/                 # Command tests
-│   │   ├── Add/
-│   │   │   ├── AddEntryCommandTests.cs
-│   │   │   ├── AddEntryIntegrationTests.cs
-│   │   │   ├── AddFileTrackingCommandTests.cs
-│   │   │   ├── AddFileTrackingRollbackTests.cs    # rollback: fault-inject each write step
-│   │   │   ├── AddJournalrcCommandTests.cs
-│   │   │   ├── AddJournalrcRollbackTests.cs
-│   │   │   ├── AddTableOfContentsCommandTests.cs
-│   │   │   ├── AddTableOfContentsIntegrationTests.cs
-│   │   │   └── AddTableOfContentsRollbackTests.cs
-│   │   ├── Init/
-│   │   │   ├── InitCommandTests.cs
-│   │   │   └── InitCommandIntegrationTests.cs
-│   │   ├── New/
-│   │   │   ├── NewCommandTests.cs
-│   │   │   └── NewCommandIntegrationTests.cs
-│   │   ├── Remove/
-│   │   │   ├── RemoveEntryCommandTests.cs         # remove entry command tests
-│   │   │   └── RemoveEntryCommandIntegrationTests.cs
-│   │   └── Update/
-│   │       ├── UpdateCommandTests.cs              # + --rename-toc and --dry-run dispatch tests
-│   │       ├── UpdateCommandIntegrationTests.cs
-│   │       └── UpdateEntryCommandTests.cs
-│   ├── Infrastructure/           # Shared test infrastructure
-│   │   ├── CommandAppTester.cs                # Spectre.Console test harness helper
-│   │   ├── CommandTestBase.cs                 # Abstract base for command unit tests
-│   │   ├── JournalIntegrationTestBase.cs      # Abstract base for integration tests
-│   │   ├── MockFactory.cs                     # Pre-configured Mock<T> factory methods
-│   │   ├── QuickstartValidationTests.cs       # Tests validating the test infrastructure itself
-│   │   ├── ServiceTestBase.cs                 # Abstract base for service unit tests
-│   │   ├── FileSystem/
-│   │   │   ├── FaultInjectingFileSystem.cs    # test helper: fault injection for IFileSystem
-│   │   │   ├── FileSystemTests.cs
-│   │   │   ├── InMemoryFileBufferTests.cs     # Snapshot/Stage/Commit/Restore tests
-│   │   │   ├── MarkdownLinkRewriterTests.cs   # StripLinksInDirectory tests
-│   │   │   ├── MarkdownMetadataParserTests.cs
-│   │   │   └── TestFileSystem.cs              # In-memory IFileSystem for unit tests
-│   │   ├── Transactions/
-│   │   │   ├── FileTransactionScopeTests.cs       # Track*/Commit/Rollback + reverse-order tests
-│   │   │   ├── FileTransactionCoordinatorTests.cs  # Begin/BeginOrJoin ambient scope tests
-│   │   │   ├── JoinedTransactionScopeTests.cs      # joined scope delegation tests
-│   │   │   ├── RollbackReporterTests.cs            # console output tests
-│   │   │   └── TransactionEdgeCaseTests.cs         # idempotency, disposed scope, etc.
+├── markdown-journal-cli/
+│   ├── Commands/                  # CLI layer (thin commands)
+│   ├── Services/                  # Business logic
+│   ├── Infrastructure/
 │   │   ├── Configuration/
 │   │   ├── DependencyInjection/
+│   │   ├── FileSystem/
 │   │   ├── JournalTemplates/
 │   │   ├── Tracking/
-│   │   ├── FileTrackingTests.cs
-│   │   ├── HashServiceTests.cs
-│   │   ├── JournalConfigurationTests.cs
-│   │   ├── JournalConfigGeneratorTests.cs
-│   │   ├── TableOfContentsMarkdownParserTests.cs
-│   │   └── TypeRegistrarTests.cs
-│   ├── JournalTemplates/         # Template and initialization tests
-│   │   ├── JournalInitializerTests.cs
-│   │   ├── TableOfContentsGeneratorTests.cs
-│   │   └── TemplateManagerTests.cs
-│   └── Services/
-│       ├── EntryFormatter/
-│       │   └── EntryFormatterServiceTests.cs
-│       ├── InitJournal/
-│       │   └── InitJournalServiceTests.cs
-│       ├── JournalEntry/
-│       │   └── JournalEntryServiceTests.cs
-│       ├── JournalFileUpdate/
-│       │   └── JournalFileUpdateServiceTests.cs
-│       ├── JournalUpdate/
-│       │   └── JournalUpdateServiceTests.cs   # + RenameToc + BuildDryRunReport test cases
-│       ├── NewJournal/
-│       │   └── NewJournalServiceTests.cs
-│       ├── RemoveEntry/
-│       │   └── RemoveEntryServiceTests.cs     # remove entry service tests
-│       ├── AddToc/
-│       │   └── AddTocServiceTests.cs          # dual-artifact; structureOnly; mdOnly; AlreadyExists
-│       ├── Rollback/
-│       │   ├── ServiceRollbackTestBase.cs               # shared helpers for rollback tests
-│       │   ├── InitJournalServiceRollbackTests.cs
-│       │   ├── JournalEntryServiceRollbackTests.cs
-│       │   ├── JournalFileUpdateServiceRollbackTests.cs
-│       │   ├── JournalUpdateServiceRollbackTests.cs
-│       │   ├── NewJournalServiceRollbackTests.cs
-│       │   └── RemoveEntryServiceRollbackTests.cs
-│       └── TableOfContents/
-│           └── TableOfContentsServiceTests.cs  # + PreviewTableOfContents tests
-├── docs/                         # Documentation
-└── README.md                     # Main documentation
+│   │   ├── Transactions/
+│   │   └── Validation/
+│   ├── Exceptions/
+│   ├── Program.cs
+│   └── appsettings.json
+├── markdown-journal-cli.Tests/
+│   ├── Commands/
+│   ├── Services/
+│   └── Infrastructure/
+└── docs/
 ```
 
-## 🛠️ Development Workflow
+### Architectural Rule of Thumb
 
-### 1. Creating New Commands
+- Commands are thin: parse args, validate, call services, print output, return exit code.
+- Services own business logic.
+- All file I/O goes through `IFileSystem`.
+- Write flows are transactional (rollback-aware).
 
-#### Step 1: Create Command Class
+## Development Workflow
+
+### 1) Adding a Command
+
+### Command Pattern (Current)
+
+All commands inherit from `JournalCommand<TSettings>` and override `ExecuteCore`.
+
+- Use the parameterless base constructor only if no metadata validation is needed.
+- Commands operating on an existing journal should inject `IJournalValidator` and
+  `IAnsiConsole` into the base constructor: `: JournalCommand<T>(validator, console)`.
+- Commands that create journals (`new`, `init`) should set:
+
+```csharp
+protected override bool SkipMetadataValidation => true;
+```
+
+### Command Template
+
 ```csharp
 using System.ComponentModel;
+using markdown_journal_cli.Commands;
+using markdown_journal_cli.Exceptions;
+using markdown_journal_cli.Infrastructure.Validation;
+using Spectre.Console;
 using Spectre.Console.Cli;
-using markdown_journal_cli.Infrastructure.FileSystem;
-using markdown_journal_cli.JournalTemplates;
-using markdown_journal_cli.Infrastructure.Configuration;
 
-namespace markdown_journal_cli.Commands.YourCommand;
+namespace markdown_journal_cli.Commands.Example;
 
-[Description("TODO: Add your command description")]
-public sealed class YourCommand : JournalCommand<YourCommand.Settings>
+[Description("Describe what the command does")]
+public sealed class ExampleCommand(
+    IAnsiConsole console,
+    IJournalValidator validator,
+    IExampleService service
+) : JournalCommand<ExampleCommand.Settings>(validator, console)
 {
-    private readonly IAnsiConsole _console;
-    private readonly IFileSystem _fileSystem;
-    private readonly IJournalInitializer _journalInitializer; // Example service injection
-
-    public YourCommand(
-        IAnsiConsole console, 
-        IFileSystem fileSystem,
-        IJournalInitializer journalInitializer)
-    {
-        _console = console ?? throw new ArgumentNullException(nameof(console));
-        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _journalInitializer = journalInitializer ?? throw new ArgumentNullException(nameof(journalInitializer));
-    }
-
     public sealed class Settings : CommandSettings
     {
-        // TODO: Define your command arguments and options
-        [CommandArgument(0, "[argument]")]
-        [Description("TODO: Describe your argument")]
-        public string? YourArgument { get; set; }
+        [CommandOption("-p|--path")]
+        public string FilePath { get; set; } = ".";
 
-        public override ValidationResult Validate()
-        {
-            // TODO: Add validation logic
-            return ValidationResult.Success();
-        }
+        public override ValidationResult Validate() => ValidationResult.Success();
     }
+
+    protected override string? GetJournalDirectory(Settings settings) => settings.FilePath;
 
     protected override int ExecuteCore(CommandContext context, Settings settings)
     {
         try
         {
-            // TODO: Implement your command logic
-            _console.MarkupLine("[green]Success:[/] Command completed");
+            service.Execute(settings.FilePath);
+            console.MarkupLine("[green]Success:[/] Done.");
             return 0;
+        }
+        catch (JournalException ex)
+        {
+            console.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            return 1;
         }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Error:[/] {ex.Message}");
+            console.MarkupLine($"[red]Error:[/] Unexpected: {ex.Message.EscapeMarkup()}");
             return 1;
         }
     }
 }
 ```
 
-#### Step 2: Register Command in Program.cs
+### Register the Command in `Program.cs`
+
 ```csharp
-config.AddCommand<YourCommand>("your-command");
+config.AddCommand<ExampleCommand>("example");
 ```
 
-#### Step 3: Create Tests
+If it belongs under a branch (`add`, `update`, `remove`), register in that branch.
+
+### Add Tests
+
+- Add command unit tests under mirrored path in `markdown-journal-cli.Tests/Commands/...`
+- Add integration tests when command behavior spans multiple services/files
+
+See `docs/TESTING.md` for full patterns.
+
+### 2) Adding a Service
+
+### Service Pattern
+
+- Every service has an interface.
+- Use primary constructors and null-guard dependencies.
+- Keep business logic in services, not commands.
+
+Template:
+
 ```csharp
-// TODO: Create YourCommandTests.cs in markdown-journal-cli.Tests/Commands/
-```
+namespace markdown_journal_cli.Services.Example;
 
-### 2. Adding New Services
-
-#### Step 1: Define Interface
-```csharp
-namespace markdown_journal_cli.Infrastructure.FileSystem;
-
-public interface IYourService
+public interface IExampleService
 {
-    // TODO: Define your service contract
-    Task<string> DoSomethingAsync(string input);
+    void Execute(string journalPath);
 }
-```
 
-#### Step 2: Implement Service
-```csharp
-namespace markdown_journal_cli.Infrastructure.Services;
-
-public class YourService : IYourService
+public sealed class ExampleService(
+    IFileSystem fileSystem,
+    ILogger<ExampleService> logger
+) : IExampleService
 {
-    // TODO: Implement your service
-    public async Task<string> DoSomethingAsync(string input)
+    private readonly IFileSystem _fileSystem =
+        fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+
+    public void Execute(string journalPath)
     {
-        // Implementation here
-        return await Task.FromResult(input);
+        logger.LogDebug("Executing example service for {JournalPath}", journalPath);
+        // business logic
     }
 }
 ```
 
-#### Step 3: Register in DI Container
-```csharp
-// In Program.cs
-registrar.Register(typeof(IYourService), typeof(YourService));
-```
-
-### Metadata Directory Pattern
-
-All services that read or write internal metadata (tracking index or TOC structure) MUST resolve file paths from the `.mdjournal/` metadata directory rather than the journal root directly.
+Register in `Program.cs`:
 
 ```csharp
-// Correct — resolve from metadata directory
-var metadataDir = Path.Combine(journalDir, settings.MetadataDirName);
-var trackingPath = Path.Combine(metadataDir, settings.TrackingFileName);   // .mdjournal/.journalindex
-var tocPath      = Path.Combine(metadataDir, settings.TocStructureFileName); // .mdjournal/.journaltoc
+host.Services.AddSingleton<IExampleService, ExampleService>();
 ```
 
-Services that need to read/write the TOC structure MUST use `IJournalTocStructureRepository.Load(metadataDir)` / `Save(structure, metadataDir)` rather than embedding structure data in `.journalrc`.
+### 3) Metadata Directory Pattern
 
-Services and commands that operate on an existing journal MUST validate the metadata directory layout via `IJournalValidator.ValidateMetadataDirectory(journalDir)` before performing any writes. The `JournalCommand<TSettings>` base class calls the validator automatically; override `SkipMetadataValidation => true` only in commands that *create* the metadata directory (i.e., `new` and `init`).
+Internal metadata is rooted in `.mdjournal/`:
 
-### 3. Error Handling
+- `.mdjournal/.journalindex`
+- `.mdjournal/.journaltoc`
 
-#### Adding New Exception Types
-```csharp
-namespace markdown_journal_cli.Exceptions;
+Services should resolve these via configured names in `JournalSettings`, not hardcoded strings.
 
-public class YourSpecificException : JournalException
-{
-    public string AdditionalProperty { get; }
+Commands that target existing journals should rely on `JournalCommand<T>` metadata validation
+instead of duplicating validation logic.
 
-    public YourSpecificException(string message, string additionalInfo)
-        : base($"TODO: Format your error message: {message}")
-    {
-        AdditionalProperty = additionalInfo;
-    }
-}
+## Code Standards
+
+### Language/Style
+
+- Primary constructors
+- File-scoped namespaces
+- `sealed` where appropriate
+- Nullable reference types enabled (`string?` vs `string`)
+- Constructor null-guards for injected dependencies
+
+### CLI and Spectre Console
+
+- Use injected `IAnsiConsole` for all user output.
+- Do not use `Console.WriteLine()`.
+- Use `.EscapeMarkup()` for user-provided strings interpolated into markup.
+- Preferred message style:
+  - success: `[green]Success:[/] ...`
+  - failure: `[red]Error:[/] ...`
+
+### Command Boundaries
+
+- Keep command files small and orchestration-only.
+- If logic grows, extract/extend a service.
+- Keep exit code contract stable: `0`, `1`, `2`, `3`.
+
+### Logging
+
+- Use `ILogger<T>` with structured messages.
+- `LogDebug` for normal trace flow.
+- `LogWarning` for recoverable issues.
+
+### Dependency Injection Snapshot
+
+`Program.cs` is the source of truth for all DI registrations. Refer to it directly for the current list of services and commands.
+
+## Debugging Tips
+
+### Common Failures
+
+### Service resolution errors
+
+Symptom:
+
+```text
+Unable to resolve service for type 'IYourService'
 ```
 
-## 🧪 Testing Guidelines
+Check:
 
-### Test Naming Conventions
+- interface/implementation registration in `Program.cs`
+- command constructor matches registered service types
 
-All test methods follow the pattern `{MethodOrScenario}_Should_{ExpectedBehavior}_When_{Condition}`:
+### Command not found
 
-```csharp
-[Fact]
-public void Execute_Should_CreateJournal_When_NameIsValid()
-{
-    // Arrange - Set up test data
-    // Act - Execute the code under test
-    // Assert - Verify the results
-}
+Symptom:
+
+```text
+Unknown command '...'
 ```
 
-### Test Infrastructure Layers
+Check:
 
-There are four shared base classes. Choose the right one for each test type:
+- command added to root or correct branch in `Program.cs`
+- branch/subcommand ordering in CLI input
 
-| Base class | Use for | Key feature |
-|---|---|---|
-| `CommandTestBase` | Command-layer unit tests | Pre-wired `Mock<T>` fields + `BuildApp(configure)` helper |
-| `ServiceTestBase` | Service-layer unit tests | Same mocks + `NoOpCoordinator`, `NoOpReporter`, `NullLogger<T>()` |
-| `JournalIntegrationTestBase` | Command integration tests | Real `FileSystem`, Guid temp dir, `InitializeJournal()`, auto-cleanup |
-| `ServiceRollbackTestBase` | Service rollback / fault-injection | `FaultInjectingFileSystem` + real `FileTransactionCoordinator` |
+### Metadata validation errors
 
-`MockFactory` static class provides pre-configured `Mock<T>` instances used internally by the base classes. Use it directly for one-off mocks outside a base class.
+Symptom: command exits `1` with missing metadata or no-journal message.
 
-### Writing a Command Unit Test
+Check:
 
-Extend `CommandTestBase`. Override `SetupDefaultBehaviors()` for class-wide defaults; add per-test `Setup()` calls for scenario-specific responses. Call `BuildApp(configure)` inside each test to get a fresh `CommandAppTester`.
+- target path points at an initialized journal
+- `.mdjournal/.journalindex` and `.mdjournal/.journaltoc` exist
 
-```csharp
-public sealed class NewCommandTests : CommandTestBase
-{
-    protected override void SetupDefaultBehaviors()
-    {
-        MockFileSystem.Setup(fs => fs.DirectoryExists(It.IsAny<string>())).Returns(false);
-    }
+### Helpful Commands
 
-    [Fact]
-    public void Execute_Should_CreateJournal_When_NameIsValid()
-    {
-        var app = BuildApp(cfg =>
-        {
-            cfg.AddCommand<NewCommand>("new");
-            cfg.PropagateExceptions();
-        });
-
-        var result = app.Run(["new", "MyJournal"]);
-
-        result.ExitCode.ShouldBe(0);
-        MockFileSystem.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
-    }
-}
-```
-
-### Writing a Service Unit Test
-
-Extend `ServiceTestBase`. Create the SUT in a `CreateSut()` factory method using base-class mocks.
-
-```csharp
-public sealed class NewJournalServiceTests : ServiceTestBase
-{
-    private NewJournalService CreateSut() =>
-        new(MockFileSystem.Object, MockTemplateManager.Object,
-            MockJournalConfiguration.Object, NoOpCoordinator, NoOpReporter);
-
-    [Fact]
-    public void Initialize_Should_CallCreateDirectory_When_JournalPathIsNew()
-    {
-        MockFileSystem.Setup(fs => fs.DirectoryExists(It.IsAny<string>())).Returns(false);
-        var sut = CreateSut();
-
-        sut.Initialize("/journals/MyJournal", "MyJournal");
-
-        MockFileSystem.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.AtLeastOnce);
-    }
-}
-```
-
-### Writing a Command Integration Test
-
-Extend `JournalIntegrationTestBase`. Wire all real services. The base class creates a unique temp directory under `Path.GetTempPath()` and deletes it automatically on `Dispose()`. Use no mocks.
-
-```csharp
-public sealed class NewCommandIntegrationTests : JournalIntegrationTestBase
-{
-    [Fact]
-    public void Execute_Should_CreateJournalFiles_When_NameIsValid()
-    {
-        var result = BuildRealApp().Run(["new", "TestJournal", "--path", JournalRoot]);
-
-        result.ExitCode.ShouldBe(0);
-        File.Exists(Path.Combine(JournalPath, ".journalrc")).ShouldBeTrue();
-        Directory.Exists(Path.Combine(JournalPath, ".mdjournal")).ShouldBeTrue();
-        File.Exists(Path.Combine(JournalPath, ".mdjournal", ".journalindex")).ShouldBeTrue();
-        File.Exists(Path.Combine(JournalPath, ".mdjournal", ".journaltoc")).ShouldBeTrue();
-    }
-}
-```
-
-## 🎯 Code Standards
-
-### General Guidelines
-- Follow standard C# naming conventions
-- Use `sealed` classes where appropriate
-- Enable nullable reference types
-- Keep methods focused and testable
-
-### Documentation Strategy
-
-**For CLI projects, focus documentation efforts where they provide the most value:**
-
-#### ✅ **DO Document:**
-- **Public interfaces** and their contracts (what the abstraction provides)
-- **Complex business logic** that isn't self-explanatory
-- **Custom exception types** and when they're thrown
-- **Any code you might extract into a library later**
-- **Non-obvious design decisions** (use inline comments)
-
-#### ❌ **DON'T Document:**
-- Simple wrapper methods or obvious operations
-- Private implementation details
-- Framework plumbing (commands, DI setup, etc.)
-- Getters/setters for simple properties
-
-#### Example - Good Documentation:
-```csharp
-/// <summary>
-/// Provides file system abstraction for testability and cross-platform support.
-/// </summary>
-public interface IFileSystem
-{
-    /// <summary>
-    /// Creates directory structure, including parent directories if needed.
-    /// </summary>
-    void CreateDirectory(string path);
-}
-
-// Complex business logic deserves explanation
-public JournalEntry ParseEntry(string markdown)
-{
-    // Parse frontmatter first - supports both YAML and TOML
-    // TODO: Add support for JSON frontmatter
-    var frontmatterEnd = markdown.IndexOf("---", 3);
-    // ...
-}
-```
-
-#### Example - Skip Documentation:
-```csharp
-// These are obvious and don't need XML docs
-public string JournalName { get; set; }
-public bool DirectoryExists(string path) => Directory.Exists(path);
-
-private void InternalHelperMethod() { } // Private - no docs needed
-```
-
-### Documentation Priorities for CLI Projects
-
-**Most Valuable Documentation (in order of importance):**
-
-1. **User-facing documentation** (README, usage examples, command help)
-2. **Architecture decisions** (why certain patterns were chosen)
-3. **Development setup** (how to contribute, build, test)
-4. **Complex business logic** (inline comments for tricky algorithms)
-5. **Public interfaces** (XML docs for contracts that might be reused)
-
-**Remember:** For CLI tools, good user documentation and clear code structure are far more valuable than extensive API documentation.
-
-### Specific Patterns
-
-#### Command Classes
-```csharp
-[Description("Clear, concise description")]
-public sealed class CommandName : Command<CommandName.Settings>
-{
-    // Constructor injection only
-    public CommandName(IDependency dependency) { }
-    
-    // Nested Settings class
-    public sealed class Settings : CommandSettings
-    {
-        // Always include validation
-        public override ValidationResult Validate() { }
-    }
-    
-    // Return meaningful exit codes
-    public override int Execute(CommandContext context, Settings settings)
-    {
-        try { return 0; }
-        catch (SpecificException ex) { return 1; }
-        catch (Exception ex) { return 1; }
-    }
-}
-```
-
-#### Service Classes
-```csharp
-public interface IService
-{
-    // Use async for I/O operations
-    Task<Result> DoWorkAsync(Parameters params);
-}
-
-public class Service : IService
-{
-    // Validate inputs
-    public async Task<Result> DoWorkAsync(Parameters params)
-    {
-        if (params == null) throw new ArgumentNullException(nameof(params));
-        // Implementation
-    }
-}
-```
-
-## 🔍 Debugging Tips
-
-### Common Issues
-
-**Issue: DI Container Can't Resolve Service**
-```
-System.InvalidOperationException: Unable to resolve service for type 'IYourService'
-```
-**Solution:** Make sure service is registered in `Program.cs`
-
-**Issue: Command Not Found**
-```
-Unknown command 'your-command'
-```
-**Solution:** Verify command is added in `Program.cs` configuration
-
-**Issue: Tests Failing with DI Issues**
-```
-TypeRegistrar ambiguous reference error
-```
-**Solution:** Use fully qualified name: `markdown_journal_cli.Tests.Infrastructure.TypeRegistrar`
-
-### Debugging Commands
 ```bash
-# Run with detailed output
-dotnet run --project markdown-journal-cli -- your-command --help
-
-# Debug specific test
-dotnet test --filter "YourTestMethod"
-
-# Run in debug configuration
-dotnet run --configuration Debug --project markdown-journal-cli -- your-command
+dotnet build
+dotnet test
+dotnet test --filter "FullyQualifiedName~UpdateCommandTests"
+dotnet run --project markdown-journal-cli -- update --help
 ```
 
-## 📦 Release Process
+## Release Process
 
 ### Versioning
 
-This project uses [SemVer](https://semver.org/). The version is set in `markdown-journal-cli.csproj` via the `<Version>` property and flows automatically to `AssemblyInformationalVersionAttribute`, which is what `mdjournal --version` reads at runtime.
+SemVer version is set in `markdown-journal-cli/markdown-journal-cli.csproj` via `<Version>`.
 
-### Building and Packing
+### Build + Test
 
 ```bash
-# Release build
 dotnet build --configuration Release
-
-# Run all tests before packing
 dotnet test
-
-# Pack as a NuGet global tool
-dotnet pack --configuration Release
 ```
 
-The output `.nupkg` file is placed in `markdown-journal-cli/bin/Release/`.
-
-### Installing Locally for Testing
-
-#### Option A — NuGet Global Tool (requires .NET)
+### Package (NuGet Tool)
 
 ```bash
-# Install from local package (first time)
-dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/bin/Release
+dotnet pack markdown-journal-cli --configuration Release
+```
 
-# Reinstall after rebuilding
-dotnet tool uninstall -g markdown-journal-cli
-dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/bin/Release
+Output package path is defined in the csproj (`PackageOutputPath`, currently `./nupkg`).
 
-# Verify
+### Local Tool Install Test
+
+```bash
+dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/nupkg
 mdjournal --version
 ```
 
-#### Option B — Self-Contained Binary (no .NET required)
+To reinstall a rebuilt version:
 
-Publishes a single executable with the .NET runtime bundled in. Use this to test the binary distribution path that end users without .NET will receive.
+```bash
+dotnet tool uninstall -g markdown-journal-cli
+dotnet tool install -g markdown-journal-cli --add-source ./markdown-journal-cli/nupkg
+```
 
-The `.csproj` automatically applies the following size optimisations whenever `-p:PublishSingleFile=true` is passed. Normal `dotnet build` and `dotnet test` are completely unaffected.
+### Self-Contained Binary (No .NET Runtime Required)
 
-| Setting | Effect |
-|---|---|
-| `PublishReadyToRun=false` | Skips ahead-of-time compilation — reduces size; startup difference is negligible for a CLI |
-| `EnableCompressionInSingleFile=true` | Compresses bundled assemblies inside the single file |
-| `IncludeNativeLibrariesForSelfExtract=true` | Bundles native libs inside the file instead of extracting to a temp directory at startup |
-| `PublishTrimmed=true` + `TrimMode=partial` | Removes unreachable BCL code paths; reflection-heavy dependencies are fully protected via `TrimmerRootAssembly` |
-
-The following assemblies are explicitly rooted and are **never touched by the trimmer**: `Spectre.Console`, `Spectre.Console.Cli`, the full `Microsoft.Extensions.*` stack, and `System.Text.Json`. All runtime reflection behaviour is preserved.
+Build a single-file binary that includes the runtime:
 
 ```bash
 # macOS (Apple Silicon)
@@ -683,350 +335,31 @@ dotnet publish markdown-journal-cli -c Release -r linux-x64 --self-contained tru
 dotnet publish markdown-journal-cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-The binary is output to `markdown-journal-cli/bin/Release/net10.0/<rid>/publish/`. Run it directly to test:
+Output:
+
+- `markdown-journal-cli/bin/Release/net10.0/<rid>/publish/`
+
+Run it directly:
 
 ```bash
-# Example — macOS Apple Silicon
 ./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli --version
+```
 
-# Or copy to a directory on your PATH for convenience (the rename to mdjournal happens here)
+Optional (macOS/Linux): install to PATH as `mdjournal`:
+
+```bash
 sudo cp ./markdown-journal-cli/bin/Release/net10.0/osx-arm64/publish/markdown-journal-cli /usr/local/bin/mdjournal
 mdjournal --version
+```
 
-# To remove
+Remove later if needed:
+
+```bash
 sudo rm /usr/local/bin/mdjournal
 ```
 
-> **Validating a new publish:** After each publish, run every command branch end-to-end against a test journal — `new`, `init`, `add entry`, `add toc`, `add config`, `add tracking`, `update journal`, `update entry`, `remove entry` — and confirm `--help` and `--version` output correctly. Also verify the tracking index JSON round-trip (`add tracking` → `update journal`) and at least one rollback path (`remove entry` without `--force` on a file with backlinks).
+### Publishing Notes
 
-**Expected sizes (approximate, vary by platform):**
-
-| Target | Unoptimised | With these settings |
-|---|---|---|
-| `win-x64` | ~65–80 MB | ~25–40 MB |
-| `osx-arm64` | ~55–70 MB | ~20–35 MB |
-| `linux-x64` | ~60–75 MB | ~22–37 MB |
-
-### Publishing to NuGet.org
-
-```bash
-dotnet nuget push markdown-journal-cli/bin/Release/markdown-journal-cli.<version>.nupkg \
-  --api-key <YOUR_NUGET_API_KEY> \
-  --source https://api.nuget.org/v3/index.json
-```
-
-> **Note:** A NuGet.org API key is required. Generate one at [nuget.org/account/apikeys](https://www.nuget.org/account/apikeys) and store it securely (e.g. as a GitHub Actions secret named `NUGET_API_KEY`).
-
-### GitHub Releases
-
-1. Bump `<Version>` in `markdown-journal-cli.csproj`
-2. Run `dotnet pack --configuration Release`
-3. Create a GitHub release tagged `v<version>` and attach the `.nupkg` artifact
-4. The published NuGet package becomes available via `dotnet tool install -g markdown-journal-cli`
-
-### Current Build Targets
-```bash
-# Debug build (development)
-dotnet build --configuration Debug
-
-# Release build (production)
-dotnet build --configuration Release
-
-# Run tests
-dotnet test
-
-# Pack as global tool
-dotnet pack --configuration Release
-```
-
-**IJournalConfiguration Pattern**
-- **Purpose**: Manages journal configuration CRUD operations and topic hierarchy
-- **Benefits**: Centralized configuration management, supports complex nested structures
-- **Features**: Natural sorting, ignore files, parent-child topic detection, entry removal
-- **Example**: `AddEntry` uses this to update `.journalrc` with new entry metadata
-- **TOC Protection**: Auto-removes TOC file if accidentally added as entry (multi-layer defense)
-
-**ITableOfContentsGenerator Pattern**
-- **Purpose**: Generates markdown table of contents from journal configuration
-- **Benefits**: Automated TOC updates, smart parent-child detection, ignore file support
-- **Features**: Natural alphanumeric sorting, nested topic rendering, date preservation, TOC self-exclusion
-- **Example**: Automatically updates TOC when new entries are added
-- **Protection**: Automatically excludes TOC file from being listed in itself
-
-**IFileTracking Pattern**
-- **Purpose**: Tracks file changes using SHA256 hashing for change detection
-- **Benefits**: Detects added, modified, and deleted files without manual intervention
-- **Features**: Index persistence (`.md-journal` file), hash-based comparison
-- **Example**: Used to sync journal state and detect external file modifications
-
-**IHashService Pattern**
-- **Purpose**: Computes SHA256 hashes for file content comparison
-- **Benefits**: Reliable change detection, cryptographically secure
-- **Example**: Used by `IFileTracking` to determine if file content has changed
-
-**IEntryFormatterService Pattern**
-- **Purpose**: Formats entry names with configurable separators
-- **Benefits**: Consistent file naming, handles heading/subheading hierarchy
-- **Features**: Space separator conversion, heading separator management
-- **Example**: Converts "My Entry" to "My_Entry" or parses "Tech-Backend-API"
-
-**MarkdownMetadataParser Pattern**
-- **Purpose**: Updates markdown file metadata (Created/Last Edited dates)
-- **Benefits**: Automatic change tracking, preserves file structure
-- **Features**: Searches metadata header (first 6 lines), inserts after "Created:" line
-- **Example**: Used by `UpdateCommand` to update "Last Edited:" dates for modified files
-
-### Service Registration (Program.cs)
-```csharp
-// Core services
-host.Services.AddSingleton<IFileSystem, FileSystem>();
-host.Services.AddSingleton<IInMemoryFileBuffer, InMemoryFileBuffer>();  // ← dry-run staging
-
-// Rollback infrastructure
-host.Services.AddSingleton<IDeletionRollbackStrategy, InMemoryDeletionRollbackStrategy>();
-host.Services.AddSingleton<IFileTransactionCoordinator, FileTransactionCoordinator>();
-host.Services.AddSingleton<IRollbackReporter, RollbackReporter>();
-
-// Metadata directory infrastructure
-host.Services.AddSingleton<IJournalTocStructureRepository, JournalTocStructureRepository>();
-host.Services.AddSingleton<IJournalValidator, JournalValidator>();
-
-host.Services.AddSingleton<ITemplateManager, TemplateManager>();
-host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
-host.Services.AddSingleton<INewJournalService, NewJournalService>();
-host.Services.AddSingleton<IInitJournalService, InitJournalService>();  // ← init command
-host.Services.AddSingleton<IEntryFormatterService, EntryFormatterService>();
-host.Services.AddSingleton<IHashService, HashService>(); 
-host.Services.AddSingleton<IFileTracking, FileTracking>();
-host.Services.AddSingleton<ITableOfContentsService, TableOfContentsService>();
-host.Services.AddSingleton<ITableOfContentsGenerator, TableOfContentsGenerator>();
-host.Services.AddSingleton<ITableOfContentsMarkdownParser, TableOfContentsMarkdownParser>();
-host.Services.AddSingleton<IJournalConfigGenerator, JournalConfigGenerator>();
-host.Services.AddSingleton<IJournalUpdateService, JournalUpdateService>();
-host.Services.AddSingleton<IJournalFileUpdateService, JournalFileUpdateService>();
-host.Services.AddSingleton<IMarkdownLinkRewriter, MarkdownLinkRewriter>();
-host.Services.AddSingleton<IRemoveEntryService, RemoveEntryService>();  // ← remove command
-host.Services.AddSingleton<IDryRunRenderer, DryRunRenderer>();          // ← dry-run rendering
-host.Services.AddSingleton<IAddTocService, AddTocService>();            // ← add toc command
-
-// Commands
-host.Services.AddSingleton<NewCommand>();
-host.Services.AddSingleton<InitCommand>();   // ← init command
-host.Services.AddSingleton<AddEntry>();
-host.Services.AddSingleton<AddJournalrc>();
-host.Services.AddSingleton<AddTableOfContents>();
-host.Services.AddSingleton<AddFileTracking>();
-host.Services.AddSingleton<UpdateCommand>();
-host.Services.AddSingleton<UpdateEntryCommand>();
-host.Services.AddSingleton<RemoveEntryCommand>();  // ← remove command
-```
-
-### Key Architectural Patterns
-
-**Natural Sorting Algorithm**
-Implemented in `JournalConfiguration.cs` via `NaturalStringComparer`:
-- Treats consecutive digits as numbers for proper ordering
-- Example: `file_1, file_5, file_10, file_100` (not `file_1, file_10, file_100, file_5`)
-- Used for both topic names and entry filenames
-
-**Parent-Child Detection**
-Implemented in `TableOfContentsGenerator.cs`:
-- Detects when a topic has an entry with matching name AND subtopics
-- Merges entry link into topic heading: `## [Topic](topic.md)` with subtopics listed below
-- Uses file path prefix matching to determine parent-child relationships
-- Example: `abc.md` is parent of `abc-test_2-test_file_1.md`
-
-**Ignore Files Pattern**
-- Files in `.journalrc` `ignoreFiles` array are excluded from TOC
-- Still tracked in file system and configuration
-- Useful for draft entries or non-public content
-
-**IMarkdownLinkRewriter Pattern**
-- **Purpose**: Stateless infrastructure service for finding and rewriting inline markdown links `[text](file.md)` across a journal directory
-- **Benefits**: Reusable across future rename operations (e.g. `update entry --name`); keeps service orchestrators free of file-enumeration and regex details
-- **Features**: Pure string `RewriteLinks`, read-only `FindFilesWithLinkTo`, bulk `ReplaceLinksInDirectory` that scans/rewrites/persists in one call; `RegexOptions.Compiled` for multi-file performance
-- **Scope**: Inline links only — reference-style links (`[text][ref]`) are out of scope for this iteration
-- **Example**: Used by `JournalUpdateService.RenameToc` to rewrite all references to the old TOC filename; also used by `BuildDryRunReport` (via `FindFilesWithLinkTo`) to list affected backlink files in the rename-toc dry-run preview
-
-**IInMemoryFileBuffer Pattern**
-- **Purpose**: In-memory file staging and snapshot service; two use cases: (1) stage generated content for preview/diff without disk I/O (dry-run), (2) snapshot-before-write for transactional rollback (future)
-- **Benefits**: Separates content generation from disk I/O; enables testable dry-run logic; lays groundwork for rollback semantics
-- **Registered as**: singleton — keys are case-insensitive absolute paths; call `Clear()` between operations if reused
-- **Example**: `JournalUpdateService.BuildDryRunReport` calls `ITableOfContentsService.PreviewTableOfContents` which uses the buffer internally to stage the generated TOC string
-
-**IDryRunRenderer Pattern**
-- **Purpose**: Renders an `UpdateDryRunReport` to the terminal using Spectre.Console — no file writes
-- **Benefits**: Keeps rendering concerns out of `UpdateCommand` and `JournalUpdateService`; independently testable
-- **Features**: Color-coded tables for tracking (✚/~/✖), config (will add/remove), TOC diff (LCS panel), rename-toc preview with backlink list; each section rendered only when non-null and has changes
-- **Example**: `UpdateCommand.ExecuteDryRun` calls `_dryRunRenderer.Render(report, journalPath)` after building the report
-
-## 🏗️ Service Architecture Patterns
-
-### Current Service Implementations
-
-**IJournalInitializer Pattern**
-- **Purpose**: Orchestrates complex journal creation process
-- **Benefits**: Commands stay focused on CLI concerns, business logic is testable
-- **Example**: `NewCommand` delegates all initialization to `IJournalInitializer`
-
-**ITemplateManager Pattern**  
-- **Purpose**: Handles template processing and content generation
-- **Benefits**: Extensible template system, parameterized content generation
-- **Example**: Generates table of contents, intro, and journal entry templates
-
-**IJournalConfiguration Pattern**
-- **Purpose**: Manages `.journalrc` configuration files
-- **Benefits**: Centralized config management, supports complex configuration objects
-- **Example**: Creates and manages journal metadata and settings
-
-**IJournalConfigGenerator Pattern**
-- **Purpose**: Generates `.journalrc` configuration from existing journal sources
-- **Benefits**: Enables retroactive config creation, supports multiple generation strategies
-- **Features**: TOC parsing, tracking index parsing, directory scanning fallback
-- **Example**: `AddJournalrc` uses priority-based generation (TOC → tracking → directory)
-
-**ITableOfContentsMarkdownParser Pattern**
-- **Purpose**: Parses markdown TOC files to extract entry structure
-- **Benefits**: Converts human-readable TOC into structured configuration data
-- **Features**: Handles nested topics, preserves hierarchy, extracts file links
-- **Example**: Used by `IJournalConfigGenerator` to build config from existing TOC
-
-### Testing Service Dependencies
-
-**Integration Testing with Real Services:**
-```csharp
-[Fact]
-public void JournalInitializer_Should_Create_Complete_Journal()
-{
-    // Uses real implementations for integration testing
-    var fileSystem = new TestFileSystem();
-    var templateManager = new TemplateManager();
-    var configuration = new TestJournalConfiguration();
-    var initializer = new JournalInitializer(fileSystem, templateManager, configuration);
-    
-    initializer.Initialize("/test/journal", "TestJournal");
-    
-    // Verify complete journal structure was created
-    Assert.True(fileSystem.DirectoryExists("/test/journal"));
-    Assert.Contains("TestJournal", configuration.CreatedConfigurations.Values.First().JournalName);
-}
-```
-
-**Unit Testing with Mocked Dependencies:**
-```csharp
-[Fact] 
-public void NewCommand_Should_Handle_InitializationFailure()
-{
-    // Mock initializer to throw exception
-    var mockInitializer = new TestJournalInitializer();
-    mockInitializer.ShouldThrow = true;
-    mockInitializer.ExceptionToThrow = new InvalidOperationException("Test error");
-    
-    var command = new NewCommand(_console, _fileSystem, mockInitializer);
-    var result = command.Execute(context, settings);
-    
-    Assert.Equal(1, result);
-    Assert.Contains("Test error", _console.Output);
-}
-```
-
-### Service Design Guidelines
-
-1. **Single Responsibility**: Each service should have one clear purpose
-2. **Interface Segregation**: Keep interfaces focused and minimal  
-3. **Dependency Inversion**: Depend on abstractions, not concretions
-4. **Immutable After Construction**: Services should be configured via constructor injection
-5. **Async-Ready**: Design interfaces to support future async operations
-
-## 🤝 Contribution Guidelines
-
-### Getting Started
-
-1. **Fork** the repository and create a feature branch from `main`
-2. **Follow** the [Development Workflow](#️-development-workflow) to set up your environment
-3. **Write tests** — every new command and service requires a corresponding test file mirroring the source path in `markdown-journal-cli.Tests/`
-4. **Run the full test suite** before opening a pull request: `dotnet test`
-5. **Open a pull request** against `main` with a clear description of what changed and why
-
-### Pull Request Expectations
-
-- All existing tests must pass (`dotnet test`)
-- New code must have test coverage (unit tests at minimum; integration tests for commands)
-- Commands must stay thin — no business logic; delegate to services
-- All user-facing strings must use `IAnsiConsole.MarkupLine()` — no `Console.WriteLine()`
-- User input rendered in markup must be escaped with `.EscapeMarkup()`
-- New services require an interface and singleton DI registration
-
-### Reporting Issues
-
-Use [GitHub Issues](https://github.com/CollinRobison/markdown-journal-cli/issues) to report bugs or request features. Include:
-- Steps to reproduce
-- Expected vs. actual behaviour
-- Your OS and .NET SDK version (`dotnet --version`)
-
-### Current Status
-- ✅ Basic project structure established
-- ✅ Core `new` command implemented
-- ✅ **`init` command** — adopt an existing markdown directory as a journal (creates `.journalrc`, TOC, and tracking index; no template files)
-- ✅ `add` command branch with entry, config, toc, and tracking subcommands
-- ✅ `update journal` command for journal synchronization (config, dates, TOC)
-- ✅ `update entry` command for renaming, relocating, and ignoring entries
-- ✅ `--no-backlinks` flag on `update entry` — backlink rewriting on rename enabled by default; opt-out via `--nb|--no-backlinks`
-- ✅ `--rename-toc` flag on `update journal` — rename TOC file, update `.journalrc`, rewrite all link references
-- ✅ `--dry-run|--check` flag on `update journal` — preview all pending changes without any writes; color-coded Spectre.Console tables for tracking, config, TOC diff, and rename-toc preview; scoped by the same flags as the live path (`--tracking`, `--config`, `--toc`, `--rename-toc`)
-- ✅ **`remove entry` command** — delete an entry file, remove config/tracking records, regenerate TOC; `--clean-refs` strips dead inline links across the journal; `rm` alias supported
-- ✅ `IMarkdownLinkRewriter` infrastructure service — reusable inline-link rewriting and link stripping
-- ✅ Exception handling architecture
-- ✅ Testing framework setup (1130 tests passing)
-- ✅ Configuration system with generation from multiple sources
-- ✅ **Metadata directory layout** — `.mdjournal/` contains `.journalindex` (tracking) and `.journaltoc` (TOC structure); `.journalrc` retains only user settings. `IJournalTocStructureRepository` handles `.journaltoc` JSON read/write; `IJournalValidator` enforces the layout before writes; `new` and `init` both create the metadata directory on first run.
-- ✅ **`add toc` dual-artifact** — creates `.mdjournal/.journaltoc` and/or the markdown TOC file; `--structure-only` and `--md-only` flags allow targeting each artifact independently
-- ✅ TOC markdown parser for config generation
-- ✅ File change detection with SHA256 hashing
-- ✅ Automatic metadata date updates
-- ✅ Multi-layer TOC self-reference prevention
-- ✅ **Rollback system** — `IFileTransactionScope` / `IFileTransactionCoordinator` provide ambient execute-then-compensate transactions for all write commands; `IRollbackReporter` renders rollback summaries; `JournalCommand<TSettings>` maps `RollbackCompletedException` to exit codes 2/3
-- ⏳ Additional commands (list, open, search, rename)
-- ⏳ Documentation completion
-
-
-### Rollback Infrastructure (`Infrastructure/Transactions/`)
-
-All write commands participate in a file transaction that can be rolled back if any step fails mid-operation.
-
-**Usage pattern in services:**
-```csharp
-using var tx = _coordinator.BeginOrJoin();
-try
-{
-    tx.Track(fileA);          // snapshot before write
-    WriteFileA(...);
-
-    tx.TrackNew(fileB);       // record new file before create
-    CreateFileB(...);
-
-    tx.TrackDelete(fileC);    // snapshot before delete
-    DeleteFileC(...);
-
-    tx.Commit();
-}
-catch (Exception ex)
-{
-    _reporter.ReportRollbackStarting("update journal", ex);
-    var result = tx.Rollback();
-    _reporter.ReportRollbackComplete(result, journalPath);
-    throw new RollbackCompletedException(result, ex);
-}
-```
-
-**Key types:**
-- `IFileTransactionCoordinator` — singleton factory; `Begin()` creates a root scope; `BeginOrJoin()` joins an existing ambient scope or creates a new one; thread-local ambient scope
-- `IFileTransactionScope` — tracks write operations (`Track`, `TrackNew`, `TrackRename`, `TrackDelete`, `TrackNewDirectory`); `Commit()` finalizes; `Rollback()` reverses in reverse-registration order; auto-rolls back on `Dispose()` if not committed
-- `JoinedTransactionScope` — returned by `BeginOrJoin()` when a scope already exists; delegates to the root; `Commit()` is a local no-op (only root commit finalizes)
-- `IDeletionRollbackStrategy` / `InMemoryDeletionRollbackStrategy` — captures file content before `TrackDelete`; restores on rollback
-- `IRollbackReporter` / `RollbackReporter` — prints Spectre.Console rollback summary table to the terminal
-- `RollbackCompletedException` — thrown after rollback; carries `RollbackResult` (restored + failed entries); caught by `JournalCommand<TSettings>` and mapped to exit codes 2/3
-- `NoOpFileTransactionCoordinator`, `NoOpFileTransactionScope`, `NoOpRollbackReporter` — no-op implementations (static `Instance` singleton) for tests and dry-run contexts
-
-**Testing:**
-Inject `FaultInjectingFileSystem` (in `markdown-journal-cli.Tests/Infrastructure/FileSystem/`) to trigger failures at specific write steps and assert all prior writes were reversed. Use `ServiceRollbackTestBase` for shared setup across service rollback tests.
+- Publish release notes in `CHANGELOG.md`.
+- Keep docs links and command reference in sync before release.
+- Run full test suite before pushing a release tag.
