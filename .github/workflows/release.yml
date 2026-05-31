@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Test
+        run: dotnet test --no-restore --configuration Release --verbosity minimal
+
+  build-binaries:
+    name: Build ${{ matrix.rid }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Set version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish ${{ matrix.rid }}
+        run: |
+          dotnet publish markdown-journal-cli \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=true \
+            -p:Version=${{ env.VERSION }} \
+            -o ./publish/${{ matrix.rid }}
+
+      - name: Zip ${{ matrix.rid }}
+        run: |
+          cd ./publish/${{ matrix.rid }}
+          zip -r ../../mdjournal-${{ env.VERSION }}-${{ matrix.rid }}.zip .
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mdjournal-${{ env.VERSION }}-${{ matrix.rid }}.zip
+
+  pack-nuget:
+    name: Pack & Upload NuGet
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Set version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Pack NuGet
+        run: |
+          dotnet pack markdown-journal-cli \
+            -c Release \
+            -p:Version=${{ env.VERSION }} \
+            -o ./nupkg
+
+      # To enable NuGet publish:
+      # 1. Add NUGET_API_KEY secret (Settings → Secrets → Actions)
+      # 2. Create the key at nuget.org → Account → API Keys, scoped to CollinRobison.mdjournal
+      # 3. Uncomment the step below
+      # - name: Publish to NuGet.org
+      #   run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Upload NuGet package to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./nupkg/*.nupkg

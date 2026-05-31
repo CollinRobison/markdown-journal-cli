@@ -9,11 +9,12 @@
     <!-- Tool packaging -->
     <PackAsTool>true</PackAsTool>
     <PackageId>CollinRobison.mdjournal</PackageId>
+    <ToolCommandName>mdjournal</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
 
     <!-- NuGet identity -->
     <PackageId>CollinRobison.mdjournal</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.0</Version> <!-- x-release-please-version -->
     <Authors>Collin Robison</Authors>
     <Description>CLI tool for creating and managing markdown journals.</Description>
 
