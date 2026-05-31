@@ -80,7 +80,7 @@ jobs:
           zip -r ../../mdjournal-${{ env.VERSION }}-${{ matrix.rid }}.zip .
 
       - name: Upload binary to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: mdjournal-${{ env.VERSION }}-${{ matrix.rid }}.zip
 
@@ -127,6 +127,6 @@ jobs:
       #   run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Upload NuGet package to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ./nupkg/*.nupkg
