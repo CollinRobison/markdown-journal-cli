@@ -9,6 +9,7 @@ Thanks for your interest in contributing to `markdown-journal-cli`.
 - [Development setup](#development-setup)
 - [Contribution workflow](#contribution-workflow)
 - [Testing expectations](#testing-expectations)
+- [Commit message convention](#commit-message-convention)
 - [Pull request checklist](#pull-request-checklist)
 - [Security reporting](#security-reporting)
 

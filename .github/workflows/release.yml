@@ -119,12 +119,8 @@ jobs:
             -p:Version=${{ env.VERSION }} \
             -o ./nupkg
 
-      # To enable NuGet publish:
-      # 1. Add NUGET_API_KEY secret (Settings → Secrets → Actions)
-      # 2. Create the key at nuget.org → Account → API Keys, scoped to CollinRobison.mdjournal
-      # 3. Uncomment the step below
-      # - name: Publish to NuGet.org
-      #   run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: Publish to NuGet.org
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Upload NuGet package to release
         uses: softprops/action-gh-release@v2
