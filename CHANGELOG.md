@@ -5,21 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Maintainer Notes
-
-- Add entries under `Unreleased` as changes merge.
-- Move `Unreleased` items into a new version section at release time.
-- Use ISO date format: `YYYY-MM-DD`.
-- Keep entries user-focused and grouped by type.
-
-Suggested categories:
-
-- `Added` for new features
-- `Changed` for changes in existing functionality
-- `Deprecated` for soon-to-be removed features
-- `Removed` for now removed features
-- `Fixed` for bug fixes
-- `Security` for vulnerability-related updates
+This changelog is updated automatically by Release Please.
 
 ## [0.1.2](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.1...v0.1.2) (2026-06-06)
 
