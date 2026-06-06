@@ -21,3 +21,139 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # Packaging and publishing live in this same workflow by design.
+  # GitHub may not trigger other workflows from releases created by automation,
+  # so we gate downstream jobs on release_created to keep release behavior reliable.
+  test:
+    name: Test
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Test
+        run: dotnet test --no-restore --configuration Release --verbosity minimal
+
+  build-binaries:
+    name: Build ${{ matrix.rid }}
+    needs: [release-please, test]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64]
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Set version from tag
+        id: version
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          echo "value=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish ${{ matrix.rid }}
+        run: |
+          dotnet publish markdown-journal-cli \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=true \
+            -p:Version=${{ steps.version.outputs.value }} \
+            -o ./publish/${{ matrix.rid }}
+
+      - name: Zip ${{ matrix.rid }}
+        run: |
+          cd ./publish/${{ matrix.rid }}
+          zip -r ../../mdjournal-${{ steps.version.outputs.value }}-${{ matrix.rid }}.zip .
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v3
+        with:
+          # Explicit tag avoids ambiguity and always targets the release just created.
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: mdjournal-${{ steps.version.outputs.value }}-${{ matrix.rid }}.zip
+
+  pack-nuget:
+    name: Pack & Upload NuGet
+    needs: [release-please, test]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Set version from tag
+        id: version
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          echo "value=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Pack NuGet
+        run: |
+          dotnet pack markdown-journal-cli \
+            -c Release \
+            -p:Version=${{ steps.version.outputs.value }} \
+            -o ./nupkg
+
+      - name: Publish to NuGet.org
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Upload NuGet package to release
+        uses: softprops/action-gh-release@v3
+        with:
+          # Explicit tag avoids ambiguity and always targets the release just created.
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: ./nupkg/*.nupkg
