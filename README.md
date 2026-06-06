@@ -37,8 +37,8 @@ Pick the right asset:
 ```bash
 # Replace the filename with the one you downloaded
 unzip mdjournal-<version>-osx-arm64.zip
-chmod +x mdjournal
-sudo mv mdjournal /usr/local/bin/
+chmod +x markdown-journal-cli
+sudo mv markdown-journal-cli /usr/local/bin/mdjournal
 mdjournal --version
 ```
 
@@ -68,8 +68,8 @@ Pick the right asset:
 ```bash
 # Replace the filename with the one you downloaded
 unzip mdjournal-<version>-linux-x64.zip
-chmod +x mdjournal
-sudo mv mdjournal /usr/local/bin/
+chmod +x markdown-journal-cli
+sudo mv markdown-journal-cli /usr/local/bin/mdjournal
 mdjournal --version
 ```
 
@@ -86,10 +86,14 @@ sudo rm /usr/local/bin/mdjournal
 <details>
 <summary><strong>Windows</strong></summary>
 
-Download `mdjournal-<version>-win-x64.zip`, then extract it.
+Pick the right asset:
+- **x64 (most PCs):** `mdjournal-<version>-win-x64.zip`
+- **ARM64:** `mdjournal-<version>-win-arm64.zip`
 
-To add `mdjournal.exe` to your PATH:
-1. Move `mdjournal.exe` to a permanent folder, e.g. `C:\Tools\`.
+Download the asset you need, then extract it.
+
+To add `mdjournal` to your PATH:
+1. Rename `markdown-journal-cli.exe` to `mdjournal.exe`, then move it to a permanent folder, e.g. `C:\Tools\`.
 2. Open **Settings → System → About → Advanced system settings → Environment Variables**.
 3. Under **System variables**, select **Path** and click **Edit**.
 4. Click **New** and add your folder path (e.g. `C:\Tools`).
