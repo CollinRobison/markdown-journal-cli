@@ -296,9 +296,26 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
    and attached to the Release, and the NuGet package is published.
 
 **Version bump rules:**
-- `fix:` → patch bump (0.1.0 → 0.1.1)
-- `feat:` → minor bump (0.1.0 → 0.2.0)
-- `feat!:` or `BREAKING CHANGE:` footer → major bump (0.1.0 → 1.0.0)
+- `docs:` is an allowed PR title prefix and is treated as a patch release.
+
+### PR Title Prefix Reference
+
+Use this format for PR titles:
+
+`<type>(optional-scope): <description>`
+
+| Prefix | Effect on release version | Notes |
+|---|---|---|
+| `feat:` | Minor bump | Standard feature work. |
+| `feat!:` | Major bump | Breaking change via `!`. |
+| `fix:` | Patch bump | Bug fix. |
+| `perf:` | Patch bump | Performance-only improvement. |
+| `refactor:` | Patch bump | Internal refactor without feature semantics. |
+| `docs:` | Patch bump | Documentation-only updates. |
+| `test:` | No bump by itself | Test-only work. |
+| `chore:` | No bump by itself | Maintenance/housekeeping. |
+| `ci:` | No bump by itself | CI workflow changes. |
+| `BREAKING CHANGE:` footer | Major bump | Use in commit/PR body when applicable. |
 
 ### Testing packaging locally
 
