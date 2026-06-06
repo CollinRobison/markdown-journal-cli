@@ -9,6 +9,13 @@ This changelog is updated automatically by Release Please.
 <<<<<<< HEAD
 =======
 
+## [0.1.4](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.3...v0.1.4) (2026-06-06)
+
+
+### Documentation
+
+* install doc fix for binary installs in the readme ([#82](https://github.com/CollinRobison/markdown-journal-cli/issues/82)) ([3bea818](https://github.com/CollinRobison/markdown-journal-cli/commit/3bea81839210eac55845e73435543d82e8ac4a80))
+
 ## [0.1.3](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.2...v0.1.3) (2026-06-06)
 
 
