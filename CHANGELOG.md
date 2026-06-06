@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 This changelog is updated automatically by Release Please.
 
+## [0.1.2](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.1...v0.1.2) (2026-06-06)
+
+
+### Bug Fixes
+
+* release pipelines and test the release process ([#77](https://github.com/CollinRobison/markdown-journal-cli/issues/77)) ([8c48943](https://github.com/CollinRobison/markdown-journal-cli/commit/8c489438b9133d281bc10108848a0697af73702c))
+
 ## [0.1.1](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.0...v0.1.1) (2026-06-06)
 
 
