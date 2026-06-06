@@ -8,12 +8,11 @@
 
     <!-- Tool packaging -->
     <PackAsTool>true</PackAsTool>
-    <PackageId>CollinRobison.mdjournal</PackageId>
     <ToolCommandName>mdjournal</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
 
     <!-- NuGet identity -->
-    <PackageId>CollinRobison.mdjournal</PackageId>
+    <PackageId>mdjournal</PackageId>
     <Version>0.1.0</Version> <!-- x-release-please-version -->
     <Authors>Collin Robison</Authors>
     <Description>CLI tool for creating and managing markdown journals.</Description>
@@ -26,7 +25,7 @@
     <RepositoryUrl>https://github.com/CollinRobison/markdown-journal-cli</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/CollinRobison/markdown-journal-cli</PackageProjectUrl>
-    <PackageTags>cli tool utility markdown journal</PackageTags>
+    <PackageTags>cli tool utility md markdown journal</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
   </PropertyGroup>

@@ -1,10 +1,16 @@
 {
     "cSpell.words": [
+        "Autobuild",
+        "coveragereport",
+        "danielpalme",
         "entrytracking",
         "journalrc",
         "journaltoc",
         "mdjournal",
-        "Shouldly"
+        "reporttypes",
+        "Shouldly",
+        "softprops",
+        "targetdir"
     ],
     "chat.promptFilesRecommendations": {
         "speckit.constitution": true,

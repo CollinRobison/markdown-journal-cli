@@ -306,15 +306,15 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 ```bash
 dotnet pack markdown-journal-cli --configuration Release
-dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
+dotnet tool install -g --add-source ./markdown-journal-cli/nupkg mdjournal
 mdjournal --version
 ```
 
 To reinstall a rebuilt version:
 
 ```bash
-dotnet tool uninstall -g CollinRobison.mdjournal
-dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
+dotnet tool uninstall -g mdjournal
+dotnet tool install -g --add-source ./markdown-journal-cli/nupkg mdjournal
 ```
 
 **Self-contained binary** (validates single-file publish and trim behaviour before a real release):

@@ -3,7 +3,7 @@
 A CLI for creating and maintaining markdown journals — with file-change tracking,
 automatic table-of-contents generation, and safe transactional updates.
 
-[![NuGet](https://img.shields.io/nuget/v/CollinRobison.mdjournal?label=NuGet)](https://www.nuget.org/packages/CollinRobison.mdjournal) [![CI](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![NuGet](https://img.shields.io/nuget/v/mdjournal?label=NuGet)](https://www.nuget.org/packages/mdjournal) [![CI](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/CollinRobison/markdown-journal-cli/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Quick Start
 
@@ -110,20 +110,20 @@ If a release does not yet include your platform asset, see the install options b
 ### Install via dotnet tool
 
 ```bash
-dotnet tool install -g CollinRobison.mdjournal
+dotnet tool install -g mdjournal
 mdjournal --version
 ```
 
 **Update:**
 
 ```bash
-dotnet tool update -g CollinRobison.mdjournal
+dotnet tool update -g mdjournal
 ```
 
 **Remove:**
 
 ```bash
-dotnet tool uninstall -g CollinRobison.mdjournal
+dotnet tool uninstall -g mdjournal
 ```
 
 ### Build from source
@@ -134,7 +134,7 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 git clone https://github.com/CollinRobison/markdown-journal-cli.git
 cd markdown-journal-cli
 dotnet pack markdown-journal-cli --configuration Release
-dotnet tool install -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
+dotnet tool install -g --add-source ./markdown-journal-cli/nupkg mdjournal
 mdjournal --version
 ```
 
@@ -143,13 +143,13 @@ mdjournal --version
 ```bash
 git pull
 dotnet pack markdown-journal-cli --configuration Release
-dotnet tool update -g --add-source ./markdown-journal-cli/nupkg CollinRobison.mdjournal
+dotnet tool update -g --add-source ./markdown-journal-cli/nupkg mdjournal
 ```
 
 **Remove:**
 
 ```bash
-dotnet tool uninstall -g CollinRobison.mdjournal
+dotnet tool uninstall -g mdjournal
 ```
 
 ## How It Works
