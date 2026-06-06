@@ -13,7 +13,7 @@
 
     <!-- NuGet identity -->
     <PackageId>mdjournal</PackageId>
-    <Version>0.1.1</Version> <!-- x-release-please-version -->
+    <Version>0.1.2</Version> <!-- x-release-please-version -->
     <Authors>Collin Robison</Authors>
     <Description>CLI tool for creating and managing markdown journals.</Description>
 
