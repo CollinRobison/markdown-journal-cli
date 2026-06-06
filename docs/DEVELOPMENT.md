@@ -320,7 +320,7 @@ Use this format for PR titles:
 ### Testing packaging locally
 
 **NuGet tool** (validates the tool installs and `--version` reports correctly):
-
+dsad
 ```bash
 dotnet pack markdown-journal-cli --configuration Release
 dotnet tool install -g --add-source ./markdown-journal-cli/nupkg mdjournal
