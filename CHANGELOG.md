@@ -21,6 +21,13 @@ Suggested categories:
 - `Fixed` for bug fixes
 - `Security` for vulnerability-related updates
 
+## [0.1.1](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.0...v0.1.1) (2026-06-06)
+
+
+### Bug Fixes
+
+* remove docs and release fixes ([#76](https://github.com/CollinRobison/markdown-journal-cli/issues/76)) ([6d726b4](https://github.com/CollinRobison/markdown-journal-cli/commit/6d726b49a1139f22675ab887d191c696cabf5cb7))
+
 ## [0.1.0] - 2026-05-23
 
 ### Added
