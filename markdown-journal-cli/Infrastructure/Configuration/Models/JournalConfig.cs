@@ -8,14 +8,14 @@ public class JournalConfig
     public string JournalName { get; set; } = "MyJournal";
 
     /// <summary>
-    /// Handles the configuration of the Journal's table of contents. 
+    /// Handles the configuration of the Journal's table of contents.
     /// </summary>
     [JsonPropertyName("tableOfContents")]
     public required TableOfContents TableOfContents { get; set; }
 
     /// <summary>
-    /// Handles the configuration of the Journal's tracking index. 
+    /// Handles the configuration of the Journal's tracking index.
     /// </summary>
     [JsonPropertyName("trackingIndex")]
-    public required TrackingIndex TrackingIndex {get; set;}
+    public required TrackingIndex TrackingIndex { get; set; }
 }
