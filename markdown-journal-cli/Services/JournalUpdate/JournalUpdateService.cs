@@ -94,7 +94,11 @@ public sealed class JournalUpdateService(
                 // Apply the effective config drift to an in-memory clone so the TOC
                 // preview reflects what the TOC would look like after config sync is applied.
                 var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalPath));
-                var (projectedConfig, projectedTocStructure) = ProjectConfig(config, tocStructure, effectiveConfigChanges);
+                var (projectedConfig, projectedTocStructure) = ProjectConfig(
+                    config,
+                    tocStructure,
+                    effectiveConfigChanges
+                );
                 previewContent = _tableOfContentsService.PreviewTableOfContents(
                     journalPath,
                     projectedConfig,
@@ -446,7 +450,10 @@ public sealed class JournalUpdateService(
                 if (trackingOnly)
                 {
                     _console.MarkupLine($"[dim]  Re-tracked: {relativePath.EscapeMarkup()}[/]");
-                    _logger.LogDebug("Re-tracked modified file (no date write): {RelativePath}", relativePath);
+                    _logger.LogDebug(
+                        "Re-tracked modified file (no date write): {RelativePath}",
+                        relativePath
+                    );
                 }
                 else
                 {

@@ -1,9 +1,11 @@
+using markdown_journal_cli.Commands;
 using markdown_journal_cli.Commands.Init;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.DependencyInjection;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
+using markdown_journal_cli.Infrastructure.Validation;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,8 +16,6 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;
 using Xunit;
-using markdown_journal_cli.Commands;
-using markdown_journal_cli.Infrastructure.Validation;
 
 namespace markdown_journal_cli.Tests.Commands.Init;
 
@@ -29,7 +29,8 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
     // JournalPath already exists (created by base constructor) — init command initializes it
     private readonly CommandAppTester _app;
 
-    public InitCommandIntegrationTests() : base("InitTest")
+    public InitCommandIntegrationTests()
+        : base("InitTest")
     {
         var hashService = new HashService();
         var fileTracking = new FileTracking(FileSystem, JournalSettings, hashService);
@@ -62,7 +63,10 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
         var buffer = new InMemoryFileBuffer(FileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
         var coordinator = new FileTransactionCoordinator(
-            FileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance
+            FileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
         );
         var console = new TestConsole();
         var rollbackReporter = new RollbackReporter(console, NullLogger<RollbackReporter>.Instance);
@@ -97,7 +101,8 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
         _app.Configure(config =>
         {
             config.SetApplicationName("mdjournal");
-            config.AddCommand<InitCommand>("init")
+            config
+                .AddCommand<InitCommand>("init")
                 .WithDescription("Initialises an existing directory as a managed journal.");
         });
     }
@@ -117,8 +122,10 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
         // Metadata directory and required files should exist under .mdjournal/
         var metadataDir = Path.Combine(JournalPath, JournalSettings.Value.MetadataDirName);
         Directory.Exists(metadataDir).ShouldBeTrue();
-        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TrackingFileName)).ShouldBeTrue();
-        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TocStructureFileName)).ShouldBeTrue();
+        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TrackingFileName))
+            .ShouldBeTrue();
+        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TocStructureFileName))
+            .ShouldBeTrue();
         File.Exists(Path.Combine(JournalPath, "1a-TableOfContents.md")).ShouldBeTrue();
     }
 
@@ -160,7 +167,9 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
             """{"journalName":"IncompleteJournal","tableOfContents":{"file":"1a-TableOfContents.md","extensions":[".md"],"ignoreFiles":[]}}"""
         );
         // Create .mdjournal/ directory but omit .journalindex and .journaltoc
-        Directory.CreateDirectory(Path.Combine(incompleteJournalDir, JournalSettings.Value.MetadataDirName));
+        Directory.CreateDirectory(
+            Path.Combine(incompleteJournalDir, JournalSettings.Value.MetadataDirName)
+        );
 
         // Set up a minimal command app using a stub command wired with the validator
         var validator = new JournalValidator(FileSystem, JournalSettings);

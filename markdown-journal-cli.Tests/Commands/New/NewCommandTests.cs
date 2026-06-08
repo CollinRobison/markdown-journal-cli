@@ -39,32 +39,37 @@ public class NewCommandTests : CommandTestBase
 
     private CommandAppTester BuildNewApp()
     {
-        var settings = Options.Create(new JournalSettings
-        {
-            AppName = "md-journal",
-            JournalConfigFileName = ".journalrc",
-            DefaultJournalName = "MyJournal",
-            TableOfContentsFileName = "1a-TableOfContents",
-            TableOfContentsTitle = "Table of Contents",
-            IntroductionFileName = "1b-Intro",
-            IntroductionTitle = "Introduction",
-            JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
-            JournalEntryTemplateTitle = "Journal Entry Template",
-            AllJournalsFileName = "1h-All_My_Journals",
-            AllJournalsTitle = "All My Journals",
-        });
+        var settings = Options.Create(
+            new JournalSettings
+            {
+                AppName = "md-journal",
+                JournalConfigFileName = ".journalrc",
+                DefaultJournalName = "MyJournal",
+                TableOfContentsFileName = "1a-TableOfContents",
+                TableOfContentsTitle = "Table of Contents",
+                IntroductionFileName = "1b-Intro",
+                IntroductionTitle = "Introduction",
+                JournalEntryTemplateFileName = "1c-Journal_Entry_Template",
+                JournalEntryTemplateTitle = "Journal Entry Template",
+                AllJournalsFileName = "1h-All_My_Journals",
+                AllJournalsTitle = "All My Journals",
+            }
+        );
         return BuildApp(
             config =>
             {
                 config.SetApplicationName("md-journal");
-                config.AddCommand<NewCommand>("new").WithDescription("Creates a new markdown journal.");
+                config
+                    .AddCommand<NewCommand>("new")
+                    .WithDescription("Creates a new markdown journal.");
             },
             services =>
             {
                 services.AddSingleton<INewJournalService>(_journalInitializer);
                 services.AddSingleton<NewCommand>();
                 services.AddSingleton(settings);
-            });
+            }
+        );
     }
 
     [Fact]
@@ -129,7 +134,9 @@ public class NewCommandTests : CommandTestBase
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain(journalName);
         result.Output.ShouldContain(customPath);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -170,7 +177,9 @@ public class NewCommandTests : CommandTestBase
         result.ExitCode.ShouldBe(0);
         // Verify the service was called with the expected journal directory
         var journalPath = Path.Combine(".", journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == journalPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == journalPath
+        );
     }
 
     [Fact]
@@ -217,7 +226,9 @@ public class NewCommandTests : CommandTestBase
 
         // Then
         result.ExitCode.ShouldBe(0);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Theory]
@@ -233,7 +244,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(".", validName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Theory]
@@ -298,7 +311,11 @@ public class NewCommandTests : CommandTestBase
         services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
         services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
         services.AddSingleton<ILogger<NewJournalService>>(NullLogger<NewJournalService>.Instance);
-        services.AddSingleton<IJournalTocStructureRepository>(markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object);
+        services.AddSingleton<IJournalTocStructureRepository>(
+            markdown_journal_cli
+                .Tests.Infrastructure.MockFactory.CreateTocStructureRepository()
+                .Object
+        );
         services.AddSingleton<INewJournalService, NewJournalService>();
         services.AddSingleton<NewCommand>();
 
@@ -334,7 +351,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(".", journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -350,7 +369,9 @@ public class NewCommandTests : CommandTestBase
         result.ExitCode.ShouldBe(0);
         // Verify the service was called with the correct journal directory
         var journalPath = Path.Combine(".", journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == journalPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == journalPath
+        );
     }
 
     [Fact]
@@ -410,7 +431,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(".", journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -426,7 +449,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(rootPath, journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -442,7 +467,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(relativePath, journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -474,7 +501,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(".", journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -504,7 +533,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(deepPath, journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -546,7 +577,11 @@ public class NewCommandTests : CommandTestBase
         services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
         services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
         services.AddSingleton<ILogger<NewJournalService>>(NullLogger<NewJournalService>.Instance);
-        services.AddSingleton<IJournalTocStructureRepository>(markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object);
+        services.AddSingleton<IJournalTocStructureRepository>(
+            markdown_journal_cli
+                .Tests.Infrastructure.MockFactory.CreateTocStructureRepository()
+                .Object
+        );
         services.AddSingleton<INewJournalService, NewJournalService>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -738,7 +773,9 @@ public class NewCommandTests : CommandTestBase
             NoOpFileTransactionCoordinator.Instance,
             NoOpRollbackReporter.Instance,
             NullLogger<NewJournalService>.Instance,
-            markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object
+            markdown_journal_cli
+                .Tests.Infrastructure.MockFactory.CreateTocStructureRepository()
+                .Object
         );
 
         var services = new ServiceCollection();
@@ -802,7 +839,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(customPath, journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     [Fact]
@@ -1136,7 +1175,11 @@ public class NewCommandTests : CommandTestBase
         services.AddSingleton<IFileTransactionCoordinator>(NoOpFileTransactionCoordinator.Instance);
         services.AddSingleton<IRollbackReporter>(NoOpRollbackReporter.Instance);
         services.AddSingleton<ILogger<NewJournalService>>(NullLogger<NewJournalService>.Instance);
-        services.AddSingleton<IJournalTocStructureRepository>(markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object);
+        services.AddSingleton<IJournalTocStructureRepository>(
+            markdown_journal_cli
+                .Tests.Infrastructure.MockFactory.CreateTocStructureRepository()
+                .Object
+        );
         services.AddSingleton<INewJournalService, NewJournalService>();
 
         // Use helper method to create TypeRegistrar with manual service registration
@@ -1178,7 +1221,9 @@ public class NewCommandTests : CommandTestBase
         // Then
         result.ExitCode.ShouldBe(0);
         var expectedPath = Path.Combine(pathValue ?? ".", journalName);
-        _journalInitializer.InitializedJournals.ShouldContain(x => x.journalDirectory == expectedPath);
+        _journalInitializer.InitializedJournals.ShouldContain(x =>
+            x.journalDirectory == expectedPath
+        );
     }
 
     /// <summary>
@@ -1337,7 +1382,9 @@ public class NewCommandTests : CommandTestBase
         registrar.RegisterInstance(typeof(IRollbackReporter), NoOpRollbackReporter.Instance);
         registrar.RegisterInstance(
             typeof(IJournalTocStructureRepository),
-            markdown_journal_cli.Tests.Infrastructure.MockFactory.CreateTocStructureRepository().Object
+            markdown_journal_cli
+                .Tests.Infrastructure.MockFactory.CreateTocStructureRepository()
+                .Object
         );
 
         foreach (var service in services)

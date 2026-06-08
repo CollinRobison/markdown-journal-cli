@@ -31,7 +31,9 @@ public class TableOfContentsGeneratorTests
             }
         );
         _mockTocStructureRepository = new Mock<IJournalTocStructureRepository>();
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>())).Returns(JournalTocStructure.Empty());
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(JournalTocStructure.Empty());
         _generator = new TableOfContentsService(
             _fileSystem,
             _journalConfiguration,
@@ -51,21 +53,24 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Template", File = "1c-Template.md" },
-                ],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new() { Name = "Introduction", File = "1b-Intro.md" },
+                        new() { Name = "Template", File = "1c-Template.md" },
+                    ],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -87,8 +92,7 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -96,12 +100,15 @@ public class TableOfContentsGeneratorTests
         var editedDate = new DateTime(2026, 1, 4);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [new() { Name = "Intro", File = "intro.md" }],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new() { Name = "Intro", File = "intro.md" }],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir, createdDate, editedDate);
 
         // Assert
@@ -121,33 +128,35 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "Bonsai",
-                            Entries =
-                            [
-                                new() { Name = "Care Guide", File = "Bonsai-Care-Guide.md" },
-                                new() { Name = "Species List", File = "Bonsai-Species.md" },
-                            ],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "Bonsai",
+                                Entries =
+                                [
+                                    new() { Name = "Care Guide", File = "Bonsai-Care-Guide.md" },
+                                    new() { Name = "Species List", File = "Bonsai-Species.md" },
+                                ],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -168,49 +177,51 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "Bonsai",
-                            Entries = [],
-                            Subtopics =
-                            [
-                                new Topic
-                                {
-                                    Name = "Articles",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "Discussion on Deciduous",
-                                            File = "Bonsai-Articles-Deciduous.md",
-                                        },
-                                        new()
-                                        {
-                                            Name = "Branching Fundamentals",
-                                            File = "Bonsai-Articles-Branching.md",
-                                        },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "Bonsai",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new Topic
+                                    {
+                                        Name = "Articles",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "Discussion on Deciduous",
+                                                File = "Bonsai-Articles-Deciduous.md",
+                                            },
+                                            new()
+                                            {
+                                                Name = "Branching Fundamentals",
+                                                File = "Bonsai-Articles-Branching.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -232,66 +243,68 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "Succulents",
-                            Entries = [],
-                            Subtopics =
-                            [
-                                new Topic
-                                {
-                                    Name = "Species",
-                                    Entries = [],
-                                    Subtopics =
-                                    [
-                                        new Topic
-                                        {
-                                            Name = "Aloe Vera",
-                                            Entries =
-                                            [
-                                                new()
-                                                {
-                                                    Name = "Care Guide",
-                                                    File = "Succulent-Aloe-Vera-Care-Guide.md",
-                                                },
-                                            ],
-                                            Subtopics = null,
-                                        },
-                                        new Topic
-                                        {
-                                            Name = "Crassula Ovata",
-                                            Entries = [],
-                                            Subtopics =
-                                            [
-                                                new Topic
-                                                {
-                                                    Name = "Ogre Ears",
-                                                    Entries = [],
-                                                    Subtopics = null,
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "Succulents",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new Topic
+                                    {
+                                        Name = "Species",
+                                        Entries = [],
+                                        Subtopics =
+                                        [
+                                            new Topic
+                                            {
+                                                Name = "Aloe Vera",
+                                                Entries =
+                                                [
+                                                    new()
+                                                    {
+                                                        Name = "Care Guide",
+                                                        File = "Succulent-Aloe-Vera-Care-Guide.md",
+                                                    },
+                                                ],
+                                                Subtopics = null,
+                                            },
+                                            new Topic
+                                            {
+                                                Name = "Crassula Ovata",
+                                                Entries = [],
+                                                Subtopics =
+                                                [
+                                                    new Topic
+                                                    {
+                                                        Name = "Ogre Ears",
+                                                        Entries = [],
+                                                        Subtopics = null,
+                                                    },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -315,29 +328,31 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "APIs",
-                            Entries = [new() { Name = "APIs", File = "APIs.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "APIs",
+                                Entries = [new() { Name = "APIs", File = "APIs.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -359,53 +374,60 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {},
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "AI",
+                                Entries =
+                                [
+                                    new() { Name = "AI Protocols", File = "AI-Protocols.md" },
+                                    new() { Name = "AI Resources", File = "AI-Resources.md" },
+                                ],
+                                Subtopics = null,
+                            },
+                            new Topic
+                            {
+                                Name = "Cloud Computing",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new Topic
+                                    {
+                                        Name = "Azure",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "AZ-900 Notes",
+                                                File = "Azure-AZ900.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries =
                     [
-                        new Topic
-                        {
-                            Name = "AI",
-                            Entries =
-                            [
-                                new() { Name = "AI Protocols", File = "AI-Protocols.md" },
-                                new() { Name = "AI Resources", File = "AI-Resources.md" },
-                            ],
-                            Subtopics = null,
-                        },
-                        new Topic
-                        {
-                            Name = "Cloud Computing",
-                            Entries = [],
-                            Subtopics =
-                            [
-                                new Topic
-                                {
-                                    Name = "Azure",
-                                    Entries =
-                                    [
-                                        new() { Name = "AZ-900 Notes", File = "Azure-AZ900.md" },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
+                        new() { Name = "Introduction", File = "1b-Intro.md" },
+                        new() { Name = "All My Journals", File = "1h-All-My-Journals.md" },
                     ],
-                },
-                RootEntries = [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "All My Journals", File = "1h-All-My-Journals.md" },
-                ],
-            });
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -468,29 +490,31 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "cloud computing",
-                            Entries = [new() { Name = "Azure Notes", File = "cloud-azure.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "cloud computing",
+                                Entries = [new() { Name = "Azure Notes", File = "cloud-azure.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -510,29 +534,34 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "ARTIFICIAL INTELLIGENCE",
-                            Entries = [new() { Name = "AI Resources", File = "ai-resources.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "ARTIFICIAL INTELLIGENCE",
+                                Entries =
+                                [
+                                    new() { Name = "AI Resources", File = "ai-resources.md" },
+                                ],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -552,29 +581,31 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "mAchIne LeArNinG",
-                            Entries = [new() { Name = "ML Guide", File = "ml-guide.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "mAchIne LeArNinG",
+                                Entries = [new() { Name = "ML Guide", File = "ml-guide.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -595,29 +626,31 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "web development",
-                            Entries = [new() { Name = "web development", File = "web-dev.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "web development",
+                                Entries = [new() { Name = "web development", File = "web-dev.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -637,37 +670,39 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "programming languages",
-                            Entries = [],
-                            Subtopics =
-                            [
-                                new Topic
-                                {
-                                    Name = "rust language",
-                                    Entries = [new() { Name = "Rust Guide", File = "rust.md" }],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "programming languages",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new Topic
+                                    {
+                                        Name = "rust language",
+                                        Entries = [new() { Name = "Rust Guide", File = "rust.md" }],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -709,40 +744,42 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "cloud computing",
-                            Entries = [],
-                            Subtopics =
-                            [
-                                new Topic
-                                {
-                                    Name = "azure services",
-                                    Entries =
-                                    [
-                                        new() { Name = "Azure Notes", File = "cloud-azure.md" },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "cloud computing",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new Topic
+                                    {
+                                        Name = "azure services",
+                                        Entries =
+                                        [
+                                            new() { Name = "Azure Notes", File = "cloud-azure.md" },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         generatorWithoutCaps.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -784,29 +821,31 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "machine learning",
-                            Entries = [new() { Name = "ML Guide", File = "ml-guide.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "machine learning",
+                                Entries = [new() { Name = "ML Guide", File = "ml-guide.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         generatorWithCaps.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -827,20 +866,22 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         var originalCreated = new DateTime(2024, 1, 1);
 
         // Create TOC with original created date
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir, createdDate: originalCreated);
 
         // Act - Update without providing created date
@@ -863,20 +904,22 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         var originalLastEdited = new DateTime(2024, 1, 15);
 
         // Create TOC with original last edited date
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir, lastEditedDate: originalLastEdited);
 
         // Act - Update without providing last edited date (simulating read-only operations)
@@ -897,8 +940,7 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
@@ -906,12 +948,15 @@ public class TableOfContentsGeneratorTests
         var originalEdited = new DateTime(2024, 1, 15);
 
         // Create TOC with original dates
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir, originalCreated, originalEdited);
 
         // Act - Update with new dates (both should be overridden)
@@ -937,18 +982,20 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act - Create TOC without any dates
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [new() { Name = "Entry", File = "entry.md" }],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new() { Name = "Entry", File = "entry.md" }],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -969,47 +1016,53 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "Test Topic",
-                            Entries =
-                            [
-                                new() { Name = "test file 5", File = "abc-test_2-test_file_5.md" },
-                            ],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "test file 5",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "test file 7",
-                                            File = "abc-test_2-test_file_5-test_file_7.md",
-                                        },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "Test Topic",
+                                Entries =
+                                [
+                                    new()
+                                    {
+                                        Name = "test file 5",
+                                        File = "abc-test_2-test_file_5.md",
+                                    },
+                                ],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "test file 5",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "test file 7",
+                                                File = "abc-test_2-test_file_5-test_file_7.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1037,48 +1090,53 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {
-                IgnoreFiles = ["abc-test_2-test_file_5.md"],            },
+            TableOfContents = new TableOfContents { IgnoreFiles = ["abc-test_2-test_file_5.md"] },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "Test Topic",
-                            Entries =
-                            [
-                                new() { Name = "test file 5", File = "abc-test_2-test_file_5.md" },
-                            ],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "test file 5",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "test file 7",
-                                            File = "abc-test_2-test_file_5-test_file_7.md",
-                                        },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "Test Topic",
+                                Entries =
+                                [
+                                    new()
+                                    {
+                                        Name = "test file 5",
+                                        File = "abc-test_2-test_file_5.md",
+                                    },
+                                ],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "test file 5",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "test file 7",
+                                                File = "abc-test_2-test_file_5-test_file_7.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1100,47 +1158,49 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "ABC",
-                            Entries =
-                            [
-                                new() { Name = "test file uno", File = "abc-test_file_1.md" },
-                            ],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "test 2",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "test 2 entry",
-                                            File = "abc-test_file_1-test_2.md",
-                                        },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "ABC",
+                                Entries =
+                                [
+                                    new() { Name = "test file uno", File = "abc-test_file_1.md" },
+                                ],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "test 2",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "test 2 entry",
+                                                File = "abc-test_file_1-test_2.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1172,59 +1232,61 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "Level 1",
-                            Entries = [new() { Name = "level 2", File = "level_1-level_2.md" }],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "level 2",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "level 3",
-                                            File = "level_1-level_2-level_3.md",
-                                        },
-                                    ],
-                                    Subtopics =
-                                    [
-                                        new()
-                                        {
-                                            Name = "level 3",
-                                            Entries =
-                                            [
-                                                new()
-                                                {
-                                                    Name = "final",
-                                                    File = "level_1-level_2-level_3-final.md",
-                                                },
-                                            ],
-                                            Subtopics = null,
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "Level 1",
+                                Entries = [new() { Name = "level 2", File = "level_1-level_2.md" }],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "level 2",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "level 3",
+                                                File = "level_1-level_2-level_3.md",
+                                            },
+                                        ],
+                                        Subtopics =
+                                        [
+                                            new()
+                                            {
+                                                Name = "level 3",
+                                                Entries =
+                                                [
+                                                    new()
+                                                    {
+                                                        Name = "final",
+                                                        File = "level_1-level_2-level_3-final.md",
+                                                    },
+                                                ],
+                                                Subtopics = null,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1267,54 +1329,56 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "Topic",
-                            Entries = [new() { Name = "parent", File = "topic-parent.md" }],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "parent",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "child 1",
-                                            File = "topic-parent-child_1.md",
-                                        },
-                                        new()
-                                        {
-                                            Name = "child 2",
-                                            File = "topic-parent-child_2.md",
-                                        },
-                                        new()
-                                        {
-                                            Name = "child 3",
-                                            File = "topic-parent-child_3.md",
-                                        },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "Topic",
+                                Entries = [new() { Name = "parent", File = "topic-parent.md" }],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "parent",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "child 1",
+                                                File = "topic-parent-child_1.md",
+                                            },
+                                            new()
+                                            {
+                                                Name = "child 2",
+                                                File = "topic-parent-child_2.md",
+                                            },
+                                            new()
+                                            {
+                                                Name = "child 3",
+                                                File = "topic-parent-child_3.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1351,23 +1415,25 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {                IgnoreFiles = ["1d-Draft.md"],
-            },
+            TableOfContents = new TableOfContents { IgnoreFiles = ["1d-Draft.md"] },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Template", File = "1c-Template.md" },
-                    new() { Name = "Draft", File = "1d-Draft.md" },
-                ],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new() { Name = "Introduction", File = "1b-Intro.md" },
+                        new() { Name = "Template", File = "1c-Template.md" },
+                        new() { Name = "Draft", File = "1d-Draft.md" },
+                    ],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1392,53 +1458,57 @@ public class TableOfContentsGeneratorTests
             JournalName = "TestJournal",
             TableOfContents = new TableOfContents
             {
-                IgnoreFiles = ["abc-test_2-test_file_5.md", "abc-test_2-test_file_6.md"],            },
+                IgnoreFiles = ["abc-test_2-test_file_5.md", "abc-test_2-test_file_6.md"],
+            },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "ABC",
-                            Entries = [],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "Test 2",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "test file 5",
-                                            File = "abc-test_2-test_file_5.md",
-                                        },
-                                        new()
-                                        {
-                                            Name = "test file 6",
-                                            File = "abc-test_2-test_file_6.md",
-                                        },
-                                        new()
-                                        {
-                                            Name = "test file 7",
-                                            File = "abc-test_2-test_file_7.md",
-                                        },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "ABC",
+                                Entries = [],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "Test 2",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "test file 5",
+                                                File = "abc-test_2-test_file_5.md",
+                                            },
+                                            new()
+                                            {
+                                                Name = "test file 6",
+                                                File = "abc-test_2-test_file_6.md",
+                                            },
+                                            new()
+                                            {
+                                                Name = "test file 7",
+                                                File = "abc-test_2-test_file_7.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1461,45 +1531,51 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "Topic",
-                            Entries =
-                            [
-                                new() { Name = "entry 1", File = "topic-entry_1.md" },
-                                new() { Name = "parent", File = "topic-parent.md" },
-                                new() { Name = "entry 2", File = "topic-entry_2.md" },
-                            ],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "parent",
-                                    Entries =
-                                    [
-                                        new() { Name = "child", File = "topic-parent-child.md" },
-                                    ],
-                                    Subtopics = null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "Topic",
+                                Entries =
+                                [
+                                    new() { Name = "entry 1", File = "topic-entry_1.md" },
+                                    new() { Name = "parent", File = "topic-parent.md" },
+                                    new() { Name = "entry 2", File = "topic-entry_2.md" },
+                                ],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "parent",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "child",
+                                                File = "topic-parent-child.md",
+                                            },
+                                        ],
+                                        Subtopics = null,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1533,70 +1609,73 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {            },
+            TableOfContents = new TableOfContents { },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new()
-                        {
-                            Name = "abc",
-                            Entries = [new() { Name = "abc", File = "abc.md" }],
-                            Subtopics =
-                            [
-                                new()
-                                {
-                                    Name = "test 2",
-                                    Entries =
-                                    [
-                                        new()
-                                        {
-                                            Name = "test file 1",
-                                            File = "abc-test_2-test_file_1.md",
-                                        },
-                                        new()
-                                        {
-                                            Name = "test file 10",
-                                            File = "abc-test_2-test_file_10.md",
-                                        },
-                                    ],
-                                    Subtopics =
-                                    [
-                                        new()
-                                        {
-                                            Name = "test file 1",
-                                            Entries =
-                                            [
-                                                new()
-                                                {
-                                                    Name = "test file 1",
-                                                    File = "abc-test_2-test_file_1-test_file_1.md",
-                                                },
-                                            ],
-                                            Subtopics = null,
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                        new()
-                        {
-                            Name = "test 2",
-                            Entries = [new() { Name = "test 2", File = "test_2.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new()
+                            {
+                                Name = "abc",
+                                Entries = [new() { Name = "abc", File = "abc.md" }],
+                                Subtopics =
+                                [
+                                    new()
+                                    {
+                                        Name = "test 2",
+                                        Entries =
+                                        [
+                                            new()
+                                            {
+                                                Name = "test file 1",
+                                                File = "abc-test_2-test_file_1.md",
+                                            },
+                                            new()
+                                            {
+                                                Name = "test file 10",
+                                                File = "abc-test_2-test_file_10.md",
+                                            },
+                                        ],
+                                        Subtopics =
+                                        [
+                                            new()
+                                            {
+                                                Name = "test file 1",
+                                                Entries =
+                                                [
+                                                    new()
+                                                    {
+                                                        Name = "test file 1",
+                                                        File =
+                                                            "abc-test_2-test_file_1-test_file_1.md",
+                                                    },
+                                                ],
+                                                Subtopics = null,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            new()
+                            {
+                                Name = "test 2",
+                                Entries = [new() { Name = "test 2", File = "test_2.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1647,23 +1726,25 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {
-                File = "newtoc.md",            },
+            TableOfContents = new TableOfContents { File = "newtoc.md" },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Newtoc", File = "newtoc.md" }, // TOC file shouldn't appear
-                    new() { Name = "Other", File = "other.md" },
-                ],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new() { Name = "Introduction", File = "1b-Intro.md" },
+                        new() { Name = "Newtoc", File = "newtoc.md" }, // TOC file shouldn't appear
+                        new() { Name = "Other", File = "other.md" },
+                    ],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1684,39 +1765,40 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {
-                File = "newtoc.md",            },
+            TableOfContents = new TableOfContents { File = "newtoc.md" },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
                 {
-                    Topics =
-                    [
-                        new Topic
-                        {
-                            Name = "newtoc",
-                            Entries =
-                            [
-                                new() { Name = "Newtoc", File = "newtoc.md" }, // Should be filtered
-                            ],
-                            Subtopics = null,
-                        },
-                        new Topic
-                        {
-                            Name = "other",
-                            Entries = [new() { Name = "Other", File = "other.md" }],
-                            Subtopics = null,
-                        },
-                    ],
-                },
-                RootEntries = [],
-            });
+                    Structure = new Structure
+                    {
+                        Topics =
+                        [
+                            new Topic
+                            {
+                                Name = "newtoc",
+                                Entries =
+                                [
+                                    new() { Name = "Newtoc", File = "newtoc.md" }, // Should be filtered
+                                ],
+                                Subtopics = null,
+                            },
+                            new Topic
+                            {
+                                Name = "other",
+                                Entries = [new() { Name = "Other", File = "other.md" }],
+                                Subtopics = null,
+                            },
+                        ],
+                    },
+                    RootEntries = [],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1740,22 +1822,24 @@ public class TableOfContentsGeneratorTests
         var config = new JournalConfig
         {
             JournalName = "TestJournal",
-            TableOfContents = new TableOfContents
-            {
-                File = "newtoc.md",            },
+            TableOfContents = new TableOfContents { File = "newtoc.md" },
         };
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "Newtoc", File = "NewTOC.md" }, // Different casing
-                ],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new() { Name = "Introduction", File = "1b-Intro.md" },
+                        new() { Name = "Newtoc", File = "NewTOC.md" }, // Different casing
+                    ],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert
@@ -1783,16 +1867,20 @@ public class TableOfContentsGeneratorTests
         _journalConfiguration.Create(journalDir, config);
 
         // Act
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [
-                    new() { Name = "Introduction", File = "1b-Intro.md" },
-                    new() { Name = "TOC", File = "toc.md" },
-                    new() { Name = "Draft", File = "draft.md" },
-                ],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries =
+                    [
+                        new() { Name = "Introduction", File = "1b-Intro.md" },
+                        new() { Name = "TOC", File = "toc.md" },
+                        new() { Name = "Draft", File = "draft.md" },
+                    ],
+                }
+            );
         _generator.UpdateTableOfContents(journalDir);
 
         // Assert

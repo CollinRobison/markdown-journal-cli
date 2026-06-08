@@ -22,14 +22,19 @@ public class JournalValidatorTests : IDisposable
     public JournalValidatorTests()
     {
         var fileSystem = new JournalFileSystem(NullLogger<JournalFileSystem>.Instance);
-        var settings = Options.Create(new markdown_journal_cli.JournalSettings
-        {
-            MetadataDirName = MetadataDirName,
-            TrackingFileName = TrackingFileName,
-            TocStructureFileName = TocFileName,
-        });
+        var settings = Options.Create(
+            new markdown_journal_cli.JournalSettings
+            {
+                MetadataDirName = MetadataDirName,
+                TrackingFileName = TrackingFileName,
+                TocStructureFileName = TocFileName,
+            }
+        );
         _sut = new JournalValidator(fileSystem, settings);
-        _tempDirectory = Path.Combine(Path.GetTempPath(), $"JournalValidatorTests_{Guid.NewGuid()}");
+        _tempDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"JournalValidatorTests_{Guid.NewGuid()}"
+        );
         Directory.CreateDirectory(_tempDirectory);
     }
 

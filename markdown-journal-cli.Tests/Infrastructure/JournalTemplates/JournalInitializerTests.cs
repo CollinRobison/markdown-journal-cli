@@ -108,14 +108,25 @@ public class JournalInitializerTests
 
         // Root entries are now saved to the TOC structure repository, not to the config file
         _mockTocStructureRepository.Verify(
-            r => r.Save(
-                It.Is<JournalTocStructure>(s =>
-                    s.RootEntries.Length == 3 &&
-                    s.RootEntries.Any(re => re.Name == "Introduction" && re.File == "1b-Intro.md") &&
-                    s.RootEntries.Any(re => re.Name == "Journal Entry Template" && re.File == "1c-Journal-Entry-Template.md") &&
-                    s.RootEntries.Any(re => re.Name == "All My Journals" && re.File == "1h-All-My-Journals.md")),
-                It.IsAny<string>()),
-            Times.Once);
+            r =>
+                r.Save(
+                    It.Is<JournalTocStructure>(s =>
+                        s.RootEntries.Length == 3
+                        && s.RootEntries.Any(re =>
+                            re.Name == "Introduction" && re.File == "1b-Intro.md"
+                        )
+                        && s.RootEntries.Any(re =>
+                            re.Name == "Journal Entry Template"
+                            && re.File == "1c-Journal-Entry-Template.md"
+                        )
+                        && s.RootEntries.Any(re =>
+                            re.Name == "All My Journals" && re.File == "1h-All-My-Journals.md"
+                        )
+                    ),
+                    It.IsAny<string>()
+                ),
+            Times.Once
+        );
     }
 
     [Fact]

@@ -1,4 +1,3 @@
-using Shouldly;
 using markdown_journal_cli;
 using markdown_journal_cli.Commands.Add;
 using markdown_journal_cli.Infrastructure.Configuration;
@@ -10,6 +9,7 @@ using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Shouldly;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Testing;

@@ -1,9 +1,9 @@
+using System.Text.Json;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shouldly;
-using System.Text.Json;
 using Xunit;
 using JournalFileSystem = markdown_journal_cli.Infrastructure.FileSystem.FileSystem;
 
@@ -23,12 +23,14 @@ public class JournalTocStructureRepositoryTests : IDisposable
     public JournalTocStructureRepositoryTests()
     {
         _fileSystem = new JournalFileSystem(NullLogger<JournalFileSystem>.Instance);
-        var settings = Options.Create(new markdown_journal_cli.JournalSettings
-        {
-            TocStructureFileName = TocFileName,
-        });
+        var settings = Options.Create(
+            new markdown_journal_cli.JournalSettings { TocStructureFileName = TocFileName }
+        );
         _sut = new JournalTocStructureRepository(_fileSystem, settings);
-        _tempDirectory = Path.Combine(Path.GetTempPath(), $"TocStructureRepoTests_{Guid.NewGuid()}");
+        _tempDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"TocStructureRepoTests_{Guid.NewGuid()}"
+        );
         Directory.CreateDirectory(_tempDirectory);
     }
 
@@ -89,10 +91,7 @@ public class JournalTocStructureRepositoryTests : IDisposable
         var original = new JournalTocStructure
         {
             Structure = new Structure { Topics = [] },
-            RootEntries =
-            [
-                new Entries { Name = "Beta", File = "Beta.md" }
-            ]
+            RootEntries = [new Entries { Name = "Beta", File = "Beta.md" }],
         };
 
         // When
