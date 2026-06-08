@@ -1,22 +1,25 @@
 namespace markdown_journal_cli.Infrastructure.Configuration.Models;
 
 /// <summary>
-/// Represents the difference between what is recorded in the tracking index
-/// and what is registered in the journal configuration (.journalrc).
-/// Used to drive incremental updates to the journal config independently of
-/// hash-based file change detection.
+/// Represents sync drift between the tracking index and the journal's
+/// configuration-backed file registration state.
+/// This includes TOC entries stored in <c>.journaltoc</c> and ignore entries
+/// stored in <c>.journalrc</c>, and is used to update configuration membership
+/// without relying on file-content hash changes.
 /// </summary>
 public class JournalConfigSyncResult
 {
     /// <summary>
-    /// Files present in the tracking index but absent from .journalrc.
-    /// These should be added to the journal configuration.
+    /// Files present in the tracking index but absent from the registered TOC
+    /// structure and ignore list.
+    /// The TOC file itself is excluded.
     /// </summary>
     public IReadOnlyList<string> FilesToAdd { get; init; } = [];
 
     /// <summary>
-    /// Files registered in .journalrc but absent from the tracking index.
-    /// These should be removed from the journal configuration.
+    /// Files present in the registered TOC structure but absent from the tracking
+    /// index.
+    /// Ignored files are excluded from removal.
     /// </summary>
     public IReadOnlyList<string> FilesToRemove { get; init; } = [];
 
