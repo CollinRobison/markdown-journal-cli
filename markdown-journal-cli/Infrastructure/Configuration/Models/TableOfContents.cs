@@ -41,4 +41,3 @@ public class Entries
     [JsonPropertyName("file")]
     public required string File { get; set; }
 }
-

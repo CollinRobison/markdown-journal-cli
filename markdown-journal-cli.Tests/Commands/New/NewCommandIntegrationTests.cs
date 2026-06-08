@@ -26,7 +26,8 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
 {
     private readonly CommandAppTester _app;
 
-    public NewCommandIntegrationTests() : base("_setup")
+    public NewCommandIntegrationTests()
+        : base("_setup")
     {
         // JournalRoot exists (side-effect of base creating JournalRoot/_setup).
         // Tests will use JournalRoot as the parent dir and create fresh journals inside it.
@@ -44,7 +45,10 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
         var buffer = new InMemoryFileBuffer(FileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
         var coordinator = new FileTransactionCoordinator(
-            FileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance
+            FileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
         );
         var console = new TestConsole();
         var rollbackReporter = new RollbackReporter(console, NullLogger<RollbackReporter>.Instance);
@@ -100,7 +104,8 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
         File.Exists(Path.Combine(journalDir, ".journalrc")).ShouldBeTrue();
         var metadataDir = Path.Combine(journalDir, JournalSettings.Value.MetadataDirName);
         Directory.Exists(metadataDir).ShouldBeTrue();
-        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TrackingFileName)).ShouldBeTrue();
+        File.Exists(Path.Combine(metadataDir, JournalSettings.Value.TrackingFileName))
+            .ShouldBeTrue();
         File.Exists(Path.Combine(journalDir, "1a-TableOfContents.md")).ShouldBeTrue();
     }
 

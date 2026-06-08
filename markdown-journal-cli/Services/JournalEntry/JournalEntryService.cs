@@ -60,7 +60,10 @@ public sealed class JournalEntryService(
 
         var journalrc = _fileSystem.CombinePaths(filePath, _journalSettings.JournalConfigFileName);
         var metadataDir = _fileSystem.CombinePaths(filePath, _journalSettings.MetadataDirName);
-        var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
+        var trackingFilePath = _fileSystem.CombinePaths(
+            metadataDir,
+            _journalSettings.TrackingFileName
+        );
 
         if (!_fileSystem.FileExists(journalrc))
         {
@@ -74,7 +77,10 @@ public sealed class JournalEntryService(
                 _journalSettings.TrackingFileName,
                 metadataDir
             );
-            throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
+            throw new TrackingIndexNotFoundException(
+                metadataDir,
+                _journalSettings.TrackingFileName
+            );
         }
 
         // title for use in table of contents and entry file

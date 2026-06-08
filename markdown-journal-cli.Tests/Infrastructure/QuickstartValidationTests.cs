@@ -174,39 +174,58 @@ public class QuickstartValidationTests
     private sealed class ConcreteCommandTestBase : CommandTestBase
     {
         // Expose protected members for testing
-        public new Mock<markdown_journal_cli.Infrastructure.FileSystem.IFileSystem> MockFileSystem => base.MockFileSystem;
-        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalConfiguration> MockJournalConfiguration => base.MockJournalConfiguration;
-        public new Mock<markdown_journal_cli.Infrastructure.Tracking.IFileTracking> MockFileTracking => base.MockFileTracking;
-        public new Mock<markdown_journal_cli.Infrastructure.JournalTemplates.ITemplateManager> MockTemplateManager => base.MockTemplateManager;
-        public new Mock<ITableOfContentsService> MockTableOfContentsService => base.MockTableOfContentsService;
-        public new Mock<IEntryFormatterService> MockEntryFormatterService => base.MockEntryFormatterService;
-        public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings => base.JournalSettings;
+        public new Mock<markdown_journal_cli.Infrastructure.FileSystem.IFileSystem> MockFileSystem =>
+            base.MockFileSystem;
+        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalConfiguration> MockJournalConfiguration =>
+            base.MockJournalConfiguration;
+        public new Mock<markdown_journal_cli.Infrastructure.Tracking.IFileTracking> MockFileTracking =>
+            base.MockFileTracking;
+        public new Mock<markdown_journal_cli.Infrastructure.JournalTemplates.ITemplateManager> MockTemplateManager =>
+            base.MockTemplateManager;
+        public new Mock<ITableOfContentsService> MockTableOfContentsService =>
+            base.MockTableOfContentsService;
+        public new Mock<IEntryFormatterService> MockEntryFormatterService =>
+            base.MockEntryFormatterService;
+        public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings =>
+            base.JournalSettings;
     }
 
     private sealed class ConcreteServiceTestBase : ServiceTestBase
     {
         // Expose protected members for testing
-        public new Mock<markdown_journal_cli.Infrastructure.FileSystem.IFileSystem> MockFileSystem => base.MockFileSystem;
-        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalConfiguration> MockJournalConfiguration => base.MockJournalConfiguration;
-        public new Mock<markdown_journal_cli.Infrastructure.Tracking.IFileTracking> MockFileTracking => base.MockFileTracking;
-        public new Mock<markdown_journal_cli.Infrastructure.JournalTemplates.ITemplateManager> MockTemplateManager => base.MockTemplateManager;
-        public new Mock<ITableOfContentsService> MockTableOfContentsService => base.MockTableOfContentsService;
-        public new Mock<IEntryFormatterService> MockEntryFormatterService => base.MockEntryFormatterService;
-        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalTocStructureRepository> MockTocStructureRepository => base.MockTocStructureRepository;
-        public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings => base.JournalSettings;
+        public new Mock<markdown_journal_cli.Infrastructure.FileSystem.IFileSystem> MockFileSystem =>
+            base.MockFileSystem;
+        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalConfiguration> MockJournalConfiguration =>
+            base.MockJournalConfiguration;
+        public new Mock<markdown_journal_cli.Infrastructure.Tracking.IFileTracking> MockFileTracking =>
+            base.MockFileTracking;
+        public new Mock<markdown_journal_cli.Infrastructure.JournalTemplates.ITemplateManager> MockTemplateManager =>
+            base.MockTemplateManager;
+        public new Mock<ITableOfContentsService> MockTableOfContentsService =>
+            base.MockTableOfContentsService;
+        public new Mock<IEntryFormatterService> MockEntryFormatterService =>
+            base.MockEntryFormatterService;
+        public new Mock<markdown_journal_cli.Infrastructure.Configuration.IJournalTocStructureRepository> MockTocStructureRepository =>
+            base.MockTocStructureRepository;
+        public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings =>
+            base.JournalSettings;
         public new IFileTransactionCoordinator NoOpCoordinator => base.NoOpCoordinator;
         public new IRollbackReporter NoOpReporter => base.NoOpReporter;
     }
 
     private sealed class ConcreteIntegrationTestBase : JournalIntegrationTestBase
     {
-        public ConcreteIntegrationTestBase() : base("QuickstartTest") { }
+        public ConcreteIntegrationTestBase()
+            : base("QuickstartTest") { }
 
         // Expose protected members for testing
         public new string JournalRoot => base.JournalRoot;
         public new string JournalPath => base.JournalPath;
-        public new markdown_journal_cli.Infrastructure.FileSystem.IFileSystem FileSystem => base.FileSystem;
-        public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings => base.JournalSettings;
+        public new markdown_journal_cli.Infrastructure.FileSystem.IFileSystem FileSystem =>
+            base.FileSystem;
+        public new Microsoft.Extensions.Options.IOptions<markdown_journal_cli.JournalSettings> JournalSettings =>
+            base.JournalSettings;
+
         public new void InitializeJournal() => base.InitializeJournal();
     }
 

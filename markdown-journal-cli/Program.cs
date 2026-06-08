@@ -94,7 +94,8 @@ public static class Program
             Assembly
                 .GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                ?.InformationalVersion ?? "0.0.0";
+                ?.InformationalVersion
+            ?? "0.0.0";
 
         // Set up dependency injection
         var registrar = new TypeRegistrar(builtHost.Services);

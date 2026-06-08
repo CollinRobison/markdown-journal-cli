@@ -47,7 +47,7 @@ public interface IFileTracking
     /// </summary>
     /// <param name="path">the journal directory path.</param>
     /// <param name="relativeFilePath">the relative file path of file to update in index.</param>
-public void UpdateFileInIndex(string path, string relativeFilePath);
+    public void UpdateFileInIndex(string path, string relativeFilePath);
 
     /// <summary>
     /// Remove a file from the index (after deletion).

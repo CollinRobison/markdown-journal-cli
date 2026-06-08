@@ -48,5 +48,6 @@ public abstract class ServiceTestBase
     }
 
     /// <summary>Returns a null logger. No assertions on logging output.</summary>
-    protected ILogger<T> NullLogger<T>() => Microsoft.Extensions.Logging.Abstractions.NullLogger<T>.Instance;
+    protected ILogger<T> NullLogger<T>() =>
+        Microsoft.Extensions.Logging.Abstractions.NullLogger<T>.Instance;
 }

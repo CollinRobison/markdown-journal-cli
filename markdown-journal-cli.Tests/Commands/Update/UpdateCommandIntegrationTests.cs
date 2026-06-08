@@ -29,7 +29,8 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
     private readonly CommandAppTester _app;
     private readonly TestConsole _console;
 
-    public UpdateCommandIntegrationTests() : base("UpdateTest")
+    public UpdateCommandIntegrationTests()
+        : base("UpdateTest")
     {
         InitializeJournal();
 
@@ -51,14 +52,23 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
             NullLogger<TableOfContentsService>.Instance,
             tocStructureRepository
         );
-        var linkRewriter = new MarkdownLinkRewriter(FileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
+        var linkRewriter = new MarkdownLinkRewriter(
+            FileSystem,
+            NullLogger<MarkdownLinkRewriter>.Instance
+        );
         var buffer = new InMemoryFileBuffer(FileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
         var coordinator = new FileTransactionCoordinator(
-            FileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance
+            FileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
         );
         _console = new TestConsole();
-        var rollbackReporter = new RollbackReporter(_console, NullLogger<RollbackReporter>.Instance);
+        var rollbackReporter = new RollbackReporter(
+            _console,
+            NullLogger<RollbackReporter>.Instance
+        );
 
         var journalUpdateService = new JournalUpdateService(
             _console,
@@ -117,10 +127,13 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         _app.Configure(config =>
         {
             config.SetApplicationName("mdjournal");
-            config.AddBranch<UpdateSettings>("update", update =>
-            {
-                update.AddCommand<UpdateCommand>("journal");
-            });
+            config.AddBranch<UpdateSettings>(
+                "update",
+                update =>
+                {
+                    update.AddCommand<UpdateCommand>("journal");
+                }
+            );
         });
     }
 
@@ -159,7 +172,11 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         // Arrange — find the Alpha entry file and read its Last Edited date
         var entryFile = Directory
             .GetFiles(JournalPath, "*.md", SearchOption.AllDirectories)
-            .First(f => !Path.GetFileName(f).StartsWith("1a-") && !Path.GetFileName(f).StartsWith("1b-") && !Path.GetFileName(f).StartsWith("1c-"));
+            .First(f =>
+                !Path.GetFileName(f).StartsWith("1a-")
+                && !Path.GetFileName(f).StartsWith("1b-")
+                && !Path.GetFileName(f).StartsWith("1c-")
+            );
         var originalContent = File.ReadAllText(entryFile);
 
         // Corrupt the tracking hash so there are changes to sync
@@ -215,8 +232,10 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         // Arrange — first sync to stabilise, then drop a new raw .md file
         _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
         var newFilePath = Path.Combine(JournalPath, "New_Entry.md");
-        File.WriteAllText(newFilePath,
-            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Entry\n\nContent.\n");
+        File.WriteAllText(
+            newFilePath,
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# New Entry\n\nContent.\n"
+        );
         var contentBefore = File.ReadAllText(newFilePath);
 
         // Act
@@ -226,7 +245,9 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         File.ReadAllText(newFilePath).ShouldBe(contentBefore);
         // Tracking index must now reference the new file
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        var trackingContent = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journalindex")
+        );
         trackingContent.ShouldContain("New_Entry");
     }
 
@@ -237,7 +258,11 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         _app.Run(["update", "--path", JournalPath, "journal", "--sync"]);
         var entryFile = Directory
             .GetFiles(JournalPath, "*.md", SearchOption.AllDirectories)
-            .First(f => !Path.GetFileName(f).StartsWith("1a-") && !Path.GetFileName(f).StartsWith("1b-") && !Path.GetFileName(f).StartsWith("1c-"));
+            .First(f =>
+                !Path.GetFileName(f).StartsWith("1a-")
+                && !Path.GetFileName(f).StartsWith("1b-")
+                && !Path.GetFileName(f).StartsWith("1c-")
+            );
         File.Delete(entryFile);
 
         // Act
@@ -245,7 +270,9 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
 
         // Assert — exit 0, deleted file no longer in tracking index
         result.ExitCode.ShouldBe(0);
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        var trackingContent = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journalindex")
+        );
         trackingContent.ShouldNotContain(Path.GetFileNameWithoutExtension(entryFile));
     }
 }

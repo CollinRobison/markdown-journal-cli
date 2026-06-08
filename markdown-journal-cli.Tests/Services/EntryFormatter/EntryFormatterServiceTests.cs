@@ -1,5 +1,5 @@
-using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Shouldly;
 using Xunit;
 
@@ -156,7 +156,10 @@ public class EntryFormatterServiceTests : ServiceTestBase
     [InlineData("trailing  ", "trailing")]
     [InlineData("a", "a")]
     [InlineData("a b", "a_b")]
-    public void AddSpaceSeparators_Should_FormatCorrectly_When_GivenInputExpectedOutput(string input, string expected)
+    public void AddSpaceSeparators_Should_FormatCorrectly_When_GivenInputExpectedOutput(
+        string input,
+        string expected
+    )
     {
         // When
         var result = _formatterService.AddSpaceSeparators(input);
@@ -321,7 +324,10 @@ public class EntryFormatterServiceTests : ServiceTestBase
     [InlineData("trailing__", "trailing")]
     [InlineData("a", "a")]
     [InlineData("a_b", "a b")]
-    public void RemoveSpaceSeparators_Should_ConvertCorrectly_When_GivenInputExpectedOutput(string input, string expected)
+    public void RemoveSpaceSeparators_Should_ConvertCorrectly_When_GivenInputExpectedOutput(
+        string input,
+        string expected
+    )
     {
         // When
         var result = _formatterService.RemoveSpaceSeparators(input);
@@ -483,7 +489,10 @@ public class EntryFormatterServiceTests : ServiceTestBase
     )]
     [InlineData("   heading1-heading2-heading3 ", new[] { "heading1", "heading2", "heading3" })]
     [InlineData("heading1-  heading2  - heading3", new[] { "heading1", "heading2", "heading3" })]
-    public void SeperateSubheadingString_Should_SplitCorrectly_When_GivenInputExpectedOutput(string input, string[] expected)
+    public void SeperateSubheadingString_Should_SplitCorrectly_When_GivenInputExpectedOutput(
+        string input,
+        string[] expected
+    )
     {
         // When
         var result = _formatterService.SeperateSubheadingString(input);
@@ -637,7 +646,10 @@ public class EntryFormatterServiceTests : ServiceTestBase
     [InlineData(new string[] { "Heading1", "" }, "Heading1")]
     [InlineData(new string[] { "" }, "")]
     [InlineData(new string[] { "Heading1" }, "Heading1")]
-    public void AddHeadingSeparators_Should_CombineSectionsWithSeparator_When_GivenInputExpectedOutput(string[] input, string expected)
+    public void AddHeadingSeparators_Should_CombineSectionsWithSeparator_When_GivenInputExpectedOutput(
+        string[] input,
+        string expected
+    )
     {
         // When
         var result = _formatterService.AddHeadingSeparators(input);

@@ -1,4 +1,3 @@
-using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -6,6 +5,7 @@ using markdown_journal_cli.Infrastructure.JournalTemplates;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -194,7 +194,9 @@ public class NewJournalServiceTests : ServiceTestBase
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Initialize_Should_ThrowArgumentException_When_JournalDirectoryIsInvalid(string? journalDirectory)
+    public void Initialize_Should_ThrowArgumentException_When_JournalDirectoryIsInvalid(
+        string? journalDirectory
+    )
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(journalDirectory!, JournalName));
     }
@@ -203,7 +205,9 @@ public class NewJournalServiceTests : ServiceTestBase
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Initialize_Should_ThrowArgumentException_When_JournalNameIsInvalid(string? journalName)
+    public void Initialize_Should_ThrowArgumentException_When_JournalNameIsInvalid(
+        string? journalName
+    )
     {
         Should.Throw<ArgumentException>(() => _service.Initialize(JournalDirectory, journalName!));
     }
@@ -276,12 +280,16 @@ public class NewJournalServiceTests : ServiceTestBase
         capturedConfig.ShouldNotBeNull();
         // Structure and rootEntries fields live in .journaltoc, not .journalrc
         capturedConfig.TableOfContents.ShouldNotBeNull();
-        capturedConfig.TableOfContents.ShouldBeOfType<TableOfContents>()
-            .GetType().GetProperties()
+        capturedConfig
+            .TableOfContents.ShouldBeOfType<TableOfContents>()
+            .GetType()
+            .GetProperties()
             .Select(p => p.Name)
             .ShouldNotContain("Structure");
-        capturedConfig.TableOfContents.ShouldBeOfType<TableOfContents>()
-            .GetType().GetProperties()
+        capturedConfig
+            .TableOfContents.ShouldBeOfType<TableOfContents>()
+            .GetType()
+            .GetProperties()
             .Select(p => p.Name)
             .ShouldNotContain("RootEntries");
     }

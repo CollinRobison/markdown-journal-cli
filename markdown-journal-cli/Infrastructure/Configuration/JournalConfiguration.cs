@@ -82,7 +82,8 @@ public class JournalConfiguration(
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
     private readonly IFileTracking _fileTracking = fileTracking;
-    private readonly IJournalTocStructureRepository _tocStructureRepository = tocStructureRepository;
+    private readonly IJournalTocStructureRepository _tocStructureRepository =
+        tocStructureRepository;
 
     private string GetMetadataDir(string directory)
     {
@@ -250,10 +251,7 @@ public class JournalConfiguration(
 
         if (RootEntryExists(tocStructure.RootEntries, file))
         {
-            _logger.LogDebug(
-                "Root entry '{File}' already exists in journal configuration",
-                file
-            );
+            _logger.LogDebug("Root entry '{File}' already exists in journal configuration", file);
             return;
         }
 
@@ -317,10 +315,18 @@ public class JournalConfiguration(
             var defaultTocName = _journalSettings.TableOfContentsFileName;
             var fileNameNoExt = Path.GetFileNameWithoutExtension(file);
             bool isTocFile =
-                (!string.IsNullOrEmpty(configTocFile)
-                    && string.Equals(file, configTocFile, StringComparison.OrdinalIgnoreCase))
-                || (!string.IsNullOrEmpty(defaultTocName)
-                    && string.Equals(fileNameNoExt, defaultTocName, StringComparison.OrdinalIgnoreCase));
+                (
+                    !string.IsNullOrEmpty(configTocFile)
+                    && string.Equals(file, configTocFile, StringComparison.OrdinalIgnoreCase)
+                )
+                || (
+                    !string.IsNullOrEmpty(defaultTocName)
+                    && string.Equals(
+                        fileNameNoExt,
+                        defaultTocName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
             if (isTocFile)
             {
                 _logger.LogDebug("Skipping TOC file '{File}' from being added as entry", file);

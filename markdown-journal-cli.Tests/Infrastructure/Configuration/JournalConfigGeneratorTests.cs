@@ -207,7 +207,10 @@ public class JournalConfigGeneratorTests
         Assert.Empty(tocStructure.RootEntries);
 
         // Check topics were created correctly
-        var topicNames = tocStructure.Structure.Topics.Select(t => t.Name).OrderBy(n => n).ToArray();
+        var topicNames = tocStructure
+            .Structure.Topics.Select(t => t.Name)
+            .OrderBy(n => n)
+            .ToArray();
         Assert.Contains("work", topicNames);
         Assert.Contains("personal", topicNames);
 
@@ -216,9 +219,7 @@ public class JournalConfigGeneratorTests
         Assert.Single(workTopic.Entries);
         Assert.Equal("meeting", workTopic.Entries[0].Name);
 
-        var personalTopic = tocStructure.Structure.Topics.First(t =>
-            t.Name == "personal"
-        );
+        var personalTopic = tocStructure.Structure.Topics.First(t => t.Name == "personal");
         Assert.Single(personalTopic.Entries);
         Assert.Equal("journal", personalTopic.Entries[0].Name);
     }

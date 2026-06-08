@@ -54,8 +54,11 @@ public sealed class RemoveEntryService(
     private readonly ILogger<RemoveEntryService> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
 
-    public void ValidatePreconditions(string journalPath, string fileName, bool cleanRefs = false) =>
-        ResolveAndValidate(journalPath, fileName, cleanRefs);
+    public void ValidatePreconditions(
+        string journalPath,
+        string fileName,
+        bool cleanRefs = false
+    ) => ResolveAndValidate(journalPath, fileName, cleanRefs);
 
     public RemoveEntryResult RemoveEntry(string journalPath, string fileName, bool cleanRefs)
     {
@@ -66,7 +69,11 @@ public sealed class RemoveEntryService(
         );
 
         // Run all guard checks (same as ValidatePreconditions) before any writes.
-        var (resolvedFileName, absoluteEntryPath, fileExists) = ResolveAndValidate(journalPath, fileName, cleanRefs);
+        var (resolvedFileName, absoluteEntryPath, fileExists) = ResolveAndValidate(
+            journalPath,
+            fileName,
+            cleanRefs
+        );
 
         var metadataDir = _fileSystem.CombinePaths(journalPath, _journalSettings.MetadataDirName);
         var journalrcPath = _fileSystem.CombinePaths(
@@ -81,7 +88,10 @@ public sealed class RemoveEntryService(
         using var tx = _txCoordinator.Begin();
         try
         {
-            var trackingAbsPath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
+            var trackingAbsPath = _fileSystem.CombinePaths(
+                metadataDir,
+                _journalSettings.TrackingFileName
+            );
             var tocAbsPath = _fileSystem.CombinePaths(journalPath, tocFile);
 
             if (cleanRefs)
@@ -117,7 +127,10 @@ public sealed class RemoveEntryService(
 
             // 7. Remove from config
             _logger.LogDebug("Removing '{FileName}' from journal config", resolvedFileName);
-            bool removedFromConfig = _journalConfiguration.RemoveEntry(journalPath, resolvedFileName);
+            bool removedFromConfig = _journalConfiguration.RemoveEntry(
+                journalPath,
+                resolvedFileName
+            );
 
             // 8. Remove from tracking index (check presence before removing)
             _logger.LogDebug("Removing '{FileName}' from tracking index", resolvedFileName);
@@ -160,7 +173,12 @@ public sealed class RemoveEntryService(
                     resolvedFileName,
                     modifiedFiles.Count
                 );
-                return new RemoveEntryResult(fileExists, removedFromConfig, removedFromTracking, modifiedFiles);
+                return new RemoveEntryResult(
+                    fileExists,
+                    removedFromConfig,
+                    removedFromTracking,
+                    modifiedFiles
+                );
             }
 
             tx.Commit();
@@ -213,7 +231,10 @@ public sealed class RemoveEntryService(
 
         // 3. Validate tracking index exists
         var metadataDir = _fileSystem.CombinePaths(journalPath, _journalSettings.MetadataDirName);
-        var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
+        var trackingFilePath = _fileSystem.CombinePaths(
+            metadataDir,
+            _journalSettings.TrackingFileName
+        );
         if (!_fileSystem.FileExists(trackingFilePath))
         {
             _logger.LogWarning(
@@ -221,7 +242,10 @@ public sealed class RemoveEntryService(
                 _journalSettings.TrackingFileName,
                 metadataDir
             );
-            throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
+            throw new TrackingIndexNotFoundException(
+                metadataDir,
+                _journalSettings.TrackingFileName
+            );
         }
 
         // 4. Guard against protected files — read live TOC filename from config

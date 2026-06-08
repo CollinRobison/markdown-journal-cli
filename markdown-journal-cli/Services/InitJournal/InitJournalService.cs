@@ -57,13 +57,22 @@ public sealed class InitJournalService(
         if (_fileSystem.FileExists(tocPath))
             throw new TocFileAlreadyExistsException(journalDirectory, tocFile);
 
-        var metadataDir = _fileSystem.CombinePaths(journalDirectory, _journalSettings.MetadataDirName);
+        var metadataDir = _fileSystem.CombinePaths(
+            journalDirectory,
+            _journalSettings.MetadataDirName
+        );
 
         using var tx = _txCoordinator.Begin();
         try
         {
-            var trackingIndexPath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
-            var tocStructurePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TocStructureFileName);
+            var trackingIndexPath = _fileSystem.CombinePaths(
+                metadataDir,
+                _journalSettings.TrackingFileName
+            );
+            var tocStructurePath = _fileSystem.CombinePaths(
+                metadataDir,
+                _journalSettings.TocStructureFileName
+            );
             var journalrcPath = _fileSystem.CombinePaths(
                 journalDirectory,
                 _journalSettings.JournalConfigFileName
@@ -116,4 +125,3 @@ public sealed class InitJournalService(
         }
     }
 }
-

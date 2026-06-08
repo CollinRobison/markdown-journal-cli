@@ -58,27 +58,41 @@ public sealed class UpdateCommand(
     {
         try
         {
-            var metadataDir = _fileSystem.CombinePaths(settings.FilePath, _journalSettings.MetadataDirName);
-            var trackingFilePath = _fileSystem.CombinePaths(metadataDir, _journalSettings.TrackingFileName);
+            var metadataDir = _fileSystem.CombinePaths(
+                settings.FilePath,
+                _journalSettings.MetadataDirName
+            );
+            var trackingFilePath = _fileSystem.CombinePaths(
+                metadataDir,
+                _journalSettings.TrackingFileName
+            );
             var journalrcPath = _fileSystem.CombinePaths(
                 settings.FilePath,
                 _journalSettings.JournalConfigFileName
             );
 
             if (!_fileSystem.FileExists(trackingFilePath))
-                throw new TrackingIndexNotFoundException(metadataDir, _journalSettings.TrackingFileName);
+                throw new TrackingIndexNotFoundException(
+                    metadataDir,
+                    _journalSettings.TrackingFileName
+                );
 
             bool all =
                 !settings.DateFlag
                 && !settings.ConfigFlag
                 && !settings.TocFlag
                 && !settings.Tracking
-                && !settings.Sync           // ← new exclusion
+                && !settings.Sync // ← new exclusion
                 && settings.RenameToc is null;
 
             if (
-                (all || settings.ConfigFlag || settings.TocFlag || settings.Sync || settings.RenameToc is not null)
-                && !_fileSystem.FileExists(journalrcPath)
+                (
+                    all
+                    || settings.ConfigFlag
+                    || settings.TocFlag
+                    || settings.Sync
+                    || settings.RenameToc is not null
+                ) && !_fileSystem.FileExists(journalrcPath)
             )
                 throw new JournalrcNotFoundException(settings.FilePath);
 
@@ -149,7 +163,9 @@ public sealed class UpdateCommand(
                     _journalUpdateService.UpdateTableOfContents(settings.FilePath);
 
                 if (settings.Sync)
-                    _console.MarkupLine("[dim]--sync active: Last Edited dates were not updated[/]");
+                    _console.MarkupLine(
+                        "[dim]--sync active: Last Edited dates were not updated[/]"
+                    );
             }
 
             outerTx.Commit();

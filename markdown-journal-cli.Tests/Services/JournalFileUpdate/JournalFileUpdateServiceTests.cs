@@ -1,11 +1,11 @@
 using markdown_journal_cli;
-using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
@@ -328,7 +328,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
+        MockEntryFormatterService
+            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
+            .Returns(newEntryName);
 
         MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -486,7 +488,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
+        MockEntryFormatterService
+            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
+            .Returns(newEntryName);
 
         MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -557,7 +561,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.RemoveSpaceSeparators(newTitle)).Returns(newDisplayName);
+        MockEntryFormatterService
+            .Setup(ef => ef.RemoveSpaceSeparators(newTitle))
+            .Returns(newDisplayName);
 
         MockFileSystem
             .Setup(fs => fs.CombinePaths(Directory, currentFile))
@@ -606,7 +612,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
+        MockEntryFormatterService
+            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
+            .Returns(newEntryName);
 
         MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -860,9 +868,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
 
         MockFileSystem.Setup(fs => fs.FileExists(currentPath)).Returns(true);
 
-        MockFileSystem
-            .Setup(fs => fs.CombinePaths(Directory, ".journalrc"))
-            .Returns(journalrcPath);
+        MockFileSystem.Setup(fs => fs.CombinePaths(Directory, ".journalrc")).Returns(journalrcPath);
 
         MockFileSystem.Setup(fs => fs.FileExists(journalrcPath)).Returns(false);
 
@@ -893,7 +899,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
+        MockEntryFormatterService
+            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
+            .Returns(newEntryName);
 
         MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -965,7 +973,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
+        MockEntryFormatterService
+            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
+            .Returns(newEntryName);
 
         MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -1036,7 +1046,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             .Setup(jc => jc.FindEntry(Directory, currentFile))
             .Returns((currentEntry, currentTopicPath));
 
-        MockEntryFormatterService.Setup(ef => ef.AddSpaceSeparators(newEntryName)).Returns(newEntryName);
+        MockEntryFormatterService
+            .Setup(ef => ef.AddSpaceSeparators(newEntryName))
+            .Returns(newEntryName);
 
         MockEntryFormatterService
             .Setup(ef => ef.AddHeadingSeparators(It.IsAny<string[]>()))
@@ -1110,9 +1122,7 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
 
         MockFileSystem.Setup(fs => fs.FileExists(filePath)).Returns(true);
 
-        MockFileSystem
-            .Setup(fs => fs.CombinePaths(Directory, ".journalrc"))
-            .Returns(journalrcPath);
+        MockFileSystem.Setup(fs => fs.CombinePaths(Directory, ".journalrc")).Returns(journalrcPath);
 
         MockFileSystem.Setup(fs => fs.FileExists(journalrcPath)).Returns(true);
     }
@@ -1204,7 +1214,9 @@ public class JournalFileUpdateServiceTests : ServiceTestBase
             );
 
         MockFileSystem.Setup(fs => fs.GetFileNameWithoutExtension(currentFile)).Returns(stem);
-        MockEntryFormatterService.Setup(ef => ef.RemoveSpaceSeparators("New Title")).Returns("New Title");
+        MockEntryFormatterService
+            .Setup(ef => ef.RemoveSpaceSeparators("New Title"))
+            .Returns("New Title");
 
         // Act — title-only: no file rename
         _service.UpdateEntry(Directory, currentFile, newEntryTitle: "New Title");

@@ -35,5 +35,10 @@ public interface IAddTocService
     /// <see cref="AddTocResult.PartiallyCreated"/> — one artifact already existed; the other was created.
     /// <see cref="AddTocResult.AlreadyExists"/> — all requested artifacts already existed.
     /// </returns>
-    AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false, string? tocName = null);
+    AddTocResult Execute(
+        string journalDir,
+        bool structureOnly = false,
+        bool mdOnly = false,
+        string? tocName = null
+    );
 }

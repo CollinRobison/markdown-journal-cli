@@ -1,5 +1,5 @@
+using System.Text.RegularExpressions;
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -7,10 +7,10 @@ using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Moq;
 using Shouldly;
 using Spectre.Console.Testing;
-using System.Text.RegularExpressions;
 
 namespace markdown_journal_cli.Tests.Services;
 
@@ -54,11 +54,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         new JournalConfig
         {
             JournalName = "Test Journal",
-            TableOfContents = new TableOfContents
-            {
-                File = tocFile,
-                Extensions = [".md"],
-            },
+            TableOfContents = new TableOfContents { File = tocFile, Extensions = [".md"] },
         };
 
     #region Constructor Guards
@@ -365,11 +361,12 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         // Assert
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(
-                _testPath,
-                relativePath,
-                It.Is<string>(s => s.Contains("Last Edited:"))
-            ),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    relativePath,
+                    It.Is<string>(s => s.Contains("Last Edited:"))
+                ),
             Times.Once
         );
     }
@@ -429,7 +426,9 @@ public class JournalUpdateServiceTests : ServiceTestBase
         // Arrange
         const string relativePath = "note.md";
         var absolutePath = Path.Combine(_testPath, relativePath);
-        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath)).Returns("# My Note\n\nContent here.");
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(absolutePath))
+            .Returns("# My Note\n\nContent here.");
         MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath)).Returns(_testPath);
         MockFileSystem.Setup(fs => fs.GetFileName(absolutePath)).Returns(relativePath);
 
@@ -440,10 +439,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert — index must be updated for the modified file
-        MockFileTracking.Verify(
-            ft => ft.UpdateFileInIndex(_testPath, relativePath),
-            Times.Once
-        );
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(_testPath, relativePath), Times.Once);
     }
 
     [Fact]
@@ -458,10 +454,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: true);
 
         // Assert — the index must be updated even when trackingOnly skips content updates
-        MockFileTracking.Verify(
-            ft => ft.UpdateFileInIndex(_testPath, relativePath),
-            Times.Once
-        );
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(_testPath, relativePath), Times.Once);
     }
 
     [Fact]
@@ -476,10 +469,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
-        MockFileTracking.Verify(
-            ft => ft.UpdateFileInIndex(_testPath, relativePath),
-            Times.Once
-        );
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(_testPath, relativePath), Times.Once);
     }
 
     [Fact]
@@ -512,10 +502,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         sut.UpdateLastEditedDatesAndTracking(_testPath, fileResults, trackingOnly: false);
 
         // Assert
-        MockFileTracking.Verify(
-            ft => ft.RemoveFileFromIndex(_testPath, relativePath),
-            Times.Once
-        );
+        MockFileTracking.Verify(ft => ft.RemoveFileFromIndex(_testPath, relativePath), Times.Once);
     }
 
     [Fact]
@@ -527,8 +514,12 @@ public class JournalUpdateServiceTests : ServiceTestBase
         var absolutePath1 = Path.Combine(_testPath, relativePath1);
         var absolutePath2 = Path.Combine(_testPath, relativePath2);
 
-        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath1)).Returns("Created: 01/01/2025\n# Note One");
-        MockFileSystem.Setup(fs => fs.GetFileContent(absolutePath2)).Returns("Created: 01/01/2025\n# Note Two");
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(absolutePath1))
+            .Returns("Created: 01/01/2025\n# Note One");
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(absolutePath2))
+            .Returns("Created: 01/01/2025\n# Note Two");
         MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath1)).Returns(_testPath);
         MockFileSystem.Setup(fs => fs.GetDirectoryName(absolutePath2)).Returns(_testPath);
         MockFileSystem.Setup(fs => fs.GetFileName(absolutePath1)).Returns(relativePath1);
@@ -545,11 +536,21 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         // Assert
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(_testPath, relativePath1, It.Is<string>(s => s.Contains("Last Edited:"))),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    relativePath1,
+                    It.Is<string>(s => s.Contains("Last Edited:"))
+                ),
             Times.Once
         );
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(_testPath, relativePath2, It.Is<string>(s => s.Contains("Last Edited:"))),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    relativePath2,
+                    It.Is<string>(s => s.Contains("Last Edited:"))
+                ),
             Times.Once
         );
     }
@@ -574,11 +575,12 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         // Assert — MarkdownMetadataParser must insert the date even when no existing metadata exists
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(
-                _testPath,
-                relativePath,
-                It.Is<string>(s => s.Contains("Last Edited:"))
-            ),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    relativePath,
+                    It.Is<string>(s => s.Contains("Last Edited:"))
+                ),
             Times.Once
         );
     }
@@ -651,11 +653,12 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         // Assert — date must match the MM/dd/yyyy format configured in JournalSettings
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(
-                _testPath,
-                relativePath,
-                It.Is<string>(s => Regex.IsMatch(s, @"Last Edited: \d{2}/\d{2}/\d{4}"))
-            ),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    relativePath,
+                    It.Is<string>(s => Regex.IsMatch(s, @"Last Edited: \d{2}/\d{2}/\d{4}"))
+                ),
             Times.Once
         );
     }
@@ -769,13 +772,20 @@ public class JournalUpdateServiceTests : ServiceTestBase
             .Setup(r => r.FindFilesWithLinkTo(_testPath, oldTocFile))
             .Returns([noteRelPath]);
         _mockMarkdownLinkRewriter
-            .Setup(r => r.ReplaceLinksInDirectory(
-                _testPath, oldTocFile, newTocFile, It.IsAny<IReadOnlyList<string>>()))
+            .Setup(r =>
+                r.ReplaceLinksInDirectory(
+                    _testPath,
+                    oldTocFile,
+                    newTocFile,
+                    It.IsAny<IReadOnlyList<string>>()
+                )
+            )
             .Returns([noteRelPath]);
 
         var noteAbsPath = Path.Combine(_testPath, noteRelPath);
         var noteDir = Path.GetDirectoryName(noteAbsPath)!;
-        MockFileSystem.Setup(fs => fs.GetFileContent(noteAbsPath))
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(noteAbsPath))
             .Returns($"Created: 01/01/2025\n# Intro\nSee [TOC]({newTocFile}).");
         MockFileSystem.Setup(fs => fs.GetDirectoryName(noteAbsPath)).Returns(noteDir);
         MockFileSystem.Setup(fs => fs.GetFileName(noteAbsPath)).Returns("intro.md");
@@ -803,7 +813,8 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         // Backlink file stamped with Last Edited and re-tracked
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(noteDir, "intro.md", It.Is<string>(s => s.Contains("Last Edited:"))),
+            fs =>
+                fs.UpdateFile(noteDir, "intro.md", It.Is<string>(s => s.Contains("Last Edited:"))),
             Times.Once
         );
         MockFileTracking.Verify(ft => ft.UpdateFileInIndex(_testPath, noteRelPath), Times.Once);
@@ -870,8 +881,14 @@ public class JournalUpdateServiceTests : ServiceTestBase
             .Setup(r => r.FindFilesWithLinkTo(_testPath, oldTocFile))
             .Returns([]);
         _mockMarkdownLinkRewriter
-            .Setup(r => r.ReplaceLinksInDirectory(
-                _testPath, oldTocFile, newTocFile, It.IsAny<IReadOnlyList<string>>()))
+            .Setup(r =>
+                r.ReplaceLinksInDirectory(
+                    _testPath,
+                    oldTocFile,
+                    newTocFile,
+                    It.IsAny<IReadOnlyList<string>>()
+                )
+            )
             .Returns([]);
 
         var sut = CreateSut();
@@ -901,15 +918,23 @@ public class JournalUpdateServiceTests : ServiceTestBase
             .Setup(r => r.FindFilesWithLinkTo(_testPath, oldTocFile))
             .Returns([]);
         _mockMarkdownLinkRewriter
-            .Setup(r => r.ReplaceLinksInDirectory(
-                _testPath, oldTocFile, newTocFile, It.IsAny<IReadOnlyList<string>>()))
+            .Setup(r =>
+                r.ReplaceLinksInDirectory(
+                    _testPath,
+                    oldTocFile,
+                    newTocFile,
+                    It.IsAny<IReadOnlyList<string>>()
+                )
+            )
             .Returns(["intro.md", "chapter-1.md"]);
 
         var introAbsPath = Path.Combine(_testPath, "intro.md");
         var ch1AbsPath = Path.Combine(_testPath, "chapter-1.md");
-        MockFileSystem.Setup(fs => fs.GetFileContent(introAbsPath))
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(introAbsPath))
             .Returns($"Created: 01/01/2025\n# Intro\n[TOC]({newTocFile})");
-        MockFileSystem.Setup(fs => fs.GetFileContent(ch1AbsPath))
+        MockFileSystem
+            .Setup(fs => fs.GetFileContent(ch1AbsPath))
             .Returns($"Created: 01/01/2025\n# Chapter 1\n[TOC]({newTocFile})");
         MockFileSystem.Setup(fs => fs.GetDirectoryName(introAbsPath)).Returns(_testPath);
         MockFileSystem.Setup(fs => fs.GetDirectoryName(ch1AbsPath)).Returns(_testPath);
@@ -923,11 +948,21 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         // Assert — both files stamped with Last Edited
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(_testPath, "intro.md", It.Is<string>(s => s.Contains("Last Edited:"))),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    "intro.md",
+                    It.Is<string>(s => s.Contains("Last Edited:"))
+                ),
             Times.Once
         );
         MockFileSystem.Verify(
-            fs => fs.UpdateFile(_testPath, "chapter-1.md", It.Is<string>(s => s.Contains("Last Edited:"))),
+            fs =>
+                fs.UpdateFile(
+                    _testPath,
+                    "chapter-1.md",
+                    It.Is<string>(s => s.Contains("Last Edited:"))
+                ),
             Times.Once
         );
         _console.Output.ShouldContain("Last Edited updated for 2 file(s).");
@@ -994,23 +1029,39 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         MockFileTracking
             .Setup(ft => ft.LoadIndex(_testPath))
-            .Returns(new JournalIndex
-            {
-                Files = new Dictionary<string, FileState>
+            .Returns(
+                new JournalIndex
                 {
-                    { "1a-TableOfContents.md", new FileState { FilePath = "1a-TableOfContents.md", Hash = "h1" } },
-                    { "existing.md", new FileState { FilePath = "existing.md", Hash = "h2" } },
-                },
-            });
+                    Files = new Dictionary<string, FileState>
+                    {
+                        {
+                            "1a-TableOfContents.md",
+                            new FileState { FilePath = "1a-TableOfContents.md", Hash = "h1" }
+                        },
+                        {
+                            "existing.md",
+                            new FileState { FilePath = "existing.md", Hash = "h2" }
+                        },
+                    },
+                }
+            );
 
         // TOC file does not exist yet on disk
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
         // Preview returns the root entry file names of the projected toc structure
         MockTableOfContentsService
-            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>(), It.IsAny<JournalTocStructure>()))
-            .Returns((string _, JournalConfig _, JournalTocStructure s) =>
-                string.Join("\n", s.RootEntries.Select(e => e.File)));
+            .Setup(toc =>
+                toc.PreviewTableOfContents(
+                    _testPath,
+                    It.IsAny<JournalConfig>(),
+                    It.IsAny<JournalTocStructure>()
+                )
+            )
+            .Returns(
+                (string _, JournalConfig _, JournalTocStructure s) =>
+                    string.Join("\n", s.RootEntries.Select(e => e.File))
+            );
 
         var trackingChanges = new ChangeDetectionResult { AddedFiles = ["new-entry.md"] };
         // configChanges is non-null so projection is triggered
@@ -1044,31 +1095,49 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         MockFileTracking
             .Setup(ft => ft.LoadIndex(_testPath))
-            .Returns(new JournalIndex
-            {
-                Files = new Dictionary<string, FileState>
+            .Returns(
+                new JournalIndex
                 {
-                    { "1a-TableOfContents.md", new FileState { FilePath = "1a-TableOfContents.md", Hash = "h1" } },
-                    { "going-away.md", new FileState { FilePath = "going-away.md", Hash = "h2" } },
-                },
-            });
+                    Files = new Dictionary<string, FileState>
+                    {
+                        {
+                            "1a-TableOfContents.md",
+                            new FileState { FilePath = "1a-TableOfContents.md", Hash = "h1" }
+                        },
+                        {
+                            "going-away.md",
+                            new FileState { FilePath = "going-away.md", Hash = "h2" }
+                        },
+                    },
+                }
+            );
 
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
         // Set up toc structure so "going-away.md" is recognized as a registered entry
         MockTocStructureRepository
             .Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = [] },
-                RootEntries = [new Entries { Name = "going-away", File = "going-away.md" }],
-            });
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = [] },
+                    RootEntries = [new Entries { Name = "going-away", File = "going-away.md" }],
+                }
+            );
 
         // Preview returns root entry file names of the projected toc structure
         MockTableOfContentsService
-            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>(), It.IsAny<JournalTocStructure>()))
-            .Returns((string _, JournalConfig _, JournalTocStructure s) =>
-                string.Join("\n", s.RootEntries.Select(e => e.File)));
+            .Setup(toc =>
+                toc.PreviewTableOfContents(
+                    _testPath,
+                    It.IsAny<JournalConfig>(),
+                    It.IsAny<JournalTocStructure>()
+                )
+            )
+            .Returns(
+                (string _, JournalConfig _, JournalTocStructure s) =>
+                    string.Join("\n", s.RootEntries.Select(e => e.File))
+            );
 
         var trackingChanges = new ChangeDetectionResult { DeletedFiles = ["going-away.md"] };
         var naiveConfigChanges = new JournalConfigSyncResult();
@@ -1104,9 +1173,17 @@ public class JournalUpdateServiceTests : ServiceTestBase
         MockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
 
         MockTableOfContentsService
-            .Setup(toc => toc.PreviewTableOfContents(_testPath, It.IsAny<JournalConfig>(), It.IsAny<JournalTocStructure>()))
-            .Returns((string _, JournalConfig _, JournalTocStructure s) =>
-                string.Join("\n", s.RootEntries.Select(e => e.File)));
+            .Setup(toc =>
+                toc.PreviewTableOfContents(
+                    _testPath,
+                    It.IsAny<JournalConfig>(),
+                    It.IsAny<JournalTocStructure>()
+                )
+            )
+            .Returns(
+                (string _, JournalConfig _, JournalTocStructure s) =>
+                    string.Join("\n", s.RootEntries.Select(e => e.File))
+            );
 
         var configChanges = new JournalConfigSyncResult { FilesToAdd = ["unregistered.md"] };
         var sut = CreateSut();

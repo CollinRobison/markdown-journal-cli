@@ -1,5 +1,4 @@
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
@@ -8,6 +7,7 @@ using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
 using markdown_journal_cli.Services.RemoveEntry;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -65,10 +65,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
             .Returns(
                 new JournalConfig
                 {
-                    TableOfContents = new TableOfContents
-                    {
-                        File = "1a-TableOfContents.md",
-                    },
+                    TableOfContents = new TableOfContents { File = "1a-TableOfContents.md" },
                 }
             );
 
@@ -88,13 +85,20 @@ public class RemoveEntryServiceTests : ServiceTestBase
 
         MockFileTracking
             .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
-            .Returns(new JournalIndex
-            {
-                Files = new Dictionary<string, FileState>
+            .Returns(
+                new JournalIndex
                 {
-                    [EntryFileName] = new FileState { FilePath = EntryFilePath, Hash = "abc", LastChecked = DateTime.Now },
-                },
-            });
+                    Files = new Dictionary<string, FileState>
+                    {
+                        [EntryFileName] = new FileState
+                        {
+                            FilePath = EntryFilePath,
+                            Hash = "abc",
+                            LastChecked = DateTime.Now,
+                        },
+                    },
+                }
+            );
     }
 
     // ------------------------------------------------------------------
@@ -255,13 +259,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
         MockJournalConfiguration
             .Setup(jc => jc.Read(JournalPath))
             .Returns(
-                new JournalConfig
-                {
-                    TableOfContents = new TableOfContents
-                    {
-                        File = "my-toc.md",
-                    },
-                }
+                new JournalConfig { TableOfContents = new TableOfContents { File = "my-toc.md" } }
             );
 
         // Act & Assert
@@ -464,9 +462,7 @@ public class RemoveEntryServiceTests : ServiceTestBase
     public void RemoveEntry_Should_ReturnRemovedFromTrackingFalse_When_EntryNotInIndex()
     {
         // Arrange
-        MockFileTracking
-            .Setup(ft => ft.LoadIndex(It.IsAny<string>()))
-            .Returns(new JournalIndex());
+        MockFileTracking.Setup(ft => ft.LoadIndex(It.IsAny<string>())).Returns(new JournalIndex());
 
         // Act
         var result = _service.RemoveEntry(JournalPath, EntryFileName, cleanRefs: false);

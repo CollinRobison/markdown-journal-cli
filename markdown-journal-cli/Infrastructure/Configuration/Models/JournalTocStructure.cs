@@ -19,5 +19,9 @@ public class JournalTocStructure
     /// when the .journaltoc file is absent.
     /// </summary>
     public static JournalTocStructure Empty() =>
-        new() { Structure = new Structure { Topics = [] }, RootEntries = [] };
+        new()
+        {
+            Structure = new Structure { Topics = [] },
+            RootEntries = [],
+        };
 }

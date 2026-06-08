@@ -39,7 +39,11 @@ public sealed class RemoveEntryCommand(
             {
                 // Validate all preconditions before prompting; surfaces errors without
                 // asking the user to confirm an action that was never possible.
-                _removeEntryService.ValidatePreconditions(settings.FilePath, settings.FileName, settings.CleanRefs);
+                _removeEntryService.ValidatePreconditions(
+                    settings.FilePath,
+                    settings.FileName,
+                    settings.CleanRefs
+                );
 
                 var confirmed = _console.Confirm(
                     $"Are you sure you want to remove '{settings.FileName.EscapeMarkup()}'? This action cannot be undone.",
@@ -59,7 +63,8 @@ public sealed class RemoveEntryCommand(
                 settings.CleanRefs
             );
 
-            bool anythingRemoved = result.FileExistedOnDisk || result.RemovedFromConfig || result.RemovedFromTracking;
+            bool anythingRemoved =
+                result.FileExistedOnDisk || result.RemovedFromConfig || result.RemovedFromTracking;
 
             if (anythingRemoved)
             {
@@ -82,7 +87,9 @@ public sealed class RemoveEntryCommand(
                 {
                     foreach (var relativePath in result.StrippedLinkFiles)
                     {
-                        _console.MarkupLine($"[dim]  Stripped links: {relativePath.EscapeMarkup()}[/]");
+                        _console.MarkupLine(
+                            $"[dim]  Stripped links: {relativePath.EscapeMarkup()}[/]"
+                        );
                     }
                     _console.MarkupLine(
                         $"[green]Cleaned dead references in {result.StrippedLinkFiles.Count} file(s).[/]"
