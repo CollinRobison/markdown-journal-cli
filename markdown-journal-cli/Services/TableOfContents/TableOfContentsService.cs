@@ -244,10 +244,7 @@ public class TableOfContentsService(
         var ignoreFilesWithToc = ignoreFiles.Append(tocFile).ToArray();
 
         // Add root entries (filter out ignored files)
-        if (
-            tocStructure.RootEntries != null
-            && tocStructure.RootEntries.Length > 0
-        )
+        if (tocStructure.RootEntries != null && tocStructure.RootEntries.Length > 0)
         {
             foreach (var entry in tocStructure.RootEntries)
             {
@@ -259,10 +256,7 @@ public class TableOfContentsService(
         }
 
         // Add topics
-        if (
-            tocStructure.Structure?.Topics != null
-            && tocStructure.Structure.Topics.Length > 0
-        )
+        if (tocStructure.Structure?.Topics != null && tocStructure.Structure.Topics.Length > 0)
         {
             foreach (var topic in tocStructure.Structure.Topics)
             {

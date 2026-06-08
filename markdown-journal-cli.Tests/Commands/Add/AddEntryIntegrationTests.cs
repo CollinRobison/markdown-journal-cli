@@ -24,7 +24,8 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
     private readonly AddEntry _addEntryCommand;
     private readonly TestConsole _console;
 
-    public AddEntryIntegrationTests() : base("TestJournal")
+    public AddEntryIntegrationTests()
+        : base("TestJournal")
     {
         // Initialize journal files on disk
         InitializeJournal();
@@ -206,12 +207,16 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         File.Exists(Path.Combine(JournalPath, "CommonHeading-Entry3.md")).ShouldBeTrue();
 
         // Verify split metadata was updated for all entries
-        var trackingContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        var trackingContent = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journalindex")
+        );
         trackingContent.ShouldContain("CommonHeading-Entry1.md");
         trackingContent.ShouldContain("CommonHeading-Entry2.md");
         trackingContent.ShouldContain("CommonHeading-Entry3.md");
 
-        var tocStructureContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        var tocStructureContent = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journaltoc")
+        );
         tocStructureContent.ShouldContain("Entry1");
         tocStructureContent.ShouldContain("Entry2");
         tocStructureContent.ShouldContain("Entry3");
@@ -234,7 +239,9 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
         File.Exists(expectedFile).ShouldBeTrue();
 
         // Verify split metadata has correct hierarchy and entry
-        var tocStructureContent = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        var tocStructureContent = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journaltoc")
+        );
         tocStructureContent.ShouldContain("Category");
         tocStructureContent.ShouldContain("Sub1");
         tocStructureContent.ShouldContain("Sub2");
@@ -317,5 +324,4 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
     }
 
     #endregion
-
 }

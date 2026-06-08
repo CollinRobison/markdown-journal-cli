@@ -1,8 +1,8 @@
-using markdown_journal_cli.Tests.Infrastructure;
 using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Services;
+using markdown_journal_cli.Tests.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -47,23 +47,22 @@ public class TableOfContentsServiceTests : ServiceTestBase
         return new JournalConfig
         {
             JournalName = "Test Journal",
-            TableOfContents = new TableOfContents
-            {
-                File = TocFile,
-                IgnoreFiles = ignoreFiles,
-            },
+            TableOfContents = new TableOfContents { File = TocFile, IgnoreFiles = ignoreFiles },
         };
     }
 
     /// <summary>Sets up the mock TOC structure repository to return the given entries/topics.</summary>
     private void SetupTocStructure(Entries[]? rootEntries = null, Topic[]? topics = null)
     {
-        MockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = topics ?? [] },
-                RootEntries = rootEntries ?? [],
-            });
+        MockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = topics ?? [] },
+                    RootEntries = rootEntries ?? [],
+                }
+            );
     }
 
     #region Constructor Validation
@@ -118,7 +117,9 @@ public class TableOfContentsServiceTests : ServiceTestBase
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void UpdateTableOfContents_Should_ThrowArgumentException_When_DirectoryIsInvalid(string? directory)
+    public void UpdateTableOfContents_Should_ThrowArgumentException_When_DirectoryIsInvalid(
+        string? directory
+    )
     {
         Should.Throw<ArgumentException>(() => _service.UpdateTableOfContents(directory!));
     }
@@ -142,9 +143,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     [Fact]
     public void UpdateTableOfContents_Should_CallUpdateFileWithCorrectPaths()
     {
-        MockFileSystem
-            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
-            .Returns(TocFilePath);
+        MockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
 
         _service.UpdateTableOfContents(JournalDirectory);
 
@@ -157,13 +156,9 @@ public class TableOfContentsServiceTests : ServiceTestBase
     [Fact]
     public void UpdateTableOfContents_Should_ReadExistingContent_When_TocFileExists()
     {
-        MockFileSystem
-            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
-            .Returns(TocFilePath);
+        MockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
         MockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
-        MockFileSystem
-            .Setup(fs => fs.GetFileContent(TocFilePath))
-            .Returns("# Table of Contents\n");
+        MockFileSystem.Setup(fs => fs.GetFileContent(TocFilePath)).Returns("# Table of Contents\n");
 
         _service.UpdateTableOfContents(JournalDirectory);
 
@@ -202,9 +197,7 @@ public class TableOfContentsServiceTests : ServiceTestBase
     [Fact]
     public void UpdateTableOfContents_Should_PreserveCreatedDate_When_ExistingTocHasCreatedDateAndNoNewDateGiven()
     {
-        MockFileSystem
-            .Setup(fs => fs.CombinePaths(JournalDirectory, TocFile))
-            .Returns(TocFilePath);
+        MockFileSystem.Setup(fs => fs.CombinePaths(JournalDirectory, TocFile)).Returns(TocFilePath);
         MockFileSystem.Setup(fs => fs.FileExists(TocFilePath)).Returns(true);
         MockFileSystem
             .Setup(fs => fs.GetFileContent(TocFilePath))
@@ -674,7 +667,9 @@ public class TableOfContentsServicePreviewTests
             }
         );
 
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>())).Returns(JournalTocStructure.Empty());
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(JournalTocStructure.Empty());
         _mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
         _mockJournalConfiguration.Setup(jc => jc.Read(JournalDirectory)).Returns(BuildConfig());
 
@@ -694,20 +689,20 @@ public class TableOfContentsServicePreviewTests
         new()
         {
             JournalName = "Test",
-            TableOfContents = new TableOfContents
-            {
-                File = TocFile,
-            },
+            TableOfContents = new TableOfContents { File = TocFile },
         };
 
     private void SetupTocStructure(Entries[]? rootEntries = null, Topic[]? topics = null)
     {
-        _mockTocStructureRepository.Setup(r => r.Load(It.IsAny<string>()))
-            .Returns(new JournalTocStructure
-            {
-                Structure = new Structure { Topics = topics ?? [] },
-                RootEntries = rootEntries ?? [],
-            });
+        _mockTocStructureRepository
+            .Setup(r => r.Load(It.IsAny<string>()))
+            .Returns(
+                new JournalTocStructure
+                {
+                    Structure = new Structure { Topics = topics ?? [] },
+                    RootEntries = rootEntries ?? [],
+                }
+            );
     }
 
     [Fact]
@@ -798,7 +793,9 @@ public class TableOfContentsServicePreviewTests
     public void PreviewTableOfContents_Should_GenerateOutputWithoutReadingJournalrc_When_ProjectedConfigProvided()
     {
         // Arrange — structure with projected entries is loaded from the repository, not .journalrc
-        SetupTocStructure(rootEntries: [new Entries { Name = "Projected Entry", File = "projected-entry.md" }]);
+        SetupTocStructure(
+            rootEntries: [new Entries { Name = "Projected Entry", File = "projected-entry.md" }]
+        );
         var projectedConfig = BuildConfig(
             rootEntries: [new Entries { Name = "Projected Entry", File = "projected-entry.md" }]
         );

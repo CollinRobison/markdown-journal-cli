@@ -51,7 +51,8 @@ public class FileTracking(
     /// <returns>all markdown files in the journal directory (excluding metadata directory).</returns>
     private HashSet<string> GetCurrentMarkdownFiles(string path)
     {
-        var metadataDir = Path.Combine(path, _journalSettings.MetadataDirName) + Path.DirectorySeparatorChar;
+        var metadataDir =
+            Path.Combine(path, _journalSettings.MetadataDirName) + Path.DirectorySeparatorChar;
         return
         [
             .. _fileSystem

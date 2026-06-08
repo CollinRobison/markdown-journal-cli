@@ -29,11 +29,7 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     }
 
     private AddTableOfContents CreateCommand() =>
-        new AddTableOfContents(
-            _console,
-            _mockAddTocService.Object,
-            NoOpRollbackReporter.Instance
-        );
+        new AddTableOfContents(_console, _mockAddTocService.Object, NoOpRollbackReporter.Instance);
 
     private static AddTableOfContentsSettings DefaultSettings(
         bool structureOnly = false,
@@ -129,19 +125,29 @@ public class AddTableOfContentsCommandTests : CommandTestBase
         var result = CreateCommand().Execute(null!, DefaultSettings(tocName: "MyCustomToc"));
 
         result.ShouldBe(0);
-        _mockAddTocService.Verify(s => s.Execute(JournalDir, false, false, "MyCustomToc"), Times.Once);
+        _mockAddTocService.Verify(
+            s => s.Execute(JournalDir, false, false, "MyCustomToc"),
+            Times.Once
+        );
     }
 
     [Fact]
     public void Execute_ReturnsOne_AndErrorMessage_WhenBothFlagsAreSet()
     {
-        var result = CreateCommand().Execute(null!, DefaultSettings(structureOnly: true, mdOnly: true));
+        var result = CreateCommand()
+            .Execute(null!, DefaultSettings(structureOnly: true, mdOnly: true));
 
         result.ShouldBe(1);
         _console.Output.ShouldContain("Error");
         // Service should NOT be called when flags are mutually exclusive
         _mockAddTocService.Verify(
-            s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()),
+            s =>
+                s.Execute(
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string>()
+                ),
             Times.Never
         );
     }
@@ -149,13 +155,20 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     [Fact]
     public void Execute_ReturnsOne_AndErrorMessage_WhenNameAndStructureOnlyAreSet()
     {
-        var result = CreateCommand().Execute(null!, DefaultSettings(structureOnly: true, tocName: "MyToc"));
+        var result = CreateCommand()
+            .Execute(null!, DefaultSettings(structureOnly: true, tocName: "MyToc"));
 
         result.ShouldBe(1);
         _console.Output.ShouldContain("Error");
         // Service should NOT be called when --name and --structure-only conflict
         _mockAddTocService.Verify(
-            s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()),
+            s =>
+                s.Execute(
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string>()
+                ),
             Times.Never
         );
     }
@@ -168,7 +181,14 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsOne_AndErrorMessage_WhenServiceThrows()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()))
+            .Setup(s =>
+                s.Execute(
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string>()
+                )
+            )
             .Throws(new InvalidOperationException("Config not found"));
 
         var result = CreateCommand().Execute(null!, DefaultSettings());
@@ -181,11 +201,20 @@ public class AddTableOfContentsCommandTests : CommandTestBase
     public void Execute_ReturnsTwo_WhenServiceThrowsFullyRestoredRollbackCompletedException()
     {
         _mockAddTocService
-            .Setup(s => s.Execute(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>()))
-            .Throws(new RollbackCompletedException(
-                new RollbackResult([], []),
-                new IOException("simulated fault")
-            ));
+            .Setup(s =>
+                s.Execute(
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<string>()
+                )
+            )
+            .Throws(
+                new RollbackCompletedException(
+                    new RollbackResult([], []),
+                    new IOException("simulated fault")
+                )
+            );
 
         var result = CreateCommand().Execute(null!, DefaultSettings());
 
@@ -195,4 +224,3 @@ public class AddTableOfContentsCommandTests : CommandTestBase
 
     #endregion
 }
-

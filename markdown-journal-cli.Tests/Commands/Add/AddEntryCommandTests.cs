@@ -42,7 +42,10 @@ public class AddEntryCommandTests : CommandTestBase
                 config.SetApplicationName(JournalSettings.Value.AppName);
                 config.AddBranch<AddSettings>(
                     "add",
-                    add => { add.AddCommand<AddEntry>("entry"); }
+                    add =>
+                    {
+                        add.AddCommand<AddEntry>("entry");
+                    }
                 );
             },
             services =>
@@ -60,7 +63,11 @@ public class AddEntryCommandTests : CommandTestBase
             .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".journalrc"))))
             .Returns(true);
         MockFileSystem
-            .Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".mdjournal") && s.Contains(".journalindex"))))
+            .Setup(fs =>
+                fs.FileExists(
+                    It.Is<string>(s => s.Contains(".mdjournal") && s.Contains(".journalindex"))
+                )
+            )
             .Returns(true);
 
         // Default: entry markdown files don't exist yet
@@ -203,7 +210,8 @@ body goes here.
             .Returns(new[] { "AI", "ML" });
 
         // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--sh", "AI-ML", "-p", "."]);
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--sh", "AI-ML", "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -218,9 +226,8 @@ body goes here.
             .Returns(new[] { "AI", "ML" });
 
         // Act
-        var result = BuildAddEntryApp().Run(
-            ["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "-p", "."]
-        );
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -234,7 +241,8 @@ body goes here.
     public void Execute_Should_UseCustomTitle_When_TitleProvided()
     {
         // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "-p", "."]);
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "-p", "."]);
 
         // Assert
         // RemoveSpaceSeparators replaces underscores with spaces; "My Custom Title" has no underscores
@@ -278,7 +286,13 @@ body goes here.
     public void Execute_Should_ReturnError_When_TrackingIndexNotFound()
     {
         // Arrange
-        MockFileSystem.Setup(fs => fs.FileExists(It.Is<string>(s => s.Contains(".mdjournal") && s.Contains(".journalindex")))).Returns(false);
+        MockFileSystem
+            .Setup(fs =>
+                fs.FileExists(
+                    It.Is<string>(s => s.Contains(".mdjournal") && s.Contains(".journalindex"))
+                )
+            )
+            .Returns(false);
 
         // Act
         var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "-p", "."]);
@@ -330,7 +344,8 @@ body goes here.
     public void Execute_Should_ReturnError_When_HeadingHasInvalidCharacters(string invalidHeading)
     {
         // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--he", invalidHeading, "-p", "."]);
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--he", invalidHeading, "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldNotBe(0);
@@ -341,10 +356,13 @@ body goes here.
     [InlineData("Invalid/Sub")]
     [InlineData("Invalid Sub")]
     [InlineData("Invalid<Sub")]
-    public void Execute_Should_ReturnError_When_SubheadingHasInvalidCharacters(string invalidSubheading)
+    public void Execute_Should_ReturnError_When_SubheadingHasInvalidCharacters(
+        string invalidSubheading
+    )
     {
         // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--sh", invalidSubheading, "-p", "."]);
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--sh", invalidSubheading, "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldNotBe(0);
@@ -410,7 +428,8 @@ body goes here.
     public void Execute_Should_HandleHeadingWithSpaces()
     {
         // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--he", "Tech News", "-p", "."]);
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--he", "Tech News", "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -429,9 +448,8 @@ body goes here.
             .Returns(new[] { "Level1", "Level2", "Level3", "Level4" });
 
         // Act
-        var result = BuildAddEntryApp().Run(
-            ["add", "entry", "MyEntry", "--sh", "Level1-Level2-Level3-Level4", "-p", "."]
-        );
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--sh", "Level1-Level2-Level3-Level4", "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -446,7 +464,8 @@ body goes here.
             .Returns(new[] { "SubOnly" });
 
         // Act
-        var result = BuildAddEntryApp().Run(["add", "entry", "MyEntry", "--sh", "SubOnly", "-p", "."]);
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "MyEntry", "--sh", "SubOnly", "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -619,9 +638,10 @@ body goes here.
             .Returns(new[] { "AI", "ML" });
 
         // Act
-        var result = BuildAddEntryApp().Run(
-            ["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "--ignore", "-p", "."]
-        );
+        var result = BuildAddEntryApp()
+            .Run(
+                ["add", "entry", "MyEntry", "--he", "Tech", "--sh", "AI-ML", "--ignore", "-p", "."]
+            );
 
         // Assert
         result.ExitCode.ShouldBe(0);
@@ -660,9 +680,8 @@ body goes here.
     public void Execute_Should_HandleIgnoreFileWithCustomTitle()
     {
         // Act
-        var result = BuildAddEntryApp().Run(
-            ["add", "entry", "my_file_name", "-t", "My Custom Title", "--ignore", "-p", "."]
-        );
+        var result = BuildAddEntryApp()
+            .Run(["add", "entry", "my_file_name", "-t", "My Custom Title", "--ignore", "-p", "."]);
 
         // Assert
         result.ExitCode.ShouldBe(0);

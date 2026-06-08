@@ -29,7 +29,8 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
     private readonly CommandAppTester _app;
     private readonly TestConsole _console;
 
-    public RemoveEntryCommandIntegrationTests() : base("RemoveTest")
+    public RemoveEntryCommandIntegrationTests()
+        : base("RemoveTest")
     {
         InitializeJournal();
 
@@ -52,14 +53,23 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
             NullLogger<TableOfContentsService>.Instance,
             tocStructureRepository
         );
-        var linkRewriter = new MarkdownLinkRewriter(FileSystem, NullLogger<MarkdownLinkRewriter>.Instance);
+        var linkRewriter = new MarkdownLinkRewriter(
+            FileSystem,
+            NullLogger<MarkdownLinkRewriter>.Instance
+        );
         var buffer = new InMemoryFileBuffer(FileSystem);
         var deletionStrategy = new InMemoryDeletionRollbackStrategy();
         var coordinator = new FileTransactionCoordinator(
-            FileSystem, buffer, deletionStrategy, NullLoggerFactory.Instance
+            FileSystem,
+            buffer,
+            deletionStrategy,
+            NullLoggerFactory.Instance
         );
         _console = new TestConsole();
-        var rollbackReporter = new RollbackReporter(_console, NullLogger<RollbackReporter>.Instance);
+        var rollbackReporter = new RollbackReporter(
+            _console,
+            NullLogger<RollbackReporter>.Instance
+        );
 
         // Use JournalEntryService to seed entries for removal tests
         var journalEntryService = new JournalEntryService(
@@ -106,10 +116,13 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         _app.Configure(config =>
         {
             config.SetApplicationName("mdjournal");
-            config.AddBranch<RemoveSettings>("remove", remove =>
-            {
-                remove.AddCommand<RemoveEntryCommand>("entry");
-            });
+            config.AddBranch<RemoveSettings>(
+                "remove",
+                remove =>
+                {
+                    remove.AddCommand<RemoveEntryCommand>("entry");
+                }
+            );
         });
     }
 
@@ -125,7 +138,8 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
 
         // Assert
         result.ExitCode.ShouldBe(0);
-        File.Exists(entryPath).ShouldBeFalse("Alpha.md should have been deleted by the remove command");
+        File.Exists(entryPath)
+            .ShouldBeFalse("Alpha.md should have been deleted by the remove command");
     }
 
     [Fact]
@@ -169,7 +183,9 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
     public void Execute_Should_ReturnExitCode1_When_EntryDoesNotExist()
     {
         // Act
-        var result = _app.Run(["remove", "--path", JournalPath, "entry", "NonExistent.md", "--force"]);
+        var result = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "NonExistent.md", "--force"]
+        );
 
         // Assert
         result.ExitCode.ShouldBe(1);
@@ -186,7 +202,8 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
 
         var alphaPath = Path.Combine(JournalPath, "Alpha.md");
         File.Delete(alphaPath);
-        File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent before the test");
+        File.Exists(alphaPath)
+            .ShouldBeFalse("Pre-condition: Alpha.md must be absent before the test");
 
         // Act
         var result = _app.Run(
@@ -233,9 +250,13 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         File.Exists(alphaPath).ShouldBeFalse("Pre-condition: Alpha.md must be absent");
 
         // Verify Alpha is still represented in split metadata before cleanup
-        var trackingBefore = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        var trackingBefore = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journalindex")
+        );
         trackingBefore.ShouldContain("Alpha.md");
-        var tocStructureBefore = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        var tocStructureBefore = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journaltoc")
+        );
         tocStructureBefore.ShouldContain("Alpha.md");
 
         // Act
@@ -248,9 +269,13 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
         result.Output.ShouldContain("Success:");
 
         // Alpha should no longer appear in metadata after cleanup
-        var trackingAfter = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journalindex"));
+        var trackingAfter = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journalindex")
+        );
         trackingAfter.ShouldNotContain("Alpha.md");
-        var tocStructureAfter = File.ReadAllText(Path.Combine(JournalPath, ".mdjournal", ".journaltoc"));
+        var tocStructureAfter = File.ReadAllText(
+            Path.Combine(JournalPath, ".mdjournal", ".journaltoc")
+        );
         tocStructureAfter.ShouldNotContain("Alpha.md");
     }
 
@@ -258,7 +283,9 @@ public class RemoveEntryCommandIntegrationTests : JournalIntegrationTestBase
     public void Execute_Should_NotReportFalseRemovals_When_SecondRunOnFullyCleanedJournal()
     {
         // Arrange — first run cleans up Alpha
-        var firstResult = _app.Run(["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]);
+        var firstResult = _app.Run(
+            ["remove", "--path", JournalPath, "entry", "Alpha.md", "--clean-refs", "--force"]
+        );
         var offsetAfterFirstRun = firstResult.Output.Length;
 
         // Act — second run on an already fully-cleaned journal

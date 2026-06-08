@@ -39,7 +39,12 @@ public sealed class AddTocService(
     private readonly JournalSettings _settings = journalSettings.Value;
 
     /// <inheritdoc />
-    public AddTocResult Execute(string journalDir, bool structureOnly = false, bool mdOnly = false, string? tocName = null)
+    public AddTocResult Execute(
+        string journalDir,
+        bool structureOnly = false,
+        bool mdOnly = false,
+        string? tocName = null
+    )
     {
         if (string.IsNullOrWhiteSpace(journalDir))
             throw new ArgumentException(
@@ -48,7 +53,10 @@ public sealed class AddTocService(
             );
 
         var metadataDir = _fileSystem.CombinePaths(journalDir, _settings.MetadataDirName);
-        var tocStructurePath = _fileSystem.CombinePaths(metadataDir, _settings.TocStructureFileName);
+        var tocStructurePath = _fileSystem.CombinePaths(
+            metadataDir,
+            _settings.TocStructureFileName
+        );
 
         var config =
             _journalConfiguration.Read(journalDir)
@@ -87,8 +95,14 @@ public sealed class AddTocService(
                 // Seed the structure from entries already in the tracking index so that
                 // the .journaltoc and the generated markdown TOC reflect existing journal entries.
                 var index = _fileTracking.LoadIndex(journalDir);
-                foreach (var file in index.Files.Keys
-                    .Where(f => f.EndsWith(FileConstants.MarkdownExtension, StringComparison.OrdinalIgnoreCase)))
+                foreach (
+                    var file in index.Files.Keys.Where(f =>
+                        f.EndsWith(
+                            FileConstants.MarkdownExtension,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                )
                 {
                     _journalConfiguration.AddEntry(journalDir, string.Empty, file);
                 }
@@ -100,9 +114,15 @@ public sealed class AddTocService(
                 // writing the TOC file — UpdateTableOfContents reads the filename from config.
                 if (tocName is not null)
                 {
-                    var journalrcPath = _fileSystem.CombinePaths(journalDir, _settings.JournalConfigFileName);
+                    var journalrcPath = _fileSystem.CombinePaths(
+                        journalDir,
+                        _settings.JournalConfigFileName
+                    );
                     tx.Track(journalrcPath);
-                    _journalConfiguration.Update(journalDir, c => c.TableOfContents.File = tocFileName);
+                    _journalConfiguration.Update(
+                        journalDir,
+                        c => c.TableOfContents.File = tocFileName
+                    );
                 }
 
                 tx.TrackNew(tocMdPath);

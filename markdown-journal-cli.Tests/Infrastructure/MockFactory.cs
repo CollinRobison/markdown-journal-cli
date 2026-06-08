@@ -38,24 +38,19 @@ public static class MockFactory
     }
 
     /// <summary>Creates a pre-configured mock for IJournalConfiguration.</summary>
-    public static Mock<IJournalConfiguration> CreateJournalConfiguration() =>
-        new();
+    public static Mock<IJournalConfiguration> CreateJournalConfiguration() => new();
 
     /// <summary>Creates a pre-configured mock for IFileTracking.</summary>
-    public static Mock<IFileTracking> CreateFileTracking() =>
-        new();
+    public static Mock<IFileTracking> CreateFileTracking() => new();
 
     /// <summary>Creates a pre-configured mock for ITemplateManager.</summary>
-    public static Mock<ITemplateManager> CreateTemplateManager() =>
-        new();
+    public static Mock<ITemplateManager> CreateTemplateManager() => new();
 
     /// <summary>Creates a pre-configured mock for ITableOfContentsService.</summary>
-    public static Mock<ITableOfContentsService> CreateTableOfContentsService() =>
-        new();
+    public static Mock<ITableOfContentsService> CreateTableOfContentsService() => new();
 
     /// <summary>Creates a pre-configured mock for IEntryFormatterService.</summary>
-    public static Mock<IEntryFormatterService> CreateEntryFormatterService() =>
-        new();
+    public static Mock<IEntryFormatterService> CreateEntryFormatterService() => new();
 
     /// <summary>
     /// Creates a mock IJournalValidator that returns an empty list (valid) by default.

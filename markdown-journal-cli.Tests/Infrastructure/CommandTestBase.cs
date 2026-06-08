@@ -59,7 +59,10 @@ public abstract class CommandTestBase
     /// </summary>
     /// <param name="configure">Configure the Spectre.Console command tree (add commands/branches).</param>
     /// <param name="addServices">Optional callback to register additional services (e.g. IFileTransactionCoordinator, concrete command types).</param>
-    protected CommandAppTester BuildApp(Action<IConfigurator> configure, Action<IServiceCollection>? addServices = null)
+    protected CommandAppTester BuildApp(
+        Action<IConfigurator> configure,
+        Action<IServiceCollection>? addServices = null
+    )
     {
         var services = new ServiceCollection();
         services.AddSingleton<IAnsiConsole>(new TestConsole());

@@ -68,7 +68,10 @@ public sealed class NewJournalService(
         );
 
         var directoryAlreadyExisted = _fileSystem.DirectoryExists(journalDirectory);
-        var metadataDir = _fileSystem.CombinePaths(journalDirectory, _journalSettings.MetadataDirName);
+        var metadataDir = _fileSystem.CombinePaths(
+            journalDirectory,
+            _journalSettings.MetadataDirName
+        );
 
         using var tx = _txCoordinator.Begin();
         try
@@ -199,11 +202,7 @@ public sealed class NewJournalService(
 
     private void CreateJournalConfiguration(string journalDirectory, string journalName)
     {
-        JournalConfig journalrc = new()
-        {
-            JournalName = journalName,
-            TableOfContents = new(),
-        };
+        JournalConfig journalrc = new() { JournalName = journalName, TableOfContents = new() };
 
         _journalConfiguration.Create(journalDirectory, journalrc);
 
@@ -217,17 +216,20 @@ public sealed class NewJournalService(
                 new()
                 {
                     Name = _journalSettings.IntroductionTitle,
-                    File = $"{_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension}",
+                    File =
+                        $"{_journalSettings.IntroductionFileName}{FileConstants.MarkdownExtension}",
                 },
                 new()
                 {
                     Name = _journalSettings.JournalEntryTemplateTitle,
-                    File = $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
+                    File =
+                        $"{_journalSettings.JournalEntryTemplateFileName}{FileConstants.MarkdownExtension}",
                 },
                 new()
                 {
                     Name = _journalSettings.AllJournalsTitle,
-                    File = $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}",
+                    File =
+                        $"{_journalSettings.AllJournalsFileName}{FileConstants.MarkdownExtension}",
                 },
             ],
         };

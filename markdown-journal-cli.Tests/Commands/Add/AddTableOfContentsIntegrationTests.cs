@@ -30,7 +30,8 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
     private readonly string _tocStructurePath;
     private readonly string _tocMdPath;
 
-    public AddTableOfContentsIntegrationTests() : base("TocJournal")
+    public AddTableOfContentsIntegrationTests()
+        : base("TocJournal")
     {
         _metadataDir = Path.Combine(JournalPath, JournalSettings.Value.MetadataDirName);
         _tocStructurePath = Path.Combine(_metadataDir, JournalSettings.Value.TocStructureFileName);
@@ -68,10 +69,7 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
             NullLoggerFactory.Instance
         );
         var console = new TestConsole();
-        var rollbackReporter = new RollbackReporter(
-            console,
-            NullLogger<RollbackReporter>.Instance
-        );
+        var rollbackReporter = new RollbackReporter(console, NullLogger<RollbackReporter>.Instance);
 
         var addTocService = new AddTocService(
             FileSystem,
@@ -179,9 +177,8 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("Success");
         File.Exists(_tocStructurePath).ShouldBeTrue(".journaltoc should have been created");
-        File.Exists(_tocMdPath).ShouldBeFalse(
-            "Markdown TOC file should NOT have been created with --structure-only"
-        );
+        File.Exists(_tocMdPath)
+            .ShouldBeFalse("Markdown TOC file should NOT have been created with --structure-only");
     }
 
     [Fact]
@@ -197,19 +194,15 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
         result.ExitCode.ShouldBe(0);
         result.Output.ShouldContain("Success");
         File.Exists(_tocMdPath).ShouldBeTrue("Markdown TOC file should have been created");
-        File.Exists(_tocStructurePath).ShouldBeFalse(
-            ".journaltoc should NOT have been created with --md-only"
-        );
+        File.Exists(_tocStructurePath)
+            .ShouldBeFalse(".journaltoc should NOT have been created with --md-only");
     }
 
     [Fact]
     public void AddToc_BothAlreadyExist_ReturnsExitCode1WithWarning()
     {
         // Arrange — pre-create both artifacts
-        File.WriteAllText(
-            _tocStructurePath,
-            """{"Structure":{"Topics":[]},"RootEntries":[]}"""
-        );
+        File.WriteAllText(_tocStructurePath, """{"Structure":{"Topics":[]},"RootEntries":[]}""");
         File.WriteAllText(_tocMdPath, "# Table of Contents\n");
 
         // Act
