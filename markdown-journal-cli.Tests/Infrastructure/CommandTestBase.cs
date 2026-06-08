@@ -16,7 +16,7 @@ using Spectre.Console.Testing;
 namespace markdown_journal_cli.Tests.Infrastructure;
 
 /// <summary>
-/// Abstract base class for command-layer unit tests..
+/// Abstract base class for command-layer unit tests.
 /// Provides pre-constructed Moq mocks for all standard command dependencies.
 /// Override SetupDefaultBehaviors() to change defaults for the entire test class.
 /// Call BuildApp(configure) in each test or in a helper to get a fresh CommandAppTester.
