@@ -1,10 +1,10 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36" version="29.6.4">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36">
   <diagram name="Page-1" id="bHoVlOGzG4BwT8m59Xn-">
-    <mxGraphModel dx="1426" dy="881" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1845" dy="647" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="1iz8g19e6lX26GezY2zj-1" parent="1" style="whiteSpace=wrap;html=1;aspect=fixed;" value=".journalrc&lt;br&gt;(journal configuration file)" vertex="1">
+        <mxCell id="1iz8g19e6lX26GezY2zj-1" parent="1" style="whiteSpace=wrap;html=1;aspect=fixed;" value=".journalrc&lt;br&gt;(journal configuration file)&lt;br&gt;TOC ignoreFiles&lt;br&gt;tracking noTrack" vertex="1">
           <mxGeometry height="150" width="150" x="40" y="100" as="geometry" />
         </mxCell>
         <mxCell id="1iz8g19e6lX26GezY2zj-2" parent="1" style="whiteSpace=wrap;html=1;aspect=fixed;fillColor=#dae8fc;strokeColor=#6c8ebf;" value=".mdjournal/&lt;br&gt;(metadata directory)" vertex="1">
@@ -58,9 +58,9 @@
             <mxPoint x="795" y="350" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="1iz8g19e6lX26GezY2zj-13" connectable="0" parent="1iz8g19e6lX26GezY2zj-12" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBorderColor=default;" value="Check if there are added, deleted, or updated files" vertex="1">
+        <mxCell id="1iz8g19e6lX26GezY2zj-13" connectable="0" parent="1iz8g19e6lX26GezY2zj-12" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBorderColor=default;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;fillColor=none;gradientColor=none;rotation=0;" value="Check for added, deleted,&amp;nbsp;&lt;div&gt;or updated files after excluding trackingIndex.noTrack&lt;/div&gt;" vertex="1">
           <mxGeometry relative="1" x="0.3683" y="-1" as="geometry">
-            <mxPoint x="-29" as="offset" />
+            <mxPoint x="-18" y="21" as="offset" />
           </mxGeometry>
         </mxCell>
         <mxCell id="1iz8g19e6lX26GezY2zj-16" edge="1" parent="1" source="mdjournal-index" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" target="1iz8g19e6lX26GezY2zj-3">
@@ -86,7 +86,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="1iz8g19e6lX26GezY2zj-11" connectable="0" parent="1iz8g19e6lX26GezY2zj-10" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];whiteSpace=wrap;labelBorderColor=default;" value="User-driven: updates TOC file name and sets files as ignored (via explicit commands)" vertex="1">
+        <mxCell id="1iz8g19e6lX26GezY2zj-11" connectable="0" parent="1iz8g19e6lX26GezY2zj-10" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];whiteSpace=wrap;labelBorderColor=default;" value="User config: TOC file name, TOC ignoreFiles, and trackingIndex.noTrack files/paths/directories" vertex="1">
           <mxGeometry relative="1" x="0.4875" y="2" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
@@ -128,9 +128,24 @@
             <mxPoint x="547" y="37.5" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="sM5puiyG7KJhNXqsBqFD-7" connectable="0" parent="sM5puiyG7KJhNXqsBqFD-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBorderColor=default;" value="Check which file is considered TOC file and what files to ignore adding to the TOC," vertex="1">
+        <mxCell id="sM5puiyG7KJhNXqsBqFD-7" connectable="0" parent="sM5puiyG7KJhNXqsBqFD-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBorderColor=default;" value="Check TOC file and tableOfContents.ignoreFiles for TOC rendering" vertex="1">
           <mxGeometry relative="1" x="0.4875" y="2" as="geometry">
             <mxPoint x="169" y="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tracking-notrack-edge" edge="1" parent="1" source="1iz8g19e6lX26GezY2zj-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;strokeColor=#9673a6;" target="mdjournal-index">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="175" />
+              <mxPoint x="560" y="240" />
+            </Array>
+            <mxPoint x="185.00000000000023" y="229" as="sourcePoint" />
+            <mxPoint x="500" y="309" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tracking-notrack-label" connectable="0" parent="tracking-notrack-edge" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];whiteSpace=wrap;labelBorderColor=default;fontSize=11;" value="trackingIndex.noTrack filters file names, relative paths, and directories before hashing" vertex="1">
+          <mxGeometry relative="1" x="-0.119" y="2" as="geometry">
+            <mxPoint x="-144" y="-33" as="offset" />
           </mxGeometry>
         </mxCell>
       </root>
