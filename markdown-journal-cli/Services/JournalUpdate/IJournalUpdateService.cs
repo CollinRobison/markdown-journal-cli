@@ -1,5 +1,4 @@
 using System;
-using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 
 namespace markdown_journal_cli.Services;
@@ -20,7 +19,7 @@ public interface IJournalUpdateService
     /// Incrementally updates the .journalrc configuration using a pre-computed config sync result:
     /// adds new entries and removes deleted entries.
     /// </summary>
-    public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult);
+    public void UpdateJournalConfig(string journalPath, JournalRegistrationDriftResult syncResult);
 
     /// <summary>
     /// Regenerates the table of contents markdown file from the current journal configuration.
@@ -47,14 +46,14 @@ public interface IJournalUpdateService
     /// </summary>
     /// <param name="journalPath">The root path of the journal.</param>
     /// <param name="trackingChanges">Pre-detected file tracking changes, or null to skip.</param>
-    /// <param name="configChanges">Pre-detected config drift, or null to skip.</param>
+    /// <param name="configChanges">Pre-detected registration drift, or null to skip.</param>
     /// <param name="includeToc">When true, generates a TOC preview and diff.</param>
     /// <param name="renameTocTarget">When non-null, lists files whose backlinks would be updated.</param>
     /// <returns>A <see cref="UpdateDryRunReport"/> describing all pending changes.</returns>
     public UpdateDryRunReport BuildDryRunReport(
         string journalPath,
         ChangeDetectionResult? trackingChanges,
-        JournalConfigSyncResult? configChanges,
+        JournalRegistrationDriftResult? configChanges,
         bool includeToc,
         string? renameTocTarget
     );

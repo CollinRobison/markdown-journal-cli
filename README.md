@@ -160,12 +160,35 @@ dotnet tool uninstall -g mdjournal
 
 Each journal has normal markdown files plus three managed metadata artifacts:
 
-- `.journalrc` for user-facing journal settings (name, TOC filename, ignore list)
+- `.journalrc` for user-facing journal settings (name, TOC filename, TOC ignore list, tracking no-track list)
 - `.mdjournal/.journalindex` for file-change tracking (hash-based)
 - `.mdjournal/.journaltoc` for TOC structure (topics + root entries)
 
 `mdjournal update ... journal` keeps them in sync by detecting file changes,
 updating tracking/config state, and regenerating the markdown TOC.
+
+### `.journalrc` ignore vs no-track
+
+`.journalrc` has two separate exclusion concepts:
+
+- `tableOfContents.ignoreFiles`: entries stay tracked, but are omitted from the generated TOC.
+- `trackingIndex.noTrack`: files are excluded from the tracking index entirely, so update/sync does not report, hash, or add them to `.mdjournal/.journalindex`.
+
+`trackingIndex.noTrack` accepts file names, relative file paths, or directories. Matching is case-insensitive and normalizes slashes; glob patterns are not currently supported.
+
+```json
+{
+  "journalName": "MyJournal",
+  "tableOfContents": {
+    "file": "1a-TableOfContents.md",
+    "extensions": [".md"],
+    "ignoreFiles": ["draft.md"]
+  },
+  "trackingIndex": {
+    "noTrack": ["scratch.md", "private/secret.md", "archive"]
+  }
+}
+```
 
 ## Documentation
 

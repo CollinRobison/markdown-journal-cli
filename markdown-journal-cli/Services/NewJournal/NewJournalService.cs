@@ -202,7 +202,7 @@ public sealed class NewJournalService(
 
     private void CreateJournalConfiguration(string journalDirectory, string journalName)
     {
-        JournalConfig journalrc = new() { JournalName = journalName, TableOfContents = new() };
+        JournalConfig journalrc = new() { JournalName = journalName, TableOfContents = new(), TrackingIndex = new() };
 
         _journalConfiguration.Create(journalDirectory, journalrc);
 

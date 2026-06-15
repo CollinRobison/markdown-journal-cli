@@ -25,7 +25,7 @@ Three metadata artifacts (`.journalrc`, `.mdjournal/.journalindex`, and `.mdjour
 
 | Component | Role |
 |---|---|
-| `.journalrc` | Config file. Defines the TOC file name, file extensions, and the `ignoreFiles` list.|
+| `.journalrc` | Config file. Defines the journal name, TOC file name, markdown extensions, `tableOfContents.ignoreFiles`, and `trackingIndex.noTrack`. |
 | `.mdjournal/` | Hidden metadata directory. Contains `.journalindex` and `.journaltoc`. |
 | `.mdjournal/.journalindex` | Tracking file. Stores SHA256 hashes and last-checked timestamps for every tracked `.md` file. |
 | `.mdjournal/.journaltoc` | TOC structure file. Stores the topic hierarchy and root entries as JSON. |
@@ -33,14 +33,14 @@ Three metadata artifacts (`.journalrc`, `.mdjournal/.journalindex`, and `.mdjour
 
 **Sync loop (automatic on `update journal`):**
 
-1. **Disk → `.mdjournal/.journalindex`** — `FileTracking.DetectChangesWithoutUpdate()` walks the directory and compares file hashes against the stored index to identify added, modified, and deleted files.
+1. **Disk → `.mdjournal/.journalindex`** — `FileTracking.DetectChangesWithoutUpdate()` walks the directory, filters out `.mdjournal/`, applies `.journalrc` `trackingIndex.noTrack`, and compares file hashes against the stored index to identify added, modified, and deleted files.
 2. **`.mdjournal/.journalindex` → Journal Directory** — Last-edited metadata is stamped into modified entry files; `.mdjournal/.journalindex` is updated with the new hashes.
-3. **`.mdjournal/.journalindex` → `.mdjournal/.journaltoc`** — `JournalConfiguration.DetectConfigChanges()` diffs the tracking index keys against the combined entry set from `.mdjournal/.journaltoc` (root entries + topic hierarchy) and `.journalrc` (`ignoreFiles`) to find files that need to be added or removed. Structural adds and removes are written to `.mdjournal/.journaltoc` via `IJournalTocStructureRepository`. Config detection runs twice in the live path: once before the early-return check, and again after tracking is committed so that same-run file additions and deletions are captured.
+3. **`.mdjournal/.journalindex` → `.mdjournal/.journaltoc`** — `JournalConfiguration.DetectConfigChanges()` diffs the tracking index keys against the combined entry set from `.mdjournal/.journaltoc` (root entries + topic hierarchy) and `.journalrc` (`tableOfContents.ignoreFiles`) to find files that need to be added or removed. Files in `trackingIndex.noTrack` have already been excluded from the tracking index, so they do not participate in config drift detection. Structural adds and removes are written to `.mdjournal/.journaltoc` via `IJournalTocStructureRepository`. Config detection runs twice in the live path: once before the early-return check, and again after tracking is committed so that same-run file additions and deletions are captured.
 4. **`.journalrc` + `.mdjournal/.journaltoc` → Journal Directory** — `TableOfContentsService` reads user settings from `.journalrc` and the topic structure from `.mdjournal/.journaltoc`, then regenerates the Table of Contents markdown file.
 
 **User-driven (explicit commands only):**
 
-- **Journal Directory → `.journalrc`** — Ignore-file flags (`update entry --ignore`) are written to `.journalrc`'s `ignoreFiles` list via explicit commands.
+- **Journal Directory → `.journalrc`** — Ignore-file flags (`update entry --ignore`) are written to `.journalrc`'s `tableOfContents.ignoreFiles` list via explicit commands. `trackingIndex.noTrack` is user configuration that excludes files, relative paths, or directories from tracking entirely.
 - **Journal Directory → `.mdjournal/.journaltoc`** — Entry heading/location changes (`update entry --headings`), display name changes (`update entry --name`/`--title`), and file renames are written to `.mdjournal/.journaltoc` via `IJournalTocStructureRepository`.
 
 ## 🔧 Dependency Injection
@@ -90,6 +90,7 @@ The application follows a service-oriented architecture with clear separation of
 **`IJournalConfiguration`** — Manages all `.journalrc` CRUD operations.
 - Supports complex nested topic/subtopic hierarchy.
 - Provides entry find, rename, and file-reference update for rename workflows.
+- Preserves `trackingIndex.noTrack` when journal updates regenerate user-facing configuration.
 
 **`IJournalFileUpdateService`** — Orchestrates entry update operations.
 - Handles renaming, relocation, title changes, and ignore-status toggling.
@@ -173,19 +174,50 @@ Implemented in `TableOfContentsGenerator.cs` for smart TOC rendering.
 }
 ```
 
+### Tracking No-Track Pattern
+
+**Purpose:** Allow markdown files or directories to exist inside the journal directory without becoming part of the tracking index.
+
+This is different from `tableOfContents.ignoreFiles`: ignored files are still tracked and can remain in configuration, while no-track files are omitted before hashing and are not written to `.mdjournal/.journalindex`.
+
+**Implementation:**
+- `.journalrc` contains `trackingIndex.noTrack`.
+- `FileTracking.GetCurrentMarkdownFiles()` reads the journal configuration before change detection or index refresh.
+- Matches are filtered before hashes are computed, before added/modified/deleted results are calculated, and before a new index is saved.
+- Matching accepts:
+  - file-name-only entries, e.g. `scratch.md` matches `scratch.md` and `notes/scratch.md`
+  - exact relative paths, e.g. `private/secret.md`
+  - directory entries, e.g. `archive` or `archive/` excludes all markdown files under that directory
+- Matching is case-insensitive and normalizes `\` to `/`; glob patterns are not supported.
+
+**Use Cases:**
+- Private folders that should never be indexed
+- Imported archives kept near a journal but outside active tracking
+- Scratch files that should not create update noise
+- Generated markdown files managed by another tool
+
+**Example:**
+```json
+{
+  "trackingIndex": {
+    "noTrack": ["scratch.md", "private/secret.md", "archive"]
+  }
+}
+```
+
 ### File Change Detection
 
 **Architecture:**
 ```
 IFileTracking
     └── IHashService (SHA256)
-            └── .md-journal index file
+            └── .mdjournal/.journalindex file
 ```
 
 **Process:**
-1. **Index Creation**: Hash all markdown files on journal initialization
-2. **Storage**: Save index to `.md-journal` JSON file
-3. **Detection**: Compare current file hashes with stored hashes
+1. **Index Creation**: Hash all tracked markdown files on journal initialization
+2. **Storage**: Save index to `.mdjournal/.journalindex` JSON file
+3. **Detection**: Load `.journalrc`, exclude `trackingIndex.noTrack` matches, then compare current file hashes with stored hashes
 4. **Results**: Return added/modified/deleted file lists
 
 **Index Structure:**

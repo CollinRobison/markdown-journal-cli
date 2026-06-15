@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
+using markdown_journal_cli.Services;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 
@@ -64,7 +64,7 @@ public sealed class DryRunRenderer(
         _console.MarkupLine($"[dim]{total} tracked file change(s) detected.[/]");
     }
 
-    private void RenderConfigTable(JournalConfigSyncResult configChanges)
+    private void RenderConfigTable(JournalRegistrationDriftResult configChanges)
     {
         var table = new Table()
             .Title($"[bold]Config Changes ({_journalSettings.JournalConfigFileName})[/]")

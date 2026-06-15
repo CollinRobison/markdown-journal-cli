@@ -203,6 +203,8 @@ Options:
 Notes:
 
 - If tracking already exists, command exits `0` with warning and does not overwrite
+- The generated tracking index excludes markdown files matched by `.journalrc` `trackingIndex.noTrack`.
+- `trackingIndex.noTrack` can contain a specific file name (`scratch.md`), a relative file path (`private/secret.md`), or a directory (`archive` or `archive/`).
 
 Examples:
 
@@ -241,6 +243,20 @@ Behavior:
 - `--sync` is mutually exclusive with `--date`, `--tracking`, `--config`, and `--toc`
 - `--rename-toc` runs independently and can be combined with other operations
 - `--dry-run` always exits `0`
+- Tracking and sync operations respect `.journalrc` `trackingIndex.noTrack`: matching files are skipped before hash comparison and are not saved in `.mdjournal/.journalindex`.
+- `tableOfContents.ignoreFiles` only hides entries from the generated TOC; `trackingIndex.noTrack` excludes files from tracking entirely.
+
+No-track examples in `.journalrc`:
+
+```json
+{
+  "trackingIndex": {
+    "noTrack": ["scratch.md", "private/secret.md", "archive"]
+  }
+}
+```
+
+Matching is case-insensitive, normalizes slashes, and does not currently support glob patterns.
 
 Examples:
 

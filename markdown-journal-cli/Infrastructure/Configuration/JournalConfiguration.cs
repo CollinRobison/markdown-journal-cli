@@ -73,7 +73,6 @@ public class JournalConfiguration(
     IFileSystem fileSystem,
     IOptions<JournalSettings> journalSettings,
     ILogger<JournalConfiguration> logger,
-    IFileTracking fileTracking,
     IJournalTocStructureRepository tocStructureRepository
 ) : IJournalConfiguration
 {
@@ -81,10 +80,9 @@ public class JournalConfiguration(
     private readonly ILogger<JournalConfiguration> _logger = logger;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
     private readonly JournalSettings _journalSettings = journalSettings.Value;
-    private readonly IFileTracking _fileTracking = fileTracking;
     private readonly IJournalTocStructureRepository _tocStructureRepository =
         tocStructureRepository;
-
+        
     private string GetMetadataDir(string directory)
     {
         var (_, actualDirectory) = GetJournalrcPaths(directory);
@@ -525,67 +523,6 @@ public class JournalConfiguration(
                 }
             }
         );
-    }
-
-    public JournalConfigSyncResult DetectConfigChanges(string journalPath)
-    {
-        var config = Read(journalPath);
-        if (config is null)
-            return new JournalConfigSyncResult();
-
-        var metadataDir = GetMetadataDir(journalPath);
-        var tocStructure = _tocStructureRepository.Load(metadataDir);
-
-        var trackedFiles = new HashSet<string>(
-            _fileTracking.LoadIndex(journalPath).Files.Keys,
-            StringComparer.OrdinalIgnoreCase
-        );
-
-        var configFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in tocStructure.RootEntries)
-            configFiles.Add(entry.File);
-        CollectTopicEntryFiles(tocStructure.Structure.Topics, configFiles);
-        configFiles.UnionWith(config.TableOfContents.IgnoreFiles ?? []);
-
-        _logger.LogDebug(
-            "Detecting config changes: {TrackedCount} tracked files, {ConfigCount} config entries",
-            trackedFiles.Count,
-            configFiles.Count
-        );
-
-        var tocFile = config.TableOfContents.File;
-        var ignoreFiles = new HashSet<string>(
-            config.TableOfContents.IgnoreFiles ?? [],
-            StringComparer.OrdinalIgnoreCase
-        );
-
-        var filesToAdd = trackedFiles
-            .Where(f =>
-                !configFiles.Contains(f)
-                && !string.Equals(f, tocFile, StringComparison.OrdinalIgnoreCase)
-            )
-            .ToList();
-
-        var filesToRemove = configFiles
-            .Where(f => !trackedFiles.Contains(f) && !ignoreFiles.Contains(f))
-            .ToList();
-
-        return new JournalConfigSyncResult
-        {
-            FilesToAdd = filesToAdd,
-            FilesToRemove = filesToRemove,
-        };
-    }
-
-    private static void CollectTopicEntryFiles(IEnumerable<Topic> topics, HashSet<string> fileSet)
-    {
-        foreach (var topic in topics)
-        {
-            foreach (var entry in topic.Entries)
-                fileSet.Add(entry.File);
-            if (topic.Subtopics is not null)
-                CollectTopicEntryFiles(topic.Subtopics, fileSet);
-        }
     }
 
     #region Private Helper Methods

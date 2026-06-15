@@ -207,7 +207,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     public void UpdateJournalConfig_Should_AddNewFileToConfig_When_FileIsAdded()
     {
         // Arrange
-        var syncResult = new JournalConfigSyncResult { FilesToAdd = ["2a-SomeNote.md"] };
+        var syncResult = new JournalRegistrationDriftResult { FilesToAdd = ["2a-SomeNote.md"] };
         var sut = CreateSut();
 
         // Act
@@ -224,7 +224,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     public void UpdateJournalConfig_Should_AddMultipleFilesToConfig_When_MultipleFilesAdded()
     {
         // Arrange
-        var syncResult = new JournalConfigSyncResult
+        var syncResult = new JournalRegistrationDriftResult
         {
             FilesToAdd = ["2a-NoteOne.md", "3b-NoteTwo.md"],
         };
@@ -251,7 +251,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         MockJournalConfiguration
             .Setup(jc => jc.RemoveEntry(_testPath, "2a-SomeNote.md"))
             .Returns(true);
-        var syncResult = new JournalConfigSyncResult { FilesToRemove = ["2a-SomeNote.md"] };
+        var syncResult = new JournalRegistrationDriftResult { FilesToRemove = ["2a-SomeNote.md"] };
         var sut = CreateSut();
 
         // Act
@@ -271,7 +271,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         MockJournalConfiguration
             .Setup(jc => jc.RemoveEntry(_testPath, "nonexistent-file.md"))
             .Returns(false);
-        var syncResult = new JournalConfigSyncResult { FilesToRemove = ["nonexistent-file.md"] };
+        var syncResult = new JournalRegistrationDriftResult { FilesToRemove = ["nonexistent-file.md"] };
         var sut = CreateSut();
 
         // Act
@@ -285,7 +285,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     public void UpdateJournalConfig_Should_PrintNoChangesNeeded_When_NeitherAddedNorRemoved()
     {
         // Arrange
-        var syncResult = new JournalConfigSyncResult();
+        var syncResult = new JournalRegistrationDriftResult();
         var sut = CreateSut();
 
         // Act
@@ -299,7 +299,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
     public void UpdateJournalConfig_Should_PrintConfigUpdated_When_ChangesExist()
     {
         // Arrange
-        var syncResult = new JournalConfigSyncResult { FilesToAdd = ["2a-SomeNote.md"] };
+        var syncResult = new JournalRegistrationDriftResult { FilesToAdd = ["2a-SomeNote.md"] };
         var sut = CreateSut();
 
         // Act
@@ -316,7 +316,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
         MockJournalConfiguration
             .Setup(jc => jc.RemoveEntry(_testPath, "2a-OldNote.md"))
             .Returns(true);
-        var syncResult = new JournalConfigSyncResult
+        var syncResult = new JournalRegistrationDriftResult
         {
             FilesToAdd = ["3b-NewNote.md"],
             FilesToRemove = ["2a-OldNote.md"],
@@ -1065,7 +1065,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
 
         var trackingChanges = new ChangeDetectionResult { AddedFiles = ["new-entry.md"] };
         // configChanges is non-null so projection is triggered
-        var naiveConfigChanges = new JournalConfigSyncResult();
+        var naiveConfigChanges = new JournalRegistrationDriftResult();
         var sut = CreateSut();
 
         // Act
@@ -1140,7 +1140,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
             );
 
         var trackingChanges = new ChangeDetectionResult { DeletedFiles = ["going-away.md"] };
-        var naiveConfigChanges = new JournalConfigSyncResult();
+        var naiveConfigChanges = new JournalRegistrationDriftResult();
         var sut = CreateSut();
 
         // Act
@@ -1185,7 +1185,7 @@ public class JournalUpdateServiceTests : ServiceTestBase
                     string.Join("\n", s.RootEntries.Select(e => e.File))
             );
 
-        var configChanges = new JournalConfigSyncResult { FilesToAdd = ["unregistered.md"] };
+        var configChanges = new JournalRegistrationDriftResult { FilesToAdd = ["unregistered.md"] };
         var sut = CreateSut();
 
         // Act — no tracking changes passed (null)

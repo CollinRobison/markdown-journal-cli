@@ -1,21 +1,44 @@
 using System;
 using System.Text.Json;
+using markdown_journal_cli.Infrastructure.Configuration;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using Microsoft.Extensions.Options;
 
 namespace markdown_journal_cli.Infrastructure.Tracking;
 
-public class FileTracking(
-    IFileSystem fileSystem,
-    IOptions<JournalSettings> journalSettings,
-    IHashService hashService
-) : IFileTracking
+public class FileTracking : IFileTracking
 {
-    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly IFileSystem _fileSystem;
+    private readonly IJournalConfiguration? _journalConfiguration;
     private readonly JsonSerializerOptions opts = new() { WriteIndented = true };
-    private readonly JournalSettings _journalSettings = journalSettings.Value;
-    private readonly IHashService _hashService = hashService;
+    private readonly JournalSettings _journalSettings;
+    private readonly IHashService _hashService;
+
+    public FileTracking(
+        IFileSystem fileSystem,
+        IOptions<JournalSettings> journalSettings,
+        IHashService hashService
+    )
+    {
+        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        ArgumentNullException.ThrowIfNull(journalSettings);
+        _journalSettings = journalSettings.Value;
+        _hashService = hashService ?? throw new ArgumentNullException(nameof(hashService));
+    }
+
+    public FileTracking(
+        IFileSystem fileSystem,
+        IJournalConfiguration journalConfiguration,
+        IOptions<JournalSettings> journalSettings,
+        IHashService hashService
+    )
+        : this(fileSystem, journalSettings, hashService)
+    {
+        _journalConfiguration =
+            journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    }
 
     private string GetIndexPath(string journalDir)
     {
@@ -44,21 +67,85 @@ public class FileTracking(
         _fileSystem.UpdateFile(metadataDir, _journalSettings.TrackingFileName, json);
     }
 
+    private static string Normalize(string value) =>
+    value.Trim().Replace('\\', '/').TrimStart('.');
+
+    /// <summary>
+    /// Determines whether a relative path matches any entry in the no-track list.
+    /// </summary>
+    /// <param name="relativePath">The relative path to check against the no-track list.</param>
+    /// <param name="noTrackList">The collection of patterns to match against.</param>
+    /// <returns>True if the path matches any no-track pattern; otherwise, false.</returns>
+    private bool IsNoTrackMatch(string relativePath, IEnumerable<string> noTrackList)
+    {
+        var normalizedRelative = Normalize(relativePath);
+        var fileName = _fileSystem.GetFileName(normalizedRelative);
+
+        foreach (var rawEntry in noTrackList)
+        {
+            if (string.IsNullOrWhiteSpace(rawEntry))
+            {
+                continue;
+            }
+
+            var entry = Normalize(rawEntry);
+
+            // Exact relative path match: "notes/todo.md"
+            if (string.Equals(normalizedRelative, entry, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // File-name-only match: "todo.md"
+            if (!entry.Contains('/') &&
+                string.Equals(fileName, entry, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Directory match: "notes" or "notes/" excludes everything under it
+            if (normalizedRelative.StartsWith(entry.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
     /// <summary>
     /// Get all markdown files in the journal directory (excluding metadata directory).
     /// </summary>
     /// <param name="path">the journal directory path.</param>
     /// <returns>all markdown files in the journal directory (excluding metadata directory).</returns>
+    private JournalConfig? ReadConfig(string path)
+    {
+        var journalrcPath = Path.Combine(path, _journalSettings.JournalConfigFileName);
+        if (!_fileSystem.FileExists(journalrcPath))
+        {
+            return null;
+        }
+
+        var json = _fileSystem.GetFileContent(journalrcPath);
+        return JsonSerializer.Deserialize<JournalConfig>(json);
+    }
+
     private HashSet<string> GetCurrentMarkdownFiles(string path)
     {
+        var config = _journalConfiguration?.Read(path) ?? ReadConfig(path);
+        var noTrackList = config?.TrackingIndex.NoTrack ?? [];
+
         var metadataDir =
             Path.Combine(path, _journalSettings.MetadataDirName) + Path.DirectorySeparatorChar;
+
         return
         [
             .. _fileSystem
                 .GetFiles(path, $"*{FileConstants.MarkdownExtension}", SearchOption.AllDirectories)
                 .Where(f => !f.StartsWith(metadataDir, StringComparison.OrdinalIgnoreCase))
-                .Select(f => Path.GetRelativePath(path, f)),
+                .Select(f => Path.GetRelativePath(path, f))
+                .Where(relativePath => !IsNoTrackMatch(relativePath, noTrackList))
         ];
     }
 

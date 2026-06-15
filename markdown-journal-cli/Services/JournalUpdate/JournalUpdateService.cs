@@ -54,7 +54,7 @@ public sealed class JournalUpdateService(
     public UpdateDryRunReport BuildDryRunReport(
         string journalPath,
         ChangeDetectionResult? trackingChanges,
-        JournalConfigSyncResult? configChanges,
+        JournalRegistrationDriftResult? configChanges,
         bool includeToc,
         string? renameTocTarget
     )
@@ -160,18 +160,18 @@ public sealed class JournalUpdateService(
     }
 
     /// <summary>
-    /// Computes what the config drift would look like after applying the pending tracking changes,
-    /// without touching disk. Mirrors the logic in <see cref="JournalConfiguration.DetectConfigChanges"/>
+    /// Computes what the registration drift would look like after applying the pending tracking changes,
+    /// without touching disk. Mirrors the logic in <see cref="JournalRegistrationDriftDetector"/>
     /// but operates against a projected tracking set instead of the committed index.
     /// </summary>
-    private JournalConfigSyncResult ComputeProjectedConfigDrift(
+    private JournalRegistrationDriftResult ComputeProjectedConfigDrift(
         string journalPath,
         ChangeDetectionResult pendingTracking
     )
     {
         var config = _journalConfiguration.Read(journalPath);
         if (config is null)
-            return new JournalConfigSyncResult();
+            return new JournalRegistrationDriftResult();
 
         var tocStructure = _tocStructureRepository.Load(GetMetadataDir(journalPath));
 
@@ -207,7 +207,7 @@ public sealed class JournalUpdateService(
             .Where(f => !projectedFiles.Contains(f) && !ignoreFiles.Contains(f))
             .ToList();
 
-        return new JournalConfigSyncResult
+        return new JournalRegistrationDriftResult
         {
             FilesToAdd = filesToAdd,
             FilesToRemove = filesToRemove,
@@ -233,7 +233,7 @@ public sealed class JournalUpdateService(
     private static (JournalConfig config, JournalTocStructure tocStructure) ProjectConfig(
         JournalConfig original,
         JournalTocStructure originalTocStructure,
-        JournalConfigSyncResult configSync
+        JournalRegistrationDriftResult configSync
     )
     {
         var tocFile = original.TableOfContents.File;
@@ -273,6 +273,10 @@ public sealed class JournalUpdateService(
                 Extensions = original.TableOfContents.Extensions,
                 IgnoreFiles = original.TableOfContents.IgnoreFiles,
             },
+            TrackingIndex = new TrackingIndex
+            {
+                NoTrack = original.TrackingIndex.NoTrack
+            }
         };
 
         var projectedTocStructure = new JournalTocStructure
@@ -309,7 +313,7 @@ public sealed class JournalUpdateService(
         };
     }
 
-    public void UpdateJournalConfig(string journalPath, JournalConfigSyncResult syncResult)
+    public void UpdateJournalConfig(string journalPath, JournalRegistrationDriftResult syncResult)
     {
         using var tx = _txCoordinator.BeginOrJoin();
         try

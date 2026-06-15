@@ -50,6 +50,7 @@ public static class Program
         host.Services.AddSingleton<ITemplateManager, TemplateManager>();
         host.Services.AddSingleton<IJournalTocStructureRepository, JournalTocStructureRepository>();
         host.Services.AddSingleton<IJournalConfiguration, JournalConfiguration>();
+        host.Services.AddSingleton<IJournalRegistrationDriftDetector, JournalRegistrationDriftDetector>();
         host.Services.AddSingleton<IJournalValidator, JournalValidator>();
         host.Services.AddSingleton<INewJournalService, NewJournalService>();
         host.Services.AddSingleton<IInitJournalService, InitJournalService>();

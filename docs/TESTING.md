@@ -184,6 +184,7 @@ For new behavior, include:
 - validation/guard failure tests
 - exceptional/error handling tests
 - rollback tests for write-path failures (when applicable)
+- file tracking no-track tests when `.journalrc` `trackingIndex.noTrack` behavior changes, including specific file-name matches, relative path matches, and directory matches
 
 ## Testing Checklist for PRs
 

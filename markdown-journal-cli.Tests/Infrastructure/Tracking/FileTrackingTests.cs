@@ -1,8 +1,12 @@
+using System.Text.Json;
+using markdown_journal_cli.Infrastructure.Configuration;
+using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Tests.Infrastructure.FileSystem;
 using Microsoft.Extensions.Options;
+using Moq;
 using Shouldly;
 using Xunit;
 
@@ -363,6 +367,223 @@ public class FileTrackingTests : IDisposable
         result.AddedFiles.Count.ShouldBe(1);
         result.AddedFiles.ShouldContain("regular.md");
         result.AddedFiles.ShouldNotContain(f => f.Contains(_indexFileName));
+    }
+
+    #endregion
+
+    #region NoTrack Tests
+
+    [Fact]
+    public void DetectChanges_Should_Exclude_Exact_Relative_Path_From_Config_NoTrack()
+    {
+        // Given
+        CreateJournalConfigFile(["notes/private.md"]);
+        CreateRealMarkdownFile("notes/private.md", "Private content");
+        CreateRealMarkdownFile("notes/public.md", "Public content");
+        _hashService.SetHash("/test/journal/notes/public.md", "public-hash");
+
+        // When
+        var result = _fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["notes/public.md"]);
+
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["notes/public.md"]);
+    }
+
+    [Fact]
+    public void DetectChanges_Should_Respect_NoTrack_For_Specific_File_And_Relative_FilePath()
+    {
+        // Given
+        CreateJournalConfigFile(["draft.md", "notes/private.md"]);
+        CreateRealMarkdownFile("draft.md", "Root draft excluded by specific file name");
+        CreateRealMarkdownFile("notes/draft.md", "Nested draft excluded by specific file name");
+        CreateRealMarkdownFile("notes/private.md", "Private note excluded by relative path");
+        CreateRealMarkdownFile("notes/public.md", "Public note should be tracked");
+        _hashService.SetHash("/test/journal/notes/public.md", "public-hash");
+
+        // When
+        var result = _fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["notes/public.md"]);
+        result.AddedFiles.ShouldNotContain("draft.md");
+        result.AddedFiles.ShouldNotContain("notes/draft.md");
+        result.AddedFiles.ShouldNotContain("notes/private.md");
+
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["notes/public.md"]);
+    }
+
+    [Fact]
+    public void DetectChanges_Should_Exclude_FileName_Only_NoTrack_Matches_In_Any_Directory()
+    {
+        // Given
+        CreateJournalConfigFile(["draft.md"]);
+        CreateRealMarkdownFile("draft.md", "Root draft");
+        CreateRealMarkdownFile("notes/draft.md", "Nested draft");
+        CreateRealMarkdownFile("notes/final.md", "Final note");
+        _hashService.SetHash("/test/journal/notes/final.md", "final-hash");
+
+        // When
+        var result = _fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["notes/final.md"]);
+
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["notes/final.md"]);
+    }
+
+    [Fact]
+    public void DetectChanges_Should_Exclude_All_Files_Under_NoTrack_Directory()
+    {
+        // Given
+        CreateJournalConfigFile(["archive"]);
+        CreateRealMarkdownFile("archive/old.md", "Old note");
+        CreateRealMarkdownFile("archive/nested/old.md", "Nested old note");
+        CreateRealMarkdownFile("active/current.md", "Current note");
+        _hashService.SetHash("/test/journal/active/current.md", "current-hash");
+
+        // When
+        var result = _fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["active/current.md"]);
+
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["active/current.md"]);
+    }
+
+    [Fact]
+    public void DetectChanges_Should_Normalize_NoTrack_Entries_For_Case_Separators_And_Whitespace()
+    {
+        // Given
+        CreateJournalConfigFile(["  .Notes\\Private.md  ", "Temp\\"]);
+        CreateRealMarkdownFile("notes/private.md", "Private content");
+        CreateRealMarkdownFile("temp/scratch.md", "Scratch content");
+        CreateRealMarkdownFile("notes/public.md", "Public content");
+        _hashService.SetHash("/test/journal/notes/public.md", "public-hash");
+
+        // When
+        var result = _fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["notes/public.md"]);
+
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["notes/public.md"]);
+    }
+
+    [Fact]
+    public void DetectChanges_Should_Ignore_Null_And_Whitespace_NoTrack_Entries()
+    {
+        // Given
+        CreateJournalConfigFile([null, "", "   "]);
+        CreateRealMarkdownFile("note.md", "Tracked content");
+        _hashService.SetHash("/test/journal/note.md", "note-hash");
+
+        // When
+        var result = _fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["note.md"]);
+
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["note.md"]);
+    }
+
+    [Fact]
+    public void DetectChanges_Should_Use_Injected_JournalConfiguration_When_Available()
+    {
+        // Given
+        var config = CreateJournalConfig(["configured.md"]);
+        var journalConfiguration = new Mock<IJournalConfiguration>();
+        journalConfiguration.Setup(x => x.Read(_testPath)).Returns(config);
+
+        var fileTracking = new FileTracking(
+            _fileSystem,
+            journalConfiguration.Object,
+            Options.Create(new JournalSettings { AppName = "testapp" }),
+            _hashService
+        );
+
+        CreateJournalConfigFile([]);
+        CreateRealMarkdownFile("configured.md", "Excluded by injected config");
+        CreateRealMarkdownFile("tracked.md", "Tracked content");
+        _hashService.SetHash("/test/journal/tracked.md", "tracked-hash");
+
+        // When
+        var result = fileTracking.DetectChanges(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBe(["tracked.md"]);
+        journalConfiguration.Verify(x => x.Read(_testPath), Times.Once);
+
+        var index = fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["tracked.md"]);
+    }
+
+    [Fact]
+    public void DetectChangesWithoutUpdate_Should_Respect_NoTrack_When_Detecting_Deleted_Files()
+    {
+        // Given
+        CreateJournalConfigFile(["ignored.md"]);
+        _fileTracking.SaveIndex(
+            new JournalIndex
+            {
+                Files = new Dictionary<string, FileState>
+                {
+                    ["ignored.md"] = new()
+                    {
+                        FilePath = "ignored.md",
+                        Hash = "ignored-hash",
+                        LastChecked = DateTime.UtcNow.AddDays(-1),
+                    },
+                    ["tracked.md"] = new()
+                    {
+                        FilePath = "tracked.md",
+                        Hash = "tracked-hash",
+                        LastChecked = DateTime.UtcNow.AddDays(-1),
+                    },
+                },
+            },
+            _testPath
+        );
+        CreateRealMarkdownFile("ignored.md", "Still on disk but no longer tracked");
+        CreateRealMarkdownFile("tracked.md", "Tracked content");
+        _hashService.SetHash("/test/journal/tracked.md", "tracked-hash");
+
+        // When
+        var result = _fileTracking.DetectChangesWithoutUpdate(_testPath);
+
+        // Then
+        result.AddedFiles.ShouldBeEmpty();
+        result.ModifiedFiles.ShouldBeEmpty();
+        result.DeletedFiles.ShouldBe(["ignored.md"]);
+    }
+
+    [Fact]
+    public void UpdateIndex_Should_Respect_NoTrack_For_Specific_File_And_Relative_FilePath()
+    {
+        // Given
+        CreateJournalConfigFile(["draft.md", "notes/private.md"]);
+        CreateRealMarkdownFile("draft.md", "Root draft excluded by specific file name");
+        CreateRealMarkdownFile("notes/draft.md", "Nested draft excluded by specific file name");
+        CreateRealMarkdownFile("notes/private.md", "Private note excluded by relative path");
+        CreateRealMarkdownFile("notes/public.md", "Public note should be tracked");
+        _hashService.SetHash("/test/journal/notes/public.md", "public-hash");
+
+        // When
+        _fileTracking.UpdateIndex(_testPath);
+
+        // Then
+        var index = _fileTracking.LoadIndex(_testPath);
+        index.Files.Keys.ShouldBe(["notes/public.md"]);
+        index.Files.ContainsKey("draft.md").ShouldBeFalse();
+        index.Files.ContainsKey("notes/draft.md").ShouldBeFalse();
+        index.Files.ContainsKey("notes/private.md").ShouldBeFalse();
     }
 
     #endregion
@@ -759,6 +980,21 @@ public class FileTrackingTests : IDisposable
         // Use the TestFileSystem to create markdown files
         _fileSystem.CreateMarkdownFile(_testPath, fileName.Replace(".md", ""), content);
     }
+
+    private void CreateJournalConfigFile(string?[] noTrack)
+    {
+        var config = CreateJournalConfig(noTrack);
+        var json = JsonSerializer.Serialize(config);
+        _fileSystem.CreateFile(_testPath, ".journalrc", json);
+    }
+
+    private static JournalConfig CreateJournalConfig(string?[] noTrack) =>
+        new()
+        {
+            JournalName = "Test Journal",
+            TableOfContents = new TableOfContents(),
+            TrackingIndex = new TrackingIndex { NoTrack = noTrack! },
+        };
 
     #endregion
 }

@@ -79,6 +79,7 @@ public class JournalConfigGenerator(
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
             },
+            TrackingIndex = new TrackingIndex { },
         };
 
         var configPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);
@@ -146,6 +147,7 @@ public class JournalConfigGenerator(
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
             },
+            TrackingIndex = new TrackingIndex { },
         };
 
         var configPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);
@@ -209,6 +211,7 @@ public class JournalConfigGenerator(
                 Extensions = [FileConstants.MarkdownExtension],
                 IgnoreFiles = null,
             },
+            TrackingIndex = new TrackingIndex { },
         };
 
         var configPath = Path.Combine(directory, _journalSettings.JournalConfigFileName);

@@ -39,7 +39,6 @@ public class AddEntryIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
             tocStructureRepository
         );
         var tocGenerator = new TableOfContentsService(

@@ -41,7 +41,6 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
             tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);
@@ -83,6 +82,13 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
             NullLogger<JournalUpdateService>.Instance,
             tocStructureRepository
         );
+        var configSyncDetector = new JournalRegistrationDriftDetector(
+            journalConfiguration,
+            fileTracking,
+            tocStructureRepository,
+            JournalSettings,
+            NullLogger<JournalRegistrationDriftDetector>.Instance
+        );
         var dryRunRenderer = new DryRunRenderer(_console, journalConfiguration, JournalSettings);
 
         var templateManager = new TemplateManager(JournalSettings);
@@ -108,6 +114,7 @@ public class UpdateCommandIntegrationTests : JournalIntegrationTestBase
         services.AddSingleton<IJournalUpdateService>(journalUpdateService);
         services.AddSingleton<IFileTracking>(fileTracking);
         services.AddSingleton<IJournalConfiguration>(journalConfiguration);
+        services.AddSingleton<IJournalRegistrationDriftDetector>(configSyncDetector);
         services.AddSingleton<IDryRunRenderer>(dryRunRenderer);
         services.AddSingleton<IFileTransactionCoordinator>(coordinator);
         services.AddSingleton(JournalSettings);

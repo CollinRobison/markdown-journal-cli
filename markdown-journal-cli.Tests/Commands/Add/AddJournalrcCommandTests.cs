@@ -48,7 +48,6 @@ public class AddJournalrcCommandTests : CommandTestBase
             _fileSystem,
             Options.Create(_journalSettings),
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
             _tocStructureRepository
         );
 

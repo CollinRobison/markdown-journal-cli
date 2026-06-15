@@ -57,7 +57,7 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
         );
 
         var service = CreateService();
-        var syncResult = new JournalConfigSyncResult
+        var syncResult = new JournalRegistrationDriftResult
         {
             FilesToAdd = ["new_entry.md"],
             FilesToRemove = [],

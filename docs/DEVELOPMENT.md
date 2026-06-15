@@ -194,6 +194,8 @@ Internal metadata is rooted in `.mdjournal/`:
 - `.mdjournal/.journalindex`
 - `.mdjournal/.journaltoc`
 
+Root-level `.journalrc` remains the user-facing configuration file. It includes both TOC exclusions (`tableOfContents.ignoreFiles`) and tracking exclusions (`trackingIndex.noTrack`). When touching file tracking, make sure no-track filtering happens before hashing or saving `.journalindex`; when touching TOC generation, use `ignoreFiles` instead.
+
 Services should resolve these via configured names in `JournalSettings`, not hardcoded strings.
 
 Commands that target existing journals should rely on `JournalCommand<T>` metadata validation
