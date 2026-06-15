@@ -1,6 +1,6 @@
 using markdown_journal_cli.Commands.Update;
 using markdown_journal_cli.Exceptions;
-using markdown_journal_cli.Infrastructure.Configuration.Models;
+using markdown_journal_cli.Infrastructure.Configuration;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
 using markdown_journal_cli.Infrastructure.Transactions;
 using markdown_journal_cli.Services;
@@ -30,6 +30,8 @@ public class UpdateCommandTests : CommandTestBase
     private readonly TestConsole _console = new();
     private readonly Mock<IJournalUpdateService> _mockJournalUpdateService = new();
     private readonly Mock<IDryRunRenderer> _mockDryRunRenderer = new();
+    private readonly Mock<IJournalRegistrationDriftDetector> _mockJournalRegistrationDriftDetector =
+        new();
 
     protected override void SetupDefaultBehaviors()
     {
@@ -43,9 +45,9 @@ public class UpdateCommandTests : CommandTestBase
             .Returns(new ChangeDetectionResult());
 
         // No config drift by default
-        MockJournalConfiguration
-            .Setup(c => c.DetectConfigChanges(TestPath))
-            .Returns(new JournalConfigSyncResult());
+        _mockJournalRegistrationDriftDetector
+            .Setup(c => c.DetectDrift(TestPath))
+            .Returns(new JournalRegistrationDriftResult());
 
         // Default dry-run report with no changes
         _mockJournalUpdateService
@@ -53,7 +55,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -68,7 +70,7 @@ public class UpdateCommandTests : CommandTestBase
             _mockJournalUpdateService.Object,
             MockFileTracking.Object,
             JournalSettings,
-            MockJournalConfiguration.Object,
+            _mockJournalRegistrationDriftDetector.Object,
             NullLogger<UpdateCommand>.Instance,
             _mockDryRunRenderer.Object,
             NoOpFileTransactionCoordinator.Instance,
@@ -92,9 +94,9 @@ public class UpdateCommandTests : CommandTestBase
 
     /// <summary>Override default to simulate config drift (files missing from .journalrc).</summary>
     private void SetupConfigDrift(params string[] filesToAdd) =>
-        MockJournalConfiguration
-            .Setup(c => c.DetectConfigChanges(TestPath))
-            .Returns(new JournalConfigSyncResult { FilesToAdd = [.. filesToAdd] });
+        _mockJournalRegistrationDriftDetector
+            .Setup(c => c.DetectDrift(TestPath))
+            .Returns(new JournalRegistrationDriftResult { FilesToAdd = [.. filesToAdd] });
 
     #region No Changes
 
@@ -333,7 +335,11 @@ public class UpdateCommandTests : CommandTestBase
         // Assert — config update must NOT run when only --tracking is set
         result.ShouldBe(0);
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()),
+            s =>
+                s.UpdateJournalConfig(
+                    It.IsAny<string>(),
+                    It.IsAny<JournalRegistrationDriftResult>()
+                ),
             Times.Never
         );
     }
@@ -621,7 +627,9 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r => r.FilesToAdd.Contains("Learning-Rust.md"))
+                    It.Is<JournalRegistrationDriftResult>(r =>
+                        r.FilesToAdd.Contains("Learning-Rust.md")
+                    )
                 ),
             Times.Once
         );
@@ -634,9 +642,9 @@ public class UpdateCommandTests : CommandTestBase
         MockFileTracking
             .Setup(ft => ft.DetectChangesWithoutUpdate(TestPath))
             .Returns(new ChangeDetectionResult { DeletedFiles = ["Learning-Rust.md"] });
-        MockJournalConfiguration
-            .Setup(c => c.DetectConfigChanges(TestPath))
-            .Returns(new JournalConfigSyncResult { FilesToRemove = ["Learning-Rust.md"] });
+        _mockJournalRegistrationDriftDetector
+            .Setup(c => c.DetectDrift(TestPath))
+            .Returns(new JournalRegistrationDriftResult { FilesToRemove = ["Learning-Rust.md"] });
 
         var settings = new UpdateJournalSettings { FilePath = TestPath }; // all flags
 
@@ -649,7 +657,7 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r =>
+                    It.Is<JournalRegistrationDriftResult>(r =>
                         r.FilesToRemove.Contains("Learning-Rust.md")
                     )
                 ),
@@ -671,7 +679,11 @@ public class UpdateCommandTests : CommandTestBase
         // Assert
         result.ShouldBe(0);
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()),
+            s =>
+                s.UpdateJournalConfig(
+                    It.IsAny<string>(),
+                    It.IsAny<JournalRegistrationDriftResult>()
+                ),
             Times.Never
         );
     }
@@ -691,7 +703,7 @@ public class UpdateCommandTests : CommandTestBase
         // Assert — config was updated
         result.ShouldBe(0);
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalConfigSyncResult>()),
+            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalRegistrationDriftResult>()),
             Times.Once
         );
     }
@@ -785,7 +797,7 @@ public class UpdateCommandTests : CommandTestBase
         // Assert — config and TOC both updated
         result.ShouldBe(0);
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalConfigSyncResult>()),
+            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalRegistrationDriftResult>()),
             Times.Once
         );
         _mockJournalUpdateService.Verify(s => s.UpdateTableOfContents(TestPath), Times.Once);
@@ -910,12 +922,12 @@ public class UpdateCommandTests : CommandTestBase
     [Fact]
     public void Execute_Should_NotAddTocFileAsEntry_When_ConfigFlagSet()
     {
-        // TOC file exclusion is IJournalConfiguration.DetectConfigChanges responsibility.
+        // TOC file exclusion is registration drift detection responsibility.
         // Verify the command passes drift unchanged (no TOC file in result) to UpdateJournalConfig.
-        MockJournalConfiguration
-            .Setup(c => c.DetectConfigChanges(TestPath))
+        _mockJournalRegistrationDriftDetector
+            .Setup(c => c.DetectDrift(TestPath))
             .Returns(
-                new JournalConfigSyncResult { FilesToAdd = ["note.md"] } // TOC excluded upstream
+                new JournalRegistrationDriftResult { FilesToAdd = ["note.md"] } // TOC excluded upstream
             );
 
         var settings = new UpdateJournalSettings { FilePath = TestPath, ConfigFlag = true };
@@ -929,7 +941,7 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r =>
+                    It.Is<JournalRegistrationDriftResult>(r =>
                         !r.FilesToAdd.Contains("1a-TableOfContents.md")
                     )
                 ),
@@ -940,12 +952,12 @@ public class UpdateCommandTests : CommandTestBase
     [Fact]
     public void Execute_Should_NotAddTocFileAsEntry_When_AllFlagsDefault()
     {
-        // Arrange — all-mode; DetectConfigChanges correctly excludes the TOC file
+        // Arrange — all-mode; DetectDrift correctly excludes the TOC file
         SetupAddedFiles("note.md");
-        MockJournalConfiguration
-            .Setup(c => c.DetectConfigChanges(TestPath))
+        _mockJournalRegistrationDriftDetector
+            .Setup(c => c.DetectDrift(TestPath))
             .Returns(
-                new JournalConfigSyncResult { FilesToAdd = ["note.md"] } // no TOC file
+                new JournalRegistrationDriftResult { FilesToAdd = ["note.md"] } // no TOC file
             );
 
         var settings = new UpdateJournalSettings { FilePath = TestPath }; // all flags
@@ -959,7 +971,7 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r =>
+                    It.Is<JournalRegistrationDriftResult>(r =>
                         !r.FilesToAdd.Contains("1a-TableOfContents.md")
                     )
                 ),
@@ -971,11 +983,11 @@ public class UpdateCommandTests : CommandTestBase
     public void Execute_Should_NotAddCustomTocFileAsEntry()
     {
         // Arrange — custom TOC filename; exclusion is service responsibility.
-        // DetectConfigChanges returns empty (custom TOC correctly excluded).
+        // DetectDrift returns empty (custom TOC correctly excluded).
         SetupModifiedFiles("note.md");
-        MockJournalConfiguration
-            .Setup(c => c.DetectConfigChanges(TestPath))
-            .Returns(new JournalConfigSyncResult()); // custom TOC excluded
+        _mockJournalRegistrationDriftDetector
+            .Setup(c => c.DetectDrift(TestPath))
+            .Returns(new JournalRegistrationDriftResult()); // custom TOC excluded
 
         var settings = new UpdateJournalSettings { FilePath = TestPath };
 
@@ -988,7 +1000,7 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r =>
+                    It.Is<JournalRegistrationDriftResult>(r =>
                         r.FilesToAdd.Count == 0 && r.FilesToRemove.Count == 0
                     )
                 ),
@@ -1111,7 +1123,11 @@ public class UpdateCommandTests : CommandTestBase
             Times.Once
         );
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()),
+            s =>
+                s.UpdateJournalConfig(
+                    It.IsAny<string>(),
+                    It.IsAny<JournalRegistrationDriftResult>()
+                ),
             Times.Never
         );
 
@@ -1129,7 +1145,9 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r => r.FilesToAdd.Contains("Learning-Rust.md"))
+                    It.Is<JournalRegistrationDriftResult>(r =>
+                        r.FilesToAdd.Contains("Learning-Rust.md")
+                    )
                 ),
             Times.Once
         );
@@ -1151,14 +1169,16 @@ public class UpdateCommandTests : CommandTestBase
             s =>
                 s.UpdateJournalConfig(
                     TestPath,
-                    It.Is<JournalConfigSyncResult>(r => r.FilesToAdd.Contains("Learning-Go.md"))
+                    It.Is<JournalRegistrationDriftResult>(r =>
+                        r.FilesToAdd.Contains("Learning-Go.md")
+                    )
                 ),
             Times.Once
         );
     }
 
     [Fact]
-    public void Execute_Should_NotCallDetectConfigChanges_When_TrackingFlagSet()
+    public void Execute_Should_NotCallDetectDrift_When_TrackingFlagSet()
     {
         // When only --tracking is set, config sync must NOT be triggered at all.
         SetupModifiedFiles("Learning-Rust.md");
@@ -1167,8 +1187,8 @@ public class UpdateCommandTests : CommandTestBase
 
         CreateCommand().Execute(CreateCommandContext(), settings);
 
-        MockJournalConfiguration.Verify(
-            c => c.DetectConfigChanges(It.IsAny<string>()),
+        _mockJournalRegistrationDriftDetector.Verify(
+            c => c.DetectDrift(It.IsAny<string>()),
             Times.Never
         );
     }
@@ -1224,7 +1244,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1256,7 +1276,11 @@ public class UpdateCommandTests : CommandTestBase
             Times.Never
         );
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()),
+            s =>
+                s.UpdateJournalConfig(
+                    It.IsAny<string>(),
+                    It.IsAny<JournalRegistrationDriftResult>()
+                ),
             Times.Never
         );
         _mockJournalUpdateService.Verify(
@@ -1274,7 +1298,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1349,7 +1373,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1387,14 +1411,14 @@ public class UpdateCommandTests : CommandTestBase
         // Arrange — report with config changes
         var report = new UpdateDryRunReport
         {
-            ConfigChanges = new JournalConfigSyncResult { FilesToAdd = ["unregistered.md"] },
+            ConfigChanges = new JournalRegistrationDriftResult { FilesToAdd = ["unregistered.md"] },
         };
         _mockJournalUpdateService
             .Setup(s =>
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1443,7 +1467,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1481,14 +1505,14 @@ public class UpdateCommandTests : CommandTestBase
         var report = new UpdateDryRunReport
         {
             TrackingChanges = new ChangeDetectionResult { ModifiedFiles = ["entry.md"] },
-            ConfigChanges = new JournalConfigSyncResult { FilesToAdd = ["entry.md"] },
+            ConfigChanges = new JournalRegistrationDriftResult { FilesToAdd = ["entry.md"] },
         };
         _mockJournalUpdateService
             .Setup(s =>
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1538,7 +1562,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1583,7 +1607,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1609,7 +1633,11 @@ public class UpdateCommandTests : CommandTestBase
             Times.Never
         );
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(It.IsAny<string>(), It.IsAny<JournalConfigSyncResult>()),
+            s =>
+                s.UpdateJournalConfig(
+                    It.IsAny<string>(),
+                    It.IsAny<JournalRegistrationDriftResult>()
+                ),
             Times.Never
         );
         _mockJournalUpdateService.Verify(
@@ -1648,7 +1676,7 @@ public class UpdateCommandTests : CommandTestBase
             Times.Once
         );
         _mockJournalUpdateService.Verify(
-            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalConfigSyncResult>()),
+            s => s.UpdateJournalConfig(TestPath, It.IsAny<JournalRegistrationDriftResult>()),
             Times.Once
         );
         _mockJournalUpdateService.Verify(s => s.UpdateTableOfContents(TestPath), Times.Once);
@@ -1721,7 +1749,7 @@ public class UpdateCommandTests : CommandTestBase
         var report = new UpdateDryRunReport
         {
             TrackingChanges = new ChangeDetectionResult { ModifiedFiles = ["entry.md"] },
-            ConfigChanges = new JournalConfigSyncResult { FilesToAdd = ["entry.md"] },
+            ConfigChanges = new JournalRegistrationDriftResult { FilesToAdd = ["entry.md"] },
             TocPreview = new TocDiffResult { CurrentContent = "old", PreviewContent = "new" },
         };
         _mockJournalUpdateService
@@ -1729,7 +1757,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     It.IsAny<string>(),
                     It.IsAny<ChangeDetectionResult?>(),
-                    It.IsAny<JournalConfigSyncResult?>(),
+                    It.IsAny<JournalRegistrationDriftResult?>(),
                     It.IsAny<bool>(),
                     It.IsAny<string?>()
                 )
@@ -1753,7 +1781,7 @@ public class UpdateCommandTests : CommandTestBase
                 s.BuildDryRunReport(
                     TestPath,
                     It.IsNotNull<ChangeDetectionResult?>(),
-                    It.IsNotNull<JournalConfigSyncResult?>(),
+                    It.IsNotNull<JournalRegistrationDriftResult?>(),
                     true,
                     null
                 ),
@@ -1870,7 +1898,6 @@ public class UpdateCommandTests : CommandTestBase
                     .Abstractions
                     .NullLogger<markdown_journal_cli.Infrastructure.Configuration.JournalConfiguration>
                     .Instance,
-                fileTracking,
                 tocStructureRepository
             );
         var tocService = new markdown_journal_cli.Services.TableOfContentsService(
@@ -1976,13 +2003,21 @@ public class UpdateCommandTests : CommandTestBase
             new IOException("Simulated TOC write failure")
         );
 
+        var configSyncDetector = new JournalRegistrationDriftDetector(
+            journalConfig,
+            fileTracking,
+            tocStructureRepository,
+            journalSettings,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<JournalRegistrationDriftDetector>.Instance
+        );
+
         var command = new UpdateCommand(
             console,
             faultFs,
             journalUpdateService,
             fileTracking,
             journalSettings,
-            journalConfig,
+            configSyncDetector,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<UpdateCommand>.Instance,
             dryRunRenderer,
             coordinator,

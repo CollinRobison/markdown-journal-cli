@@ -81,7 +81,6 @@ public abstract class ServiceRollbackTestBase : IDisposable
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            FileTracking,
             TocStructureRepository
         );
         TableOfContentsService = new TableOfContentsService(

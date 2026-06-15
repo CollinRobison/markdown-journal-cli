@@ -39,7 +39,6 @@ public class InitCommandIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
             tocStructureRepository
         );
         var entryFormatter = new EntryFormatterService(JournalSettings);

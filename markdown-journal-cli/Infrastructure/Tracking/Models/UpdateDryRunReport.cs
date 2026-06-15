@@ -1,4 +1,4 @@
-using markdown_journal_cli.Infrastructure.Configuration.Models;
+using markdown_journal_cli.Services;
 
 namespace markdown_journal_cli.Infrastructure.Tracking.Models;
 
@@ -9,7 +9,7 @@ namespace markdown_journal_cli.Infrastructure.Tracking.Models;
 public class UpdateDryRunReport
 {
     public ChangeDetectionResult? TrackingChanges { get; init; }
-    public JournalConfigSyncResult? ConfigChanges { get; init; }
+    public JournalRegistrationDriftResult? ConfigChanges { get; init; }
     public TocDiffResult? TocPreview { get; init; }
     public TocRenameDryRunResult? RenamePreview { get; init; }
 

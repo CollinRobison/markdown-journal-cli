@@ -41,7 +41,6 @@ public class JournalConfigGeneratorTests
             _fileSystem,
             Options.Create(_journalSettings),
             NullLogger<JournalConfiguration>.Instance,
-            _fileTracking,
             _tocStructureRepository
         );
 

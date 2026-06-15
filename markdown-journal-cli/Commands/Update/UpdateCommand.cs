@@ -3,7 +3,6 @@ using System.ComponentModel;
 using markdown_journal_cli.Commands;
 using markdown_journal_cli.Exceptions;
 using markdown_journal_cli.Infrastructure.Configuration;
-using markdown_journal_cli.Infrastructure.Configuration.Models;
 using markdown_journal_cli.Infrastructure.FileSystem;
 using markdown_journal_cli.Infrastructure.Tracking;
 using markdown_journal_cli.Infrastructure.Tracking.Models;
@@ -26,7 +25,7 @@ public sealed class UpdateCommand(
     IJournalUpdateService journalUpdateService,
     IFileTracking fileTracking,
     IOptions<JournalSettings> journalSettings,
-    IJournalConfiguration journalConfiguration,
+    IJournalRegistrationDriftDetector journalRegistrationDriftDetector,
     ILogger<UpdateCommand> logger,
     IDryRunRenderer dryRunRenderer,
     IFileTransactionCoordinator txCoordinator,
@@ -41,8 +40,9 @@ public sealed class UpdateCommand(
         fileTracking ?? throw new ArgumentNullException(nameof(fileTracking));
     private readonly IJournalUpdateService _journalUpdateService =
         journalUpdateService ?? throw new ArgumentNullException(nameof(journalUpdateService));
-    private readonly IJournalConfiguration _journalConfiguration =
-        journalConfiguration ?? throw new ArgumentNullException(nameof(journalConfiguration));
+    private readonly IJournalRegistrationDriftDetector _journalRegistrationDriftDetector =
+        journalRegistrationDriftDetector
+        ?? throw new ArgumentNullException(nameof(journalRegistrationDriftDetector));
     private readonly ILogger<UpdateCommand> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly IDryRunRenderer _dryRunRenderer =
@@ -120,7 +120,7 @@ public sealed class UpdateCommand(
                 // Pre-detect config drift to include in the early-return check
                 var configDrift =
                     (all || settings.ConfigFlag || settings.Sync)
-                        ? _journalConfiguration.DetectConfigChanges(settings.FilePath)
+                        ? _journalRegistrationDriftDetector.DetectDrift(settings.FilePath)
                         : null;
 
                 var hasAnythingToDo = fileResults.HasChanges || (configDrift?.HasChanges ?? false);
@@ -153,7 +153,7 @@ public sealed class UpdateCommand(
                 if (all || settings.ConfigFlag || settings.Sync)
                 {
                     // Re-detect after tracking update so same-run additions/deletions are captured
-                    var configSyncResult = _journalConfiguration.DetectConfigChanges(
+                    var configSyncResult = _journalRegistrationDriftDetector.DetectDrift(
                         settings.FilePath
                     );
                     _journalUpdateService.UpdateJournalConfig(settings.FilePath, configSyncResult);
@@ -213,8 +213,8 @@ public sealed class UpdateCommand(
             ? _fileTracking.DetectChangesWithoutUpdate(settings.FilePath)
             : null;
 
-        JournalConfigSyncResult? configDrift = includeConfig
-            ? _journalConfiguration.DetectConfigChanges(settings.FilePath)
+        JournalRegistrationDriftResult? configDrift = includeConfig
+            ? _journalRegistrationDriftDetector.DetectDrift(settings.FilePath)
             : null;
 
         var report = _journalUpdateService.BuildDryRunReport(

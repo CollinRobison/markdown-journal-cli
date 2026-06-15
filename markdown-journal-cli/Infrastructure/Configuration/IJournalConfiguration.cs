@@ -145,12 +145,4 @@ public interface IJournalConfiguration
     /// <param name="newFile">The new filename to use.</param>
     void UpdateFileReferences(string directory, string oldFile, string newFile);
 
-    /// <summary>
-    /// Compares the tracking index against the journal configuration and returns
-    /// the set of files that need to be added to or removed from .journalrc.
-    /// The TOC file is automatically excluded from <see cref="JournalConfigSyncResult.FilesToAdd"/>.
-    /// Returns an empty result (no changes) if the journal config does not exist.
-    /// </summary>
-    /// <param name="journalPath">The root path of the journal.</param>
-    JournalConfigSyncResult DetectConfigChanges(string journalPath);
 }

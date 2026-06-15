@@ -50,7 +50,6 @@ public class AddTableOfContentsIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
             tocStructureRepository
         );
         var tocService = new TableOfContentsService(

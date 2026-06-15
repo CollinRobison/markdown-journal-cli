@@ -38,7 +38,6 @@ public class NewCommandIntegrationTests : JournalIntegrationTestBase
             FileSystem,
             JournalSettings,
             NullLogger<JournalConfiguration>.Instance,
-            fileTracking,
             tocStructureRepository
         );
         var templateManager = new TemplateManager(JournalSettings);

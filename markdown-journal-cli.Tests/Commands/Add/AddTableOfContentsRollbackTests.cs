@@ -74,7 +74,6 @@ public class AddTableOfContentsRollbackTests : IDisposable
             _fileSystem,
             settingsOptions,
             NullLogger<JournalConfiguration>.Instance,
-            _fileTracking,
             _tocStructureRepository
         );
         _tableOfContentsService = new TableOfContentsService(
