@@ -17,5 +17,5 @@ public class JournalConfig
     /// Handles the configuration of the Journal's tracking index.
     /// </summary>
     [JsonPropertyName("trackingIndex")]
-    public required TrackingIndex TrackingIndex { get; set; }
+    public TrackingIndex TrackingIndex { get; set; } = new();
 }
