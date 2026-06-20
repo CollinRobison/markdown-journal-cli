@@ -747,6 +747,77 @@ public class JournalUpdateServiceTests : ServiceTestBase
         );
     }
 
+    [Fact]
+    public void UpdateTableOfContents_Should_SkipWrite_When_TocOnlyDiffersByLastEditedDate()
+    {
+        // Arrange
+        const string tocFile = "1a-TableOfContents.md";
+        var config = CreateTestConfig(tocFile);
+        var tocPath = Path.Combine(_testPath, tocFile);
+        var currentContent =
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Table of Contents\n";
+        var previewContent =
+            "Created: 01/01/2024\nLast Edited: 06/20/2026\n\n# Table of Contents\n";
+
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem.Setup(fs => fs.FileExists(tocPath)).Returns(true);
+        MockFileSystem.Setup(fs => fs.GetFileContent(tocPath)).Returns(currentContent);
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath))
+            .Returns(previewContent);
+        var sut = CreateSut();
+
+        // Act
+        sut.UpdateTableOfContents(_testPath);
+
+        // Assert
+        MockTableOfContentsService.Verify(
+            toc =>
+                toc.UpdateTableOfContents(
+                    It.IsAny<string>(),
+                    It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>()
+                ),
+            Times.Never
+        );
+        MockFileTracking.Verify(
+            ft => ft.UpdateFileInIndex(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        _console.Output.ShouldContain("No table of contents changes needed");
+    }
+
+    [Fact]
+    public void UpdateTableOfContents_Should_WriteTocFile_When_TocContentDiffersBeyondLastEditedDate()
+    {
+        // Arrange
+        const string tocFile = "1a-TableOfContents.md";
+        var config = CreateTestConfig(tocFile);
+        var tocPath = Path.Combine(_testPath, tocFile);
+        var currentContent =
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Table of Contents\n";
+        var previewContent =
+            "Created: 01/01/2024\nLast Edited: 01/01/2024\n\n# Table of Contents\n- [Note](Note.md)\n";
+
+        MockJournalConfiguration.Setup(jc => jc.Read(_testPath)).Returns(config);
+        MockFileSystem.Setup(fs => fs.FileExists(tocPath)).Returns(true);
+        MockFileSystem.Setup(fs => fs.GetFileContent(tocPath)).Returns(currentContent);
+        MockTableOfContentsService
+            .Setup(toc => toc.PreviewTableOfContents(_testPath))
+            .Returns(previewContent);
+        var sut = CreateSut();
+
+        // Act
+        sut.UpdateTableOfContents(_testPath);
+
+        // Assert
+        MockTableOfContentsService.Verify(
+            toc => toc.UpdateTableOfContents(_testPath, null, It.IsAny<DateTime?>()),
+            Times.Once
+        );
+        MockFileTracking.Verify(ft => ft.UpdateFileInIndex(_testPath, tocFile), Times.Once);
+    }
+
     #endregion
 
     #region RenameToc
