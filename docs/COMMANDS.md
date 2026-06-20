@@ -245,6 +245,7 @@ Behavior:
 - `--dry-run` always exits `0`
 - Tracking and sync operations respect `.journalrc` `trackingIndex.noTrack`: matching files are skipped before hash comparison and are not saved in `.mdjournal/.journalindex`.
 - `tableOfContents.ignoreFiles` only hides entries from the generated TOC; `trackingIndex.noTrack` excludes files from tracking entirely.
+- TOC regeneration is skipped when the generated TOC matches the current TOC except for the `Last Edited` metadata date. In that case the TOC file and tracking index are left unchanged.
 
 No-track examples in `.journalrc`:
 
