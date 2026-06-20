@@ -165,7 +165,9 @@ Each journal has normal markdown files plus three managed metadata artifacts:
 - `.mdjournal/.journaltoc` for TOC structure (topics + root entries)
 
 `mdjournal update ... journal` keeps them in sync by detecting file changes,
-updating tracking/config state, and regenerating the markdown TOC.
+updating tracking/config state, and regenerating the markdown TOC only when the
+generated TOC differs from the current file beyond the `Last Edited` metadata
+date.
 
 ### `.journalrc` ignore vs no-track
 

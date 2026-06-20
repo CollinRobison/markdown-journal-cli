@@ -377,8 +377,22 @@ public sealed class JournalUpdateService(
                 config?.TableOfContents.File
                 ?? $"{_journalSettings.TableOfContentsFileName}{FileConstants.MarkdownExtension}";
             var tocAbsPath = _fileSystem.CombinePaths(journalPath, tocFile);
+            var tocExists = _fileSystem.FileExists(tocAbsPath);
 
-            if (_fileSystem.FileExists(tocAbsPath))
+            if (tocExists)
+            {
+                var currentContent = _fileSystem.GetFileContent(tocAbsPath);
+                var previewContent = _tableOfContentsService.PreviewTableOfContents(journalPath);
+
+                if (TocMatchesIgnoringLastEditedDate(currentContent, previewContent))
+                {
+                    _console.MarkupLine("[dim]No table of contents changes needed.[/]");
+                    tx.Commit();
+                    return;
+                }
+            }
+
+            if (tocExists)
                 tx.Track(tocAbsPath);
             else
                 tx.TrackNew(tocAbsPath);
@@ -410,6 +424,16 @@ public sealed class JournalUpdateService(
             );
         }
     }
+
+    private static bool TocMatchesIgnoringLastEditedDate(
+        string currentContent,
+        string previewContent
+    ) =>
+        string.Equals(
+            MarkdownMetadataParser.NormalizeIgnoringLastEditedDate(currentContent),
+            MarkdownMetadataParser.NormalizeIgnoringLastEditedDate(previewContent),
+            StringComparison.Ordinal
+        );
 
     public void UpdateLastEditedDatesAndTracking(
         string journalPath,

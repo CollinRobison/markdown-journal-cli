@@ -36,7 +36,7 @@ Three metadata artifacts (`.journalrc`, `.mdjournal/.journalindex`, and `.mdjour
 1. **Disk → `.mdjournal/.journalindex`** — `FileTracking.DetectChangesWithoutUpdate()` walks the directory, filters out `.mdjournal/`, applies `.journalrc` `trackingIndex.noTrack`, and compares file hashes against the stored index to identify added, modified, and deleted files.
 2. **`.mdjournal/.journalindex` → Journal Directory** — Last-edited metadata is stamped into modified entry files; `.mdjournal/.journalindex` is updated with the new hashes.
 3. **`.mdjournal/.journalindex` → `.mdjournal/.journaltoc`** — `JournalConfiguration.DetectConfigChanges()` diffs the tracking index keys against the combined entry set from `.mdjournal/.journaltoc` (root entries + topic hierarchy) and `.journalrc` (`tableOfContents.ignoreFiles`) to find files that need to be added or removed. Files in `trackingIndex.noTrack` have already been excluded from the tracking index, so they do not participate in config drift detection. Structural adds and removes are written to `.mdjournal/.journaltoc` via `IJournalTocStructureRepository`. Config detection runs twice in the live path: once before the early-return check, and again after tracking is committed so that same-run file additions and deletions are captured.
-4. **`.journalrc` + `.mdjournal/.journaltoc` → Journal Directory** — `TableOfContentsService` reads user settings from `.journalrc` and the topic structure from `.mdjournal/.journaltoc`, then regenerates the Table of Contents markdown file.
+4. **`.journalrc` + `.mdjournal/.journaltoc` → Journal Directory** — `TableOfContentsService` reads user settings from `.journalrc` and the topic structure from `.mdjournal/.journaltoc`, then previews the Table of Contents markdown. `JournalUpdateService` compares that preview to the current TOC after normalizing the `Last Edited` metadata date; the TOC file is rewritten and re-tracked only when the meaningful content differs.
 
 **User-driven (explicit commands only):**
 
@@ -99,7 +99,7 @@ The application follows a service-oriented architecture with clear separation of
 
 **`IMarkdownLinkRewriter`** — Reusable inline-link rewriting infrastructure. `ReplaceLinksInDirectory` rewrites links on rename; `StripLinksInDirectory` removes dead links on entry deletion. Matches only inline links `[text](path/file.md)`; reference-style links are out of scope.
 
-**`IJournalUpdateService`** — Orchestrates `update journal` operations, including a pure read-only dry-run path that projects pending changes without any disk writes.
+**`IJournalUpdateService`** — Orchestrates `update journal` operations, including a pure read-only dry-run path that projects pending changes without any disk writes. Live TOC updates use the same preview capability to skip writes when the only potential difference is the TOC `Last Edited` date.
 
 **`ITableOfContentsService`** — TOC generation with preview support. The preview path returns generated TOC markdown as a string without writing to disk, preserving existing `Created`/`Last Edited` dates.
 

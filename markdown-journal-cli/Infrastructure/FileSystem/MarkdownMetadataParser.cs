@@ -5,6 +5,8 @@ namespace markdown_journal_cli.Infrastructure.FileSystem;
 /// </summary>
 public static class MarkdownMetadataParser
 {
+    private static readonly DateTime NormalizedLastEditedDate = new(2000, 1, 1);
+
     /// <summary>
     /// Parses "Created:" and "Last Edited:" dates from markdown content.
     /// Looks for dates in the first few lines before any heading.
@@ -111,4 +113,13 @@ public static class MarkdownMetadataParser
         result.Insert(insertAt, dateString);
         return string.Join(newline, result);
     }
+
+    /// <summary>
+    /// Normalizes markdown content for comparisons where only the value of the metadata header's
+    /// "Last Edited:" line should be ignored.
+    /// </summary>
+    /// <param name="content">The markdown content to normalize.</param>
+    /// <returns>The normalized markdown content with a stable Last Edited date and line endings.</returns>
+    public static string NormalizeIgnoringLastEditedDate(string content) =>
+        UpdateLastEditedDate(content, NormalizedLastEditedDate).ReplaceLineEndings("\n");
 }

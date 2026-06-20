@@ -76,6 +76,9 @@ public class JournalUpdateServiceRollbackTests : ServiceRollbackTestBase
     {
         // Capture TOC state before operation
         var tocBefore = FileSystem.GetFileContent(TocPath);
+
+        // Force a real TOC diff so the conditional TOC update does not no-op.
+        JournalConfiguration.AddEntry(JournalPath, "New Entry", "new_entry.md");
         FileSystem.ResetCallCounts();
 
         // UpdateFile #1 is the TOC write from TableOfContentsService
