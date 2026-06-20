@@ -9,6 +9,13 @@ This changelog is updated automatically by Release Please.
 <<<<<<< HEAD
 =======
 
+## [0.1.6](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.5...v0.1.6) (2026-06-20)
+
+
+### Bug Fixes
+
+* Toc update journal fix ([#101](https://github.com/CollinRobison/markdown-journal-cli/issues/101)) ([fb8e249](https://github.com/CollinRobison/markdown-journal-cli/commit/fb8e249460a228dc4ae66355e7dae52fac02bbd6))
+
 ## [0.1.5](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.4...v0.1.5) (2026-06-15)
 
 
