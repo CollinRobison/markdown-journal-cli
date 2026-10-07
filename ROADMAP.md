@@ -6,17 +6,6 @@ This document outlines the planned work for Markdown Journal CLI. Items are grou
 
 ---
 
-## Release Readiness
-
-These items must be completed before the repository goes public.
-
-| Status | Item |
-|--------|------|
-| ⏳ | **Build pipeline & versioned releases** — CI/CD pipeline that builds, packages, and publishes versioned artifacts to GitHub Releases so users can download pre-built binaries. |
-| ⏳ | **Public repo & collaborator readiness** — Configure branch protection rules on `main` (required reviews, no direct pushes), set up issue/PR templates, and make the repository public. |
-
----
-
 ## Commands
 
 New CLI commands planned for upcoming releases.
