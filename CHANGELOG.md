@@ -9,6 +9,13 @@ This changelog is updated automatically by Release Please.
 <<<<<<< HEAD
 =======
 
+## [0.1.7](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.6...v0.1.7) (2026-10-08)
+
+
+### Bug Fixes
+
+* Allow full subheading-entry_name in the add entry name parameter ([#119](https://github.com/CollinRobison/markdown-journal-cli/issues/119)) ([2c74517](https://github.com/CollinRobison/markdown-journal-cli/commit/2c74517c69f2d27eb978d6497009a96cffc438c7))
+
 ## [0.1.6](https://github.com/CollinRobison/markdown-journal-cli/compare/v0.1.5...v0.1.6) (2026-06-20)
 
 
