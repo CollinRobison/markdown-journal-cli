@@ -26,7 +26,7 @@ public class AddEntrySettings : AddSettings
     //title - allow spaces or _ and program to interpret either along. set filename and title to this
     [CommandArgument(0, "<name>")]
     [Description(
-        "The name of the journal entry to create. This will be used in both the file name and the entry TOC title unless title option is specified."
+        "The name of the journal entry to create. This will be used in both the file name and the entry TOC title unless title option is specified. You can add full heading-entry_name by using the correct seperators."
     )]
     public required string EntryName { get; set; }
 
@@ -58,7 +58,7 @@ public class AddEntrySettings : AddSettings
 
     public override ValidationResult Validate()
     {
-        if (!EntryName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' '))
+        if (!EntryName.All(c => char.IsLetterOrDigit(c) || c == '_' || c == ' ' || c == '-'))
         {
             return ValidationResult.Error(
                 "Entry name contains a character that is not a letter, digit, underscore, or space."
