@@ -42,7 +42,7 @@ public abstract class JournalCommand<TSettings> : Command<TSettings>
     /// </summary>
     protected virtual string? GetJournalDirectory(TSettings settings) => null;
 
-    protected sealed override int Execute(
+    public sealed override int Execute(
         CommandContext context,
         TSettings settings,
         CancellationToken cancellationToken
