@@ -8,7 +8,7 @@
 		"ghcr.io/devcontainers/features/dotnet:2": {
 			"version": "latest"
 		},
-		"ghcr.io/nikiforovall/devcontainer-features/dotnet-csharpier:1": {}
+		"ghcr.io/nikiforovall/devcontainer-features/dotnet-csharpier:2": {}
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
